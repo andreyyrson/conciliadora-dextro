@@ -104,14 +104,17 @@ export default function ConciliacaoDetalhesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "CONCILIADO":
+      case "AUTO_CONFIRMADO":
+      case "CONFIRMADO_MANUAL":
         return "bg-green-900/30 text-green-400"
-      case "DIVERGENTE":
+      case "REJEITADO":
         return "bg-orange-900/30 text-orange-400"
-      case "FALTANDO_ERP":
+      case "SEM_MATCH":
         return "bg-red-900/30 text-red-400"
-      case "FALTANDO_BANCO":
+      case "SUGERIDO":
         return "bg-yellow-900/30 text-yellow-400"
+      case "AMBIGUO":
+        return "bg-purple-900/30 text-purple-400"
       default:
         return "bg-gray-800 text-gray-400"
     }
@@ -138,7 +141,7 @@ export default function ConciliacaoDetalhesPage() {
   }
 
   const naoConciliados = itens.filter(i =>
-    i.status === "DIVERGENTE" || i.status === "FALTANDO_ERP" || i.status === "FALTANDO_BANCO"
+    i.status === "REJEITADO" || i.status === "SEM_MATCH" || i.status === "SUGERIDO" || i.status === "AMBIGUO"
   )
 
   const getExtratoData = (item: ConciliacaoItem) => {
@@ -251,11 +254,12 @@ export default function ConciliacaoDetalhesPage() {
               className="p-2 border rounded bg-black border-white/20 text-white"
             >
               <option value="">Todos</option>
-              <option value="CONCILIADO">Conciliados</option>
-              <option value="DIVERGENTE,FALTANDO_ERP,FALTANDO_BANCO">Desconciliados</option>
-              <option value="DIVERGENTE">Divergentes</option>
-              <option value="FALTANDO_ERP">Faltando ERP</option>
-              <option value="FALTANDO_BANCO">Faltando Banco</option>
+              <option value="AUTO_CONFIRMADO,CONFIRMADO_MANUAL">Conciliados</option>
+              <option value="REJEITADO,SEM_MATCH,SUGERIDO,AMBIGUO">Desconciliados</option>
+              <option value="REJEITADO">Rejeitados</option>
+              <option value="SEM_MATCH">Sem Match</option>
+              <option value="SUGERIDO">Sugeridos</option>
+              <option value="AMBIGUO">Ambíguos</option>
             </select>
           </div>
           {itens.length === 0 ? (
@@ -325,7 +329,7 @@ export default function ConciliacaoDetalhesPage() {
                             )}
                           </td>
                           <td className="p-2">
-                            {item.status !== "CONCILIADO" && (
+                            {item.status !== "AUTO_CONFIRMADO" && item.status !== "CONFIRMADO_MANUAL" && (
                               <div className="flex items-center gap-1">
                                 {editandoItem === item.id ? (
                                   <div className="flex items-center gap-1">
@@ -363,24 +367,13 @@ export default function ConciliacaoDetalhesPage() {
                                     >
                                       <Pencil className="w-3 h-3" />
                                     </Button>
-                                    {item.status === "DIVERGENTE" && item.erp && getExtratoData(item) && (
+                                    {(item.status === "REJEITADO" || item.status === "SEM_MATCH" || item.status === "SUGERIDO" || item.status === "AMBIGUO") && item.erp && getExtratoData(item) && (
                                       <Button
                                         size="sm"
-                                        onClick={() => atualizarItem(item.id, { status: "CONCILIADO", resolvidoManualmente: true })}
+                                        onClick={() => atualizarItem(item.id, { status: "CONFIRMADO_MANUAL", resolvidoManualmente: true })}
                                         disabled={atualizando}
                                         className="h-7 px-2 bg-green-600 hover:bg-green-500"
                                         title="Marcar como conciliado"
-                                      >
-                                        <Check className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                    {(item.status === "FALTANDO_ERP" || item.status === "FALTANDO_BANCO") && (
-                                      <Button
-                                        size="sm"
-                                        onClick={() => atualizarItem(item.id, { status: "CONCILIADO", resolvidoManualmente: true })}
-                                        disabled={atualizando}
-                                        className="h-7 px-2 bg-blue-600 hover:bg-blue-500"
-                                        title="Marcar como resolvido"
                                       >
                                         <Check className="w-3 h-3" />
                                       </Button>
