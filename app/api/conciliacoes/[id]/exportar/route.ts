@@ -12,6 +12,9 @@ export async function GET(
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
+    const { searchParams } = new URL(req.url)
+    const decisoesParam = searchParams.get('decisoes')
+    const decisoesExtras = decisoesParam ? JSON.parse(decisoesParam) : null
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
@@ -122,6 +125,17 @@ export async function GET(
           usuarioMap.set(u.id, u.name || u.email)
         })
       }
+    }
+
+    // Se foram fornecidas decisões extras (antes de confirmar), sobrescrever
+    if (decisoesExtras) {
+      Object.entries(decisoesExtras).forEach(([extratoId, d]: [string, any]) => {
+        decisoesMap.set(extratoId, {
+          status: d.status,
+          resolvidoPor: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? session.user.id : null,
+          resolvidoEm: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? new Date() : null
+        })
+      })
     }
 
     // Exportar TODOS os itens

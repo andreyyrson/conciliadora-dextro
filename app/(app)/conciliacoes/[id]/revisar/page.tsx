@@ -206,7 +206,9 @@ export default function RevisarConciliacaoPage() {
 
   const downloadExcel = async () => {
     try {
-      const resp = await fetch(`/api/conciliacoes/${params.id}/exportar`)
+      // Passar decisões atuais como query parameter para exportar antes de confirmar
+      const decisoesParam = encodeURIComponent(JSON.stringify(decisoes))
+      const resp = await fetch(`/api/conciliacoes/${params.id}/exportar?decisoes=${decisoesParam}`)
       if (!resp.ok) throw new Error("Erro ao exportar")
 
       const blob = await resp.blob()
