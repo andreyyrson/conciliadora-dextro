@@ -76,7 +76,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // Criar conta bancária (sem POLP Link por enquanto - estrutura básica)
+    // Criar conta bancária (estrutura básica)
     const contaBancaria = await prisma.contaBancaria.create({
       data: {
         empresaId,
