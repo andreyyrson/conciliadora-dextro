@@ -92,7 +92,8 @@ export async function POST(req: Request) {
       totalErp: resultado.totalErp,
       totalExtrato: resultado.totalExtrato,
       itens: resultado.itens,
-      erpsSobrando: resultado.erpsSobrando
+      erpsSobrando: resultado.erpsSobrando,
+      erps: erpEntradas // Enviar dados completos dos ERPs para o frontend
     })
   } catch (error) {
     console.error("Erro ao gerar sugestões:", error)

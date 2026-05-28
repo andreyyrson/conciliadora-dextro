@@ -79,6 +79,7 @@ export default function RevisarConciliacaoPage() {
   const [conciliacao, setConciliacao] = useState<Conciliacao | null>(null)
   const [itens, setItens] = useState<ItemRevisao[]>([])
   const [erpsSobrando, setErpsSobrando] = useState<ErpSobrando[]>([])
+  const [erpEntradas, setErpEntradas] = useState<any[]>([])
   const [hashConciliacao, setHashConciliacao] = useState("")
   const [loading, setLoading] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
@@ -123,6 +124,7 @@ export default function RevisarConciliacaoPage() {
       setHashConciliacao(dataSug.hashConciliacao)
       setItens(dataSug.itens)
       setErpsSobrando(dataSug.erpsSobrando || [])
+      setErpEntradas(dataSug.erps || [])
 
       // Inicializar decisões: auto-confirmados já vêm decididos
       const decs: Record<string, any> = {}
@@ -456,6 +458,21 @@ export default function RevisarConciliacaoPage() {
                           <div className="space-y-1 text-sm">
                             <p className="text-gray-400">Score: <span className="text-white">{item.sugestoes[0].score}%</span></p>
                             <p className="text-gray-400">Explicações: <span className="text-white">{item.sugestoes[0].explicacoes.join(" · ")}</span></p>
+                            {(() => {
+                              const erpSugerido = erpEntradas?.find(e => e.id === item.sugestoes[0].entradaOrigemId)
+                              if (!erpSugerido) return null
+                              return (
+                                <>
+                                  <p className="text-gray-400">Data: <span className="text-white">{new Date(erpSugerido.data).toLocaleDateString("pt-BR")}</span></p>
+                                  <p className="text-gray-400">Descrição: <span className="text-white">{erpSugerido.descricao}</span></p>
+                                  <p className="text-gray-400">Valor: <span className="text-white">R$ {erpSugerido.valor.toFixed(2)}</span></p>
+                                  <p className="text-gray-400">Tipo: <span className="text-white">{erpSugerido.tipo}</span></p>
+                                  {erpSugerido.documento && <p className="text-gray-400">Doc: <span className="text-white">{erpSugerido.documento}</span></p>}
+                                  {erpSugerido.fornecedor && <p className="text-gray-400">Fornecedor: <span className="text-white">{erpSugerido.fornecedor}</span></p>}
+                                  {erpSugerido.categoria && <p className="text-gray-400">Categoria: <span className="text-white">{erpSugerido.categoria}</span></p>}
+                                </>
+                              )
+                            })()}
                             {item.sugestoes.length > 1 && (
                               <div className="relative inline-block mt-2">
                                 <select
