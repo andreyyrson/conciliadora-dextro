@@ -95,18 +95,8 @@ export default function ContasPage() {
   }
 
   const fetchConnectors = async () => {
-    try {
-      const response = await fetch("/api/connectors")
-      const data = await response.json()
-      setConnectors(data.connectors || [])
-      // Auto-select Sandbox connector if available
-      const sandbox = data.connectors?.find((c: any) => c.name?.toLowerCase().includes("sandbox"))
-      if (sandbox) {
-        setConnectorId(sandbox.id.toString())
-      }
-    } catch (error) {
-      console.error("Erro ao buscar conectores:", error)
-    }
+    // Integração Pluggy desativada
+    setConnectors([])
   }
 
   useEffect(() => {
