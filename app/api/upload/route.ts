@@ -192,8 +192,10 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error("Erro ao processar upload:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack")
     return NextResponse.json(
-      { error: "Erro ao processar upload" },
+      { error: "Erro ao processar upload", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
