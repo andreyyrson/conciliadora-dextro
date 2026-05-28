@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file = formData.get("file") as File
     const empresaId = formData.get("empresaId") as string
+    const fileName = formData.get("fileName") as string
 
     if (!file || !empresaId) {
       return NextResponse.json(
@@ -43,37 +44,42 @@ export async function POST(req: Request) {
       )
     }
 
-    // Ler o arquivo
+    // Ler o arquivo (agora é JSON com preview)
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    // Determinar tipo
-    const fileType = file.type
-    const fileName = file.name
+    const content = buffer.toString("utf-8")
 
     let lancamentos: any[] = []
 
-    if (fileType === "text/csv" || fileName.endsWith(".csv")) {
-      const Papa = require("papaparse")
-      const result = Papa.parse(buffer.toString("utf-8"), {
-        header: true,
-        skipEmptyLines: true
-      })
-      lancamentos = result.data
-    } else if (
-      fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-      fileName.endsWith(".xlsx")
-    ) {
-      const XLSX = require("xlsx")
-      const workbook = XLSX.read(buffer, { type: "buffer" })
-      const sheetName = workbook.SheetNames[0]
-      const worksheet = workbook.Sheets[sheetName]
-      lancamentos = XLSX.utils.sheet_to_json(worksheet)
+    // Se for JSON (preview do frontend)
+    if (file.type === "application/json" || fileName === "preview.json") {
+      lancamentos = JSON.parse(content)
     } else {
-      return NextResponse.json(
-        { error: "Tipo de arquivo não suportado. Use CSV ou XLSX" },
-        { status: 400 }
-      )
+      // Fallback para formato original (CSV/XLSX)
+      const fileType = file.type
+
+      if (fileType === "text/csv" || fileName.endsWith(".csv")) {
+        const Papa = require("papaparse")
+        const result = Papa.parse(content, {
+          header: true,
+          skipEmptyLines: true
+        })
+        lancamentos = result.data
+      } else if (
+        fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        fileName.endsWith(".xlsx")
+      ) {
+        const XLSX = require("xlsx")
+        const workbook = XLSX.read(buffer, { type: "buffer" })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        lancamentos = XLSX.utils.sheet_to_json(worksheet)
+      } else {
+        return NextResponse.json(
+          { error: "Tipo de arquivo não suportado. Use CSV ou XLSX" },
+          { status: 400 }
+        )
+      }
     }
 
     if (lancamentos.length === 0) {

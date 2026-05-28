@@ -134,13 +134,27 @@ export default function UploadPage() {
     setDragActive(false)
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0])
+      const droppedFile = e.dataTransfer.files[0]
+      // Limitar a 4MB para evitar erro 413 no Vercel
+      if (droppedFile.size > 4 * 1024 * 1024) {
+        setError("Arquivo muito grande. Máximo permitido: 4MB")
+        setFile(null)
+        return
+      }
+      setFile(droppedFile)
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0])
+      const selectedFile = e.target.files[0]
+      // Limitar a 4MB para evitar erro 413 no Vercel
+      if (selectedFile.size > 4 * 1024 * 1024) {
+        setError("Arquivo muito grande. Máximo permitido: 4MB")
+        setFile(null)
+        return
+      }
+      setFile(selectedFile)
     }
   }
 
@@ -159,30 +173,60 @@ export default function UploadPage() {
       return
     }
 
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("empresaId", selectedEmpresa)
+    // Ler arquivo e enviar apenas primeiras 100 linhas para análise
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const content = e.target?.result as string
+      let previewLines: any[] = []
 
-    try {
-      const response = await fetch("/api/upload/analisar", {
-        method: "POST",
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao analisar arquivo")
-        setLoading(false)
-        return
+      if (file.name.endsWith('.csv')) {
+        const Papa = require("papaparse")
+        const result = Papa.parse(content, {
+          header: true,
+          skipEmptyLines: true
+        })
+        previewLines = result.data.slice(0, 100)
+      } else if (file.name.endsWith('.xlsx')) {
+        const XLSX = require("xlsx")
+        const workbook = XLSX.read(content, { type: 'binary' })
+        const sheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[sheetName]
+        const jsonData = XLSX.utils.sheet_to_json(worksheet)
+        previewLines = jsonData.slice(0, 100)
       }
 
-      setAnalise(data)
-      setMostrarMapeamento(true)
-    } catch (error) {
-      setError("Erro ao analisar arquivo")
-    } finally {
-      setLoading(false)
+      const formData = new FormData()
+      formData.append("file", new Blob([JSON.stringify(previewLines)], { type: 'application/json' }), 'preview.json')
+      formData.append("empresaId", selectedEmpresa)
+      formData.append("fileName", file.name)
+
+      try {
+        const response = await fetch("/api/upload/analisar", {
+          method: "POST",
+          body: formData
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          setError(data.error || "Erro ao analisar arquivo")
+          setLoading(false)
+          return
+        }
+
+        setAnalise(data)
+        setMostrarMapeamento(true)
+      } catch (error) {
+        setError("Erro ao analisar arquivo")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (file.name.endsWith('.csv')) {
+      reader.readAsText(file)
+    } else {
+      reader.readAsBinaryString(file)
     }
   }
 
