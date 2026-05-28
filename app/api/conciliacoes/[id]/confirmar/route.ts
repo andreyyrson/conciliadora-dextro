@@ -62,8 +62,8 @@ export async function POST(
       diferencaValor: d.diferencaValor || null,
       observacao: d.observacao || null,
       resolvidoManualmente: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO",
-      resolvidoPor: d.status === "AUTO_CONFIRMADO" || d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? session.user.id : null,
-      resolvidoEm: d.status === "AUTO_CONFIRMADO" || d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? new Date() : null
+      resolvidoPor: session.user.id, // Definir para todos os itens
+      resolvidoEm: new Date() // Definir para todos os itens
     }))
 
     await prisma.conciliacaoItem.createMany({

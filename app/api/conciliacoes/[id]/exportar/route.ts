@@ -86,6 +86,18 @@ export async function GET(
     const decisoesMap = new Map()
     const usuarioMap = new Map()
 
+    // Buscar usuário atual para exportação
+    let usuarioAtual = null
+    if (session?.user?.id) {
+      usuarioAtual = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true, name: true, email: true }
+      })
+      if (usuarioAtual) {
+        usuarioMap.set(usuarioAtual.id, usuarioAtual.name || usuarioAtual.email)
+      }
+    }
+
     if (conciliacaoItens.length > 0) {
       // Se já existem itens (conciliação foi confirmada), usar dados do banco
       conciliacaoItens.forEach(item => {
@@ -110,18 +122,6 @@ export async function GET(
           usuarioMap.set(u.id, u.name || u.email)
         })
       }
-    } else {
-      // Se não existem itens (conciliação ainda não foi confirmada), usar o usuário atual
-      const session = await getServerSession(authOptions)
-      if (session?.user?.id) {
-        const usuario = await prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { id: true, name: true, email: true }
-        })
-        if (usuario) {
-          usuarioMap.set(usuario.id, usuario.name || usuario.email)
-        }
-      }
     }
 
     // Exportar TODOS os itens
@@ -136,12 +136,20 @@ export async function GET(
       const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" || statusFinal === "CONFIRMADO_MANUAL" ? "APROVADO" :
                              statusFinal === "REJEITADO" ? "REPROVADO" : "PENDENTE"
 
+      // Preencher quem aprovou e data apenas se houver decisão manual
+      const aprovadoPor = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoPor
+        ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor
+        : (statusFinal === "AUTO_CONFIRMADO" ? "SISTEMA" : "")
+      const dataAprovacao = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoEm
+        ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR")
+        : (statusFinal === "AUTO_CONFIRMADO" ? "Auto-confirmado" : "")
+
       return {
         "#": idx + 1,
         "Status Final": statusFinal,
         "Aprovação": statusAprovacao,
-        "Aprovado Por": decisao?.resolvidoPor ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor : "",
-        "Data Aprovação": decisao?.resolvidoEm ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR") : "",
+        "Aprovado Por": aprovadoPor,
+        "Data Aprovação": dataAprovacao,
         // Dados do Extrato
         "Data Extrato": new Date(extrato.data).toLocaleDateString("pt-BR"),
         "Descrição Extrato": extrato.descricao,
