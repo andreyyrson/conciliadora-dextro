@@ -389,12 +389,15 @@ export default function RevisarConciliacaoPage() {
               return (
                 <div
                   key={item.extrato.id}
-                  className={`p-4 rounded border ${jaDecidido ? "border-white/10 bg-white/5" : "border-white/20 bg-white/[0.02]"}`}
+                  className={`p-4 rounded border ${jaDecidido ? "border-white/10 bg-white/5" : item.status === "AMBIGUO" ? "border-orange-500/50 bg-orange-500/5" : "border-white/20 bg-white/[0.02]"}`}
                 >
                   <div className="space-y-4">
                     {/* Header com status */}
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                      {item.status === "AMBIGUO" && !jaDecidido && (
+                        <span className="text-xs font-medium text-orange-400 animate-pulse">⚠️ Requer decisão manual</span>
+                      )}
                       {item.sugestoes[0] && !jaDecidido && (
                         <span className={`text-xs font-medium ${getConfiancaBadge(item.sugestoes[0].confianca)}`}>
                           Score: {item.sugestoes[0].score}%

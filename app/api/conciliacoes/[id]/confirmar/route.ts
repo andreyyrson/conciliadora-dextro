@@ -49,10 +49,11 @@ export async function POST(
     // Criar novos itens
     const itensParaCriar = decisoes.map((d: any) => {
       // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
+      // EXCETO se for AMBIGUO (requer decisão manual)
       let statusFinal = d.status
       let resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
 
-      if (!resolvidoManualmente && d.confiancaMatch === "HIGH" && d.scoreMatch >= 80) {
+      if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confiancaMatch === "HIGH" && d.scoreMatch >= 80) {
         statusFinal = "AUTO_CONFIRMADO"
         resolvidoManualmente = false
       }

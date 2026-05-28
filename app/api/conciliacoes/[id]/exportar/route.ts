@@ -131,13 +131,14 @@ export async function GET(
     if (decisoesExtras) {
       Object.entries(decisoesExtras).forEach(([extratoId, d]: [string, any]) => {
         // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
+        // EXCETO se for AMBIGUO (requer decisão manual)
         let statusFinal = d.status
         let resolvidoPor = null
         let resolvidoEm = null
 
         const resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
 
-        if (!resolvidoManualmente && d.confianca === "HIGH" && d.score >= 80) {
+        if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confianca === "HIGH" && d.score >= 80) {
           statusFinal = "AUTO_CONFIRMADO"
           resolvidoPor = session.user.id
           resolvidoEm = new Date()
