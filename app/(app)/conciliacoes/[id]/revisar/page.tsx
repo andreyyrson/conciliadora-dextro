@@ -381,7 +381,7 @@ export default function RevisarConciliacaoPage() {
           </div>
 
           <div className="space-y-3">
-            {itens.map((item) => {
+            {itens.filter(item => item.status !== "AUTO_CONFIRMADO").map((item) => {
               const badge = getStatusBadge(item)
               const d = decisoes[item.extrato.id]
               const jaDecidido = !!d

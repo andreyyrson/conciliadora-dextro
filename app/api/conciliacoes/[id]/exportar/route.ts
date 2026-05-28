@@ -153,6 +153,17 @@ export async function GET(
           resolvidoEm
         })
       })
+    } else {
+      // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
+      resultado.itens.forEach((item: any) => {
+        if (item.status !== "AMBIGUO" && item.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
+          decisoesMap.set(item.extrato.id, {
+            status: "AUTO_CONFIRMADO",
+            resolvidoPor: session.user.id,
+            resolvidoEm: new Date()
+          })
+        }
+      })
     }
 
     // Exportar TODOS os itens
