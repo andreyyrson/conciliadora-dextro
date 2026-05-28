@@ -84,24 +84,33 @@ export async function GET(
 
     // Criar mapa de decisões por extratoId
     const decisoesMap = new Map()
-    conciliacaoItens.forEach(item => {
-      const extratoId = item.extratoId || item.extratoImportadoId
-      if (extratoId) {
-        decisoesMap.set(extratoId, {
-          status: item.status,
-          resolvidoPor: item.resolvidoPor,
-          resolvidoEm: item.resolvidoEm
+    const usuarioMap = new Map()
+
+    if (conciliacaoItens.length > 0) {
+      // Se já existem itens (conciliação foi confirmada), usar dados do banco
+      conciliacaoItens.forEach(item => {
+        const extratoId = item.extratoId || item.extratoImportadoId
+        if (extratoId) {
+          decisoesMap.set(extratoId, {
+            status: item.status,
+            resolvidoPor: item.resolvidoPor,
+            resolvidoEm: item.resolvidoEm
+          })
+        }
+      })
+
+      // Buscar nomes dos usuários que aprovaram
+      const userIds = [...new Set(conciliacaoItens.map(i => i.resolvidoPor).filter(Boolean))]
+      if (userIds.length > 0) {
+        const usuarios = await prisma.user.findMany({
+          where: { id: { in: userIds as string[] } },
+          select: { id: true, name: true, email: true }
+        })
+        usuarios.forEach(u => {
+          usuarioMap.set(u.id, u.name || u.email)
         })
       }
-    })
-
-    // Buscar nomes dos usuários que aprovaram
-    const userIds = [...new Set(conciliacaoItens.map(i => i.resolvidoPor).filter(Boolean))]
-    const usuarios = await prisma.user.findMany({
-      where: { id: { in: userIds as string[] } },
-      select: { id: true, name: true, email: true }
-    })
-    const usuarioMap = new Map(usuarios.map(u => [u.id, u.name || u.email]))
+    }
 
     // Exportar TODOS os itens
     const rows = resultado.itens.map((item, idx) => {
@@ -110,9 +119,15 @@ export async function GET(
       const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
       const decisao = decisoesMap.get(extrato.id)
 
+      // Determinar status de aprovação
+      const statusFinal = decisao?.status || item.status
+      const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" || statusFinal === "CONFIRMADO_MANUAL" ? "APROVADO" :
+                             statusFinal === "REJEITADO" ? "REPROVADO" : "PENDENTE"
+
       return {
         "#": idx + 1,
-        "Status Final": decisao?.status || item.status,
+        "Status Final": statusFinal,
+        "Aprovação": statusAprovacao,
         "Aprovado Por": decisao?.resolvidoPor ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor : "",
         "Data Aprovação": decisao?.resolvidoEm ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR") : "",
         // Dados do Extrato
@@ -144,6 +159,7 @@ export async function GET(
     const colWidths = [
       { wch: 5 },   // #
       { wch: 20 },  // Status Final
+      { wch: 15 },  // Aprovação
       { wch: 25 },  // Aprovado Por
       { wch: 20 },  // Data Aprovação
       { wch: 12 },  // Data Extrato
