@@ -137,6 +137,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Importações recebidas:", data)
       setImportacoes(data.importacoes || [])
     } catch (error) {
       console.error("Erro ao buscar importações:", error)

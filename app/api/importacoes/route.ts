@@ -38,8 +38,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ importacoes })
   } catch (error) {
     console.error("Erro ao buscar importações:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
     return NextResponse.json(
-      { error: "Erro ao buscar importações" },
+      { error: "Erro ao buscar importações", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
