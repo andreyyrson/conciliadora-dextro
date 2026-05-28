@@ -156,7 +156,16 @@ export async function GET(
     } else {
       // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
       resultado.itens.forEach((item: any) => {
-        if (item.status !== "AMBIGUO" && item.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
+        // Se já é AUTO_CONFIRMADO, apenas garantir que tem quem aprovou
+        if (item.status === "AUTO_CONFIRMADO") {
+          decisoesMap.set(item.extrato.id, {
+            status: "AUTO_CONFIRMADO",
+            resolvidoPor: session.user.id,
+            resolvidoEm: new Date()
+          })
+        }
+        // Se não é AMBIGUO e tem confiança HIGH com score >= 80, aprovar automaticamente
+        else if (item.status !== "AMBIGUO" && item.sugestoes[0]?.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
           decisoesMap.set(item.extrato.id, {
             status: "AUTO_CONFIRMADO",
             resolvidoPor: session.user.id,
