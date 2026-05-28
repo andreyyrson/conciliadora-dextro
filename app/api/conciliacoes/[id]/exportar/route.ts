@@ -5,16 +5,15 @@ import { prisma } from "@/lib/db"
 import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
 import * as XLSX from "xlsx"
 
-export async function GET(
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
-    const { searchParams } = new URL(req.url)
-    const decisoesParam = searchParams.get('decisoes')
-    const decisoesExtras = decisoesParam ? JSON.parse(decisoesParam) : null
+    const body = await req.json()
+    const decisoesExtras = body.decisoes || null
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
