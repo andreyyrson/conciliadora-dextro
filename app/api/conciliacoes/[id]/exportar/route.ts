@@ -110,6 +110,18 @@ export async function GET(
           usuarioMap.set(u.id, u.name || u.email)
         })
       }
+    } else {
+      // Se não existem itens (conciliação ainda não foi confirmada), usar o usuário atual
+      const session = await getServerSession(authOptions)
+      if (session?.user?.id) {
+        const usuario = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { id: true, name: true, email: true }
+        })
+        if (usuario) {
+          usuarioMap.set(usuario.id, usuario.name || usuario.email)
+        }
+      }
     }
 
     // Exportar TODOS os itens
