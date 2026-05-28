@@ -41,6 +41,19 @@ interface ItemRevisao {
     valor: number
     documento?: string
   }
+  diferencaValor?: number
+}
+
+interface ErpSobrando {
+  erp: {
+    id: string
+    data: string
+    descricao: string
+    valor: number
+    tipo: string
+    documento?: string
+  }
+  status: "FALTANDO_BANCO"
 }
 
 interface Conciliacao {
@@ -58,6 +71,7 @@ export default function RevisarConciliacaoPage() {
   const router = useRouter()
   const [conciliacao, setConciliacao] = useState<Conciliacao | null>(null)
   const [itens, setItens] = useState<ItemRevisao[]>([])
+  const [erpsSobrando, setErpsSobrando] = useState<ErpSobrando[]>([])
   const [hashConciliacao, setHashConciliacao] = useState("")
   const [loading, setLoading] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
@@ -101,6 +115,7 @@ export default function RevisarConciliacaoPage() {
 
       setHashConciliacao(dataSug.hashConciliacao)
       setItens(dataSug.itens)
+      setErpsSobrando(dataSug.erpsSobrando || [])
 
       // Inicializar decisões: auto-confirmados já vêm decididos
       const decs: Record<string, any> = {}
@@ -219,7 +234,7 @@ export default function RevisarConciliacaoPage() {
       const resp = await fetch(`/api/conciliacoes/${params.id}/confirmar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decisoes: decisoesArray, hashConciliacao })
+        body: JSON.stringify({ decisoes: decisoesArray, hashConciliacao, erpsSobrando })
       })
 
       if (resp.ok) {
@@ -241,6 +256,7 @@ export default function RevisarConciliacaoPage() {
   const ambiguos = itens.filter(i => i.status === "AMBIGUO" && !decisoes[i.extrato.id]).length
   const semMatch = itens.filter(i => i.status === "SEM_MATCH" && !decisoes[i.extrato.id]).length
   const totalPendentes = sugeridosPendentes + ambiguos + semMatch
+  const totalErpsSobrando = erpsSobrando.length
 
   const getStatusBadge = (item: ItemRevisao) => {
     const d = decisoes[item.extrato.id]
@@ -310,6 +326,10 @@ export default function RevisarConciliacaoPage() {
             <div className="bg-white/5 p-4 rounded">
               <p className="text-gray-400 text-xs">Sem match</p>
               <p className="text-2xl font-bold text-gray-400">{semMatch}</p>
+            </div>
+            <div className="bg-white/5 p-4 rounded">
+              <p className="text-gray-400 text-xs">ERP sobrando</p>
+              <p className="text-2xl font-bold text-purple-400">{totalErpsSobrando}</p>
             </div>
             <div className="bg-white/5 p-4 rounded flex flex-col justify-center">
               <Button
@@ -471,6 +491,28 @@ export default function RevisarConciliacaoPage() {
           </div>
         </Card>
       </motion.div>
+
+      {/* ERPs sobrando */}
+      {erpsSobrando.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="p-6 bg-black border border-purple-500/30">
+            <h2 className="text-lg font-semibold text-purple-300 mb-4">Lançamentos ERP sem correspondência no extrato ({erpsSobrando.length})</h2>
+            <div className="space-y-2">
+              {erpsSobrando.map((item, idx) => (
+                <div key={idx} className="p-3 bg-purple-500/10 border border-purple-500/20 rounded flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-white">{item.erp.descricao}</p>
+                    <p className="text-xs text-purple-300">
+                      {new Date(item.erp.data).toLocaleDateString('pt-BR')} • {item.erp.tipo} • R$ {Number(item.erp.valor).toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">Sem match</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      )}
     </div>
   )
 }

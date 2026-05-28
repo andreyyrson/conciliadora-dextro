@@ -15,7 +15,7 @@ export async function POST(
 
     const { id: conciliacaoId } = await params
     const body = await req.json()
-    const { decisoes, hashConciliacao } = body
+    const { decisoes, hashConciliacao, erpsSobrando } = body
 
     if (!Array.isArray(decisoes)) {
       return NextResponse.json({ error: "decisoes deve ser um array" }, { status: 400 })
@@ -77,7 +77,7 @@ export async function POST(
     ).length
     const qtdDivergentes = decisoes.filter((d: any) => d.status === "REJEITADO").length
     const qtdFaltandoErp = decisoes.filter((d: any) => d.status === "SEM_MATCH").length
-    const qtdFaltandoBanco = 0 // Não aplicável no novo modelo (ERP sobrando não entra nos itens de extrato)
+    const qtdFaltandoBanco = Array.isArray(erpsSobrando) ? erpsSobrando.length : 0
 
     // Atualizar conciliação
     await prisma.conciliacao.update({

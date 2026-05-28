@@ -91,7 +91,8 @@ export async function POST(req: Request) {
       periodo: upload.periodo,
       totalErp: resultado.totalErp,
       totalExtrato: resultado.totalExtrato,
-      itens: resultado.itens
+      itens: resultado.itens,
+      erpsSobrando: resultado.erpsSobrando
     })
   } catch (error) {
     console.error("Erro ao gerar sugestões:", error)
