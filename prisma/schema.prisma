@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  password     String
+  createdAt    DateTime      @default(now())
+  conciliacoes Conciliacao[]
+  empresas     Empresa[]
+}
+
+model Empresa {
+  id                  String              @id @default(cuid())
+  nome                String
+  cnpj                String?
+  createdAt           DateTime            @default(now())
+  userId              String
+  conciliacoes        Conciliacao[]
+  contas              ContaBancaria[]
+  user                User                @relation(fields: [userId], references: [id])
+  uploadErps          UploadErp[]
+  importacoesExtrato  ImportacaoExtrato[]
+}
+
+model ContaBancaria {
+  id                String              @id @default(cuid())
+  empresaId         String
+  banco             String
+  agencia           String?
+  conta             String
+  polpAccountId     String?
+  polpIntegrationId String?
+  pluggyItemId      String?
+  ultimaSincAt      DateTime?
+  ativa             Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  empresa           Empresa             @relation(fields: [empresaId], references: [id])
+  extratos          ExtratoLancamento[]
+}
+
+model ExtratoLancamento {
+  id            String            @id @default(cuid())
+  contaId       String
+  data          DateTime
+  descricao     String
+  valor         Decimal           @db.Decimal(15, 2)
+  tipo          String
+  identificador String?
+  saldoApos     Decimal?          @db.Decimal(15, 2)
+  createdAt     DateTime          @default(now())
+  itens         ConciliacaoItem[]
+  conta         ContaBancaria     @relation(fields: [contaId], references: [id])
+
+  @@index([contaId, data])
+}
+
+model ImportacaoExtrato {
+  id                String              @id @default(cuid())
+  empresaId         String
+  tipo              String              // "CSV" ou "OFX"
+  nomeArquivo       String
+  periodo           String?
+  totalLinhas       Int                 @default(0)
+  mapeamentoColunas Json?
+  createdAt         DateTime            @default(now())
+  empresa           Empresa             @relation(fields: [empresaId], references: [id])
+  extratos          ExtratoImportado[]
+
+  @@index([empresaId, tipo])
+}
+
+model ExtratoImportado {
+  id            String            @id @default(cuid())
+  importacaoId  String
+  data          DateTime
+  descricao     String
+  valor         Decimal           @db.Decimal(15, 2)
+  tipo          String
+  identificador String?
+  saldoApos     Decimal?          @db.Decimal(15, 2)
+  createdAt     DateTime          @default(now())
+  itens         ConciliacaoItem[]
+  importacao    ImportacaoExtrato @relation(fields: [importacaoId], references: [id])
+
+  @@index([importacaoId, data])
+  @@index([valor, data, tipo])
+}
+
+model UploadErp {
+  id                String          @id @default(cuid())
+  empresaId         String
+  nomeArquivo       String
+  periodo           String
+  totalLinhas       Int
+  mapeamentoColunas Json?
+  createdAt         DateTime        @default(now())
+  conciliacoes      Conciliacao[]
+  lancamentos       ErpLancamento[]
+  empresa           Empresa         @relation(fields: [empresaId], references: [id])
+}
+
+model ErpLancamento {
+  id          String            @id @default(cuid())
+  uploadId    String
+  data        DateTime
+  descricao   String
+  valor       Decimal           @db.Decimal(15, 2)
+  tipo        String
+  documento   String?
+  centroCusto String?
+  banco       String?
+  fornecedor  String?
+  categoria   String?
+  rawData     Json?
+  createdAt   DateTime          @default(now())
+  itens       ConciliacaoItem[]
+  upload      UploadErp         @relation(fields: [uploadId], references: [id])
+
+  @@index([uploadId, data])
+  @@index([valor, data, tipo])
+  @@index([fornecedor])
+  @@index([categoria])
+}
+
+model Conciliacao {
+  id               String            @id @default(cuid())
+  empresaId        String
+  userId           String
+  uploadId         String
+  contaId          String?
+  importacaoId     String?
+  periodo          String
+  status           String            @default("PENDENTE_REVISAO")
+  totalExtrato     Decimal           @default(0) @db.Decimal(15, 2)
+  totalErp         Decimal           @default(0) @db.Decimal(15, 2)
+  qtdConciliados   Int               @default(0)
+  qtdDivergentes   Int               @default(0)
+  qtdFaltandoErp   Int               @default(0)
+  qtdFaltandoBanco Int               @default(0)
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
+  empresa          Empresa           @relation(fields: [empresaId], references: [id])
+  upload           UploadErp         @relation(fields: [uploadId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+  itens            ConciliacaoItem[]
+}
+
+model ConciliacaoItem {
+  id                   String              @id @default(cuid())
+  conciliacaoId        String
+  status               String              // AUTO_CONFIRMADO | CONFIRMADO_MANUAL | REJEITADO | SEM_MATCH
+  extratoId            String?
+  erpId                String?
+  extratoImportadoId   String?
+  diferencaValor       Decimal?           @db.Decimal(15, 2)
+  scoreMatch           Float?
+  confiancaMatch       String?             // HIGH | MEDIUM | LOW
+  scoreDetalhado       Json?               // { valor, tipo, data, descricao, documento }
+  explicacoes          Json?               // string[]
+  candidatos           Json?               // MatchSugestao[]
+  hashConciliacao      String?             // fingerprint da sessão
+  observacao           String?
+  resolvidoManualmente Boolean             @default(false)
+  resolvidoPor         String?
+  resolvidoEm          DateTime?
+  createdAt            DateTime           @default(now())
+  conciliacao          Conciliacao        @relation(fields: [conciliacaoId], references: [id])
+  erp                  ErpLancamento?     @relation(fields: [erpId], references: [id])
+  extrato              ExtratoLancamento? @relation(fields: [extratoId], references: [id])
+  extratoImportado     ExtratoImportado?  @relation(fields: [extratoImportadoId], references: [id])
+
+  @@index([conciliacaoId, status])
+}

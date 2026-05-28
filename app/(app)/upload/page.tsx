@@ -1,0 +1,477 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useEmpresa } from "@/lib/use-empresa"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { MapeamentoColunas } from "@/components/mapeamento-colunas"
+import { ExtracaoPreview } from "@/components/extracao-preview"
+import { motion, AnimatePresence } from "framer-motion"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { CalendarIcon, Trash2 } from "lucide-react"
+
+interface Empresa {
+  id: string
+  nome: string
+}
+
+interface Upload {
+  id: string
+  nomeArquivo: string
+  periodo: string
+  totalLinhas: number
+  createdAt: string
+}
+
+interface AnaliseResult {
+  colunas: string[]
+  mapeamento: { [campo: string]: string | null }
+  preview: { [coluna: string]: string }[]
+  colunasNaoMapeadas: string[]
+  confianca: { [campo: string]: number }
+  totalLinhas: number
+  mapeamentoSalvo: boolean
+}
+
+export default function UploadPage() {
+  const { data: session } = useSession()
+  const { empresaId } = useEmpresa()
+  const [empresas, setEmpresas] = useState<Empresa[]>([])
+  const [selectedEmpresa, setSelectedEmpresa] = useState("")
+  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [file, setFile] = useState<File | null>(null)
+  const [dragActive, setDragActive] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [uploads, setUploads] = useState<Upload[]>([])
+  const [analise, setAnalise] = useState<AnaliseResult | null>(null)
+  const [mostrarMapeamento, setMostrarMapeamento] = useState(false)
+  const [extracaoPreview, setExtracaoPreview] = useState<any>(null)
+
+  const fetchEmpresas = async () => {
+    try {
+      const response = await fetch("/api/empresas")
+      const data = await response.json()
+      setEmpresas(data.empresas || [])
+      if (data.empresas?.length > 0 && !selectedEmpresa) {
+        setSelectedEmpresa(data.empresas[0].id)
+      }
+    } catch (error) {
+      console.error("Erro ao buscar empresas:", error)
+    }
+  }
+
+  const fetchUploads = async () => {
+    if (!selectedEmpresa) return
+    try {
+      const response = await fetch(`/api/upload?empresaId=${selectedEmpresa}`)
+      const data = await response.json()
+      setUploads(data.uploads || [])
+    } catch (error) {
+      console.error("Erro ao buscar uploads:", error)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja deletar este upload?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/upload/${id}`, {
+        method: "DELETE"
+      })
+
+      if (response.ok) {
+        fetchUploads()
+      } else {
+        const data = await response.json()
+        alert(data.error || "Erro ao deletar upload")
+      }
+    } catch (error) {
+      console.error("Erro ao deletar upload:", error)
+      alert("Erro ao deletar upload")
+    }
+  }
+
+  useEffect(() => {
+    if (session) {
+      fetchEmpresas()
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (empresaId) {
+      setSelectedEmpresa(empresaId)
+    }
+  }, [empresaId])
+
+  useEffect(() => {
+    if (selectedEmpresa) {
+      fetchUploads()
+    }
+  }, [selectedEmpresa])
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0])
+    }
+  }
+
+  const handleAnalisar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setSuccess("")
+    setAnalise(null)
+    setMostrarMapeamento(false)
+    setExtracaoPreview(null)
+    setLoading(true)
+
+    if (!file || !selectedEmpresa || !date) {
+      setError("Selecione o arquivo, empresa e período")
+      setLoading(false)
+      return
+    }
+
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("empresaId", selectedEmpresa)
+
+    try {
+      const response = await fetch("/api/upload/analisar", {
+        method: "POST",
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao analisar arquivo")
+        setLoading(false)
+        return
+      }
+
+      setAnalise(data)
+      setMostrarMapeamento(true)
+    } catch (error) {
+      setError("Erro ao analisar arquivo")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirmarUpload = async (mapeamento: { [campo: string]: string | null }) => {
+    setError("")
+    setSuccess("")
+    setLoading(true)
+
+    const dataReferencia = format(date!, "yyyy-MM-dd")
+
+    const formData = new FormData()
+    formData.append("file", file!)
+    formData.append("empresaId", selectedEmpresa)
+    formData.append("periodo", dataReferencia)
+    formData.append("mapeamento", JSON.stringify(mapeamento))
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao fazer upload")
+        setLoading(false)
+        return
+      }
+
+      setSuccess(`Upload concluído! ${data.totalLinhas} lançamentos processados.`)
+      setFile(null)
+      setDate(new Date())
+      setAnalise(null)
+      setMostrarMapeamento(false)
+      setExtracaoPreview(data.preview ? { totalLinhas: data.totalLinhas, preview: data.preview } : null)
+      fetchUploads()
+    } catch (error) {
+      setError("Erro ao fazer upload")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelarMapeamento = () => {
+    setMostrarMapeamento(false)
+    setAnalise(null)
+    setFile(null)
+  }
+
+  if (!session) {
+    return null
+  }
+
+  return (
+    <div>
+      <motion.h1 
+        className="text-2xl font-bold text-white mb-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        Upload ERP
+      </motion.h1>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="p-6 bg-black border border-white/20">
+          <form onSubmit={handleAnalisar} className="space-y-6">
+          <div>
+            <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
+              Empresa *
+            </label>
+            <select
+              id="empresa"
+              value={selectedEmpresa}
+              onChange={(e) => setSelectedEmpresa(e.target.value)}
+              className="w-full p-2 border rounded bg-black border-white/20 text-white"
+              required
+            >
+              {empresas.map((empresa) => (
+                <option key={empresa.id} value={empresa.id}>
+                  {empresa.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="periodo" className="block text-sm font-medium text-gray-300 mb-1">
+              Data de Referência *
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal bg-black border-white/20 text-white hover:bg-white/10"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-black border-white/20">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  className="bg-black text-white"
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-gray-500 mt-1">
+              Selecione a data de referência para os lançamentos
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Arquivo (CSV ou XLSX) *
+            </label>
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                dragActive
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {file ? (
+                <div>
+                  <p className="font-medium">{file.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {(file.size / 1024).toFixed(2)} KB
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => setFile(null)}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-gray-600">
+                    Arraste e solte o arquivo aqui ou
+                  </p>
+                  <Input
+                    type="file"
+                    accept=".csv,.xlsx"
+                    onChange={handleFileChange}
+                    className="mt-2"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-400 bg-red-900/20 p-3 rounded animate-pulse">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="text-sm text-green-400 bg-green-900/20 p-3 rounded animate-pulse">
+              {success}
+            </div>
+          )}
+
+          {extracaoPreview && (
+            <ExtracaoPreview
+              totalLinhas={extracaoPreview.totalLinhas}
+              preview={extracaoPreview.preview}
+            />
+          )}
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button type="submit" disabled={loading || !file} className="bg-white text-black hover:bg-gray-200 disabled:opacity-50">
+              {loading ? "Analisando..." : "Analisar Arquivo"}
+            </Button>
+          </motion.div>
+        </form>
+        </Card>
+      </motion.div>
+
+      {/* Seção de Mapeamento */}
+      <AnimatePresence>
+        {mostrarMapeamento && analise && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-6 mt-6 bg-black border border-white/20">
+              <MapeamentoColunas
+                colunas={analise.colunas}
+                mapeamento={analise.mapeamento}
+                preview={analise.preview}
+                colunasNaoMapeadas={analise.colunasNaoMapeadas}
+                confianca={analise.confianca}
+                mapeamentoSalvo={analise.mapeamentoSalvo}
+                onConfirmar={handleConfirmarUpload}
+                onCancelar={handleCancelarMapeamento}
+                tipo="ERP"
+              />
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="p-6 mt-6 bg-black border border-white/20">
+          <h2 className="text-lg font-semibold mb-4 text-white">Uploads Recentes</h2>
+          {uploads.length === 0 ? (
+            <p className="text-gray-400">Nenhum upload encontrado.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left p-2 text-white font-medium">Arquivo</th>
+                    <th className="text-left p-2 text-white font-medium">Período</th>
+                    <th className="text-left p-2 text-white font-medium">Linhas</th>
+                    <th className="text-left p-2 text-white font-medium">Data Upload</th>
+                    <th className="text-left p-2 text-white font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uploads.map((upload) => (
+                    <tr key={upload.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="p-2 text-gray-300">{upload.nomeArquivo}</td>
+                      <td className="p-2 text-gray-300">{upload.periodo}</td>
+                      <td className="p-2 text-gray-300">{upload.totalLinhas}</td>
+                      <td className="p-2 text-gray-300">
+                        {new Date(upload.createdAt).toLocaleString("pt-BR")}
+                      </td>
+                      <td className="p-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleDelete(upload.id)}
+                          variant="outline"
+                          className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card className="p-6 mt-6 bg-black border border-white/20">
+          <h2 className="text-lg font-semibold mb-4 text-white">Formato do Arquivo</h2>
+          <p className="text-sm text-gray-300 mb-2">
+            O arquivo deve conter as seguintes colunas:
+          </p>
+          <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
+          <li><strong>data:</strong> Data do lançamento (YYYY-MM-DD)</li>
+          <li><strong>descricao:</strong> Descrição do lançamento</li>
+          <li><strong>valor:</strong> Valor numérico</li>
+          <li><strong>tipo:</strong> CREDITO ou DEBITO</li>
+          <li><strong>documento:</strong> (opcional) Número do documento</li>
+          <li><strong>centroCusto:</strong> (opcional) Centro de custo</li>
+        </ul>
+        </Card>
+      </motion.div>
+    </div>
+  )
+}
