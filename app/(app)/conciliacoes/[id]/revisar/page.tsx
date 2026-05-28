@@ -31,15 +31,20 @@ interface ItemRevisao {
     descricao: string
     valor: number
     tipo: string
+    identificador?: string
   }
   status: "AUTO_CONFIRMADO" | "SUGERIDO" | "AMBIGUO" | "SEM_MATCH"
   confianca: "HIGH" | "MEDIUM" | "LOW"
   sugestoes: Sugestao[]
   erpPareado?: {
     id: string
+    data: string
     descricao: string
     valor: number
+    tipo: string
     documento?: string
+    fornecedor?: string
+    categoria?: string
   }
   diferencaValor?: number
 }
@@ -52,6 +57,8 @@ interface ErpSobrando {
     valor: number
     tipo: string
     documento?: string
+    fornecedor?: string
+    categoria?: string
   }
   status: "FALTANDO_BANCO"
 }
@@ -380,110 +387,144 @@ export default function RevisarConciliacaoPage() {
                   key={item.extrato.id}
                   className={`p-4 rounded border ${jaDecidido ? "border-white/10 bg-white/5" : "border-white/20 bg-white/[0.02]"}`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    {/* Extrato */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-500">{new Date(item.extrato.data).toLocaleDateString("pt-BR")}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${badge.className}`}>{badge.label}</span>
-                        {item.sugestoes[0] && !jaDecidido && (
-                          <span className={`text-xs font-medium ${getConfiancaBadge(item.sugestoes[0].confianca)}`}>
-                            Score: {item.sugestoes[0].score}%
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-white font-medium truncate">{item.extrato.descricao}</p>
-                      <p className="text-sm text-gray-400">
-                        R$ {item.extrato.valor.toFixed(2)} · {item.extrato.tipo}
-                      </p>
+                  <div className="space-y-4">
+                    {/* Header com status */}
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${badge.className}`}>{badge.label}</span>
+                      {item.sugestoes[0] && !jaDecidido && (
+                        <span className={`text-xs font-medium ${getConfiancaBadge(item.sugestoes[0].confianca)}`}>
+                          Score: {item.sugestoes[0].score}%
+                        </span>
+                      )}
+                      {item.diferencaValor !== undefined && item.diferencaValor > 0 && (
+                        <span className="text-xs text-red-400">Dif: R$ {item.diferencaValor.toFixed(2)}</span>
+                      )}
                     </div>
 
-                    {/* Sugestão / Ações */}
-                    <div className="flex-1 min-w-0">
+                    {/* Cards lado a lado */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Extrato */}
+                      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded">
+                        <h4 className="text-xs font-semibold text-blue-300 mb-2">EXTRATO</h4>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-gray-400">Data: <span className="text-white">{new Date(item.extrato.data).toLocaleDateString("pt-BR")}</span></p>
+                          <p className="text-gray-400">Descrição: <span className="text-white">{item.extrato.descricao}</span></p>
+                          <p className="text-gray-400">Valor: <span className="text-white">R$ {item.extrato.valor.toFixed(2)}</span></p>
+                          <p className="text-gray-400">Tipo: <span className="text-white">{item.extrato.tipo}</span></p>
+                          {item.extrato.identificador && (
+                            <p className="text-gray-400">ID: <span className="text-white">{item.extrato.identificador}</span></p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ERP */}
                       {item.status === "AUTO_CONFIRMADO" && item.erpPareado ? (
-                        <div className="text-sm">
-                          <p className="text-green-400 font-medium">{item.erpPareado.descricao}</p>
-                          <p className="text-gray-500">R$ {item.erpPareado.valor.toFixed(2)} · Score: {item.sugestoes[0]?.score}%</p>
-                          {item.sugestoes[0]?.explicacoes.map((exp, i) => (
-                            <span key={i} className="inline-block text-xs text-green-500/80 mr-2">{exp}</span>
-                          ))}
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded">
+                          <h4 className="text-xs font-semibold text-green-300 mb-2">ERP (MATCH)</h4>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-gray-400">Data: <span className="text-white">{new Date(item.erpPareado.data).toLocaleDateString("pt-BR")}</span></p>
+                            <p className="text-gray-400">Descrição: <span className="text-white">{item.erpPareado.descricao}</span></p>
+                            <p className="text-gray-400">Valor: <span className="text-white">R$ {item.erpPareado.valor.toFixed(2)}</span></p>
+                            <p className="text-gray-400">Tipo: <span className="text-white">{item.erpPareado.tipo}</span></p>
+                            {item.erpPareado.documento && (
+                              <p className="text-gray-400">Doc: <span className="text-white">{item.erpPareado.documento}</span></p>
+                            )}
+                            {item.erpPareado.fornecedor && (
+                              <p className="text-gray-400">Fornecedor: <span className="text-white">{item.erpPareado.fornecedor}</span></p>
+                            )}
+                            {item.erpPareado.categoria && (
+                              <p className="text-gray-400">Categoria: <span className="text-white">{item.erpPareado.categoria}</span></p>
+                            )}
+                          </div>
                         </div>
                       ) : d?.status === "REJEITADO" ? (
-                        <p className="text-sm text-red-400">Rejeitado</p>
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded">
+                          <h4 className="text-xs font-semibold text-red-300 mb-2">REJEITADO</h4>
+                          <p className="text-sm text-red-400">Match rejeitado pelo usuário</p>
+                        </div>
                       ) : d?.erpId ? (
-                        <div className="text-sm">
-                          <p className="text-green-400 font-medium">{item.sugestoes.find(s => s.entradaOrigemId === d.erpId)?.explicacoes.join(" · ") || "Match confirmado"}</p>
-                          <p className="text-gray-500">Score: {d.score}%</p>
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded">
+                          <h4 className="text-xs font-semibold text-green-300 mb-2">ERP (CONFIRMADO)</h4>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-gray-400">Score: <span className="text-white">{d.score}%</span></p>
+                            <p className="text-gray-400">Explicações: <span className="text-white">{item.sugestoes.find(s => s.entradaOrigemId === d.erpId)?.explicacoes.join(" · ") || "Match confirmado"}</span></p>
+                          </div>
                         </div>
                       ) : item.sugestoes.length > 0 ? (
-                        <div className="text-sm space-y-1">
-                          <p className="text-yellow-400 font-medium">{item.sugestoes[0].explicacoes.join(" · ")}</p>
-                          <p className="text-gray-500">Score: {item.sugestoes[0].score}%</p>
-                          {item.sugestoes.length > 1 && (
-                            <div className="relative inline-block">
-                              <select
-                                onChange={(e) => {
-                                  if (e.target.value) trocarSugestao(item, e.target.value)
-                                }}
-                                className="text-xs bg-black border border-white/20 text-white rounded p-1"
-                                defaultValue=""
-                              >
-                                <option value="" disabled>Trocar sugestão...</option>
-                                {item.sugestoes.map(s => (
-                                  <option key={s.entradaOrigemId} value={s.entradaOrigemId}>
-                                    {s.explicacoes[0]} — {s.score}%
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
+                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded">
+                          <h4 className="text-xs font-semibold text-yellow-300 mb-2">ERP SUGERIDO</h4>
+                          <div className="space-y-1 text-sm">
+                            <p className="text-gray-400">Score: <span className="text-white">{item.sugestoes[0].score}%</span></p>
+                            <p className="text-gray-400">Explicações: <span className="text-white">{item.sugestoes[0].explicacoes.join(" · ")}</span></p>
+                            {item.sugestoes.length > 1 && (
+                              <div className="relative inline-block mt-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value) trocarSugestao(item, e.target.value)
+                                  }}
+                                  className="text-xs bg-black border border-white/20 text-white rounded p-1"
+                                  defaultValue=""
+                                >
+                                  <option value="" disabled>Trocar sugestão...</option>
+                                  {item.sugestoes.map(s => (
+                                    <option key={s.entradaOrigemId} value={s.entradaOrigemId}>
+                                      {s.explicacoes[0]} — {s.score}%
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">Nenhum candidato encontrado</p>
+                        <div className="p-3 bg-gray-500/10 border border-gray-500/20 rounded">
+                          <h4 className="text-xs font-semibold text-gray-300 mb-2">SEM MATCH</h4>
+                          <p className="text-sm text-gray-500">Nenhum candidato encontrado</p>
+                        </div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Botões de ação */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!jaDecidido && item.status !== "AUTO_CONFIRMADO" && (
-                        <>
-                          {item.sugestoes.length > 0 && (
-                            <Button
-                              size="sm"
-                              onClick={() => confirmarSugerido(item)}
-                              className="h-8 px-2 bg-green-600 hover:bg-green-500"
-                              title="Confirmar"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                          )}
+                  {/* Botões de ação */}
+                  <div className="flex items-center gap-1 shrink-0 mt-4">
+                    {!jaDecidido && item.status !== "AUTO_CONFIRMADO" && (
+                      <>
+                        {item.sugestoes.length > 0 && (
                           <Button
                             size="sm"
-                            onClick={() => rejeitar(item)}
-                            variant="outline"
-                            className="h-8 px-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
-                            title="Rejeitar"
+                            onClick={() => confirmarSugerido(item)}
+                            className="h-8 px-2 bg-green-600 hover:bg-green-500"
+                            title="Confirmar"
                           >
-                            <X className="w-4 h-4" />
+                            <Check className="w-4 h-4" />
                           </Button>
-                        </>
-                      )}
-                      {jaDecidido && (
+                        )}
                         <Button
                           size="sm"
-                          onClick={() => {
-                            const nd = { ...decisoes }
-                            delete nd[item.extrato.id]
-                            setDecisoes(nd)
-                          }}
+                          onClick={() => rejeitar(item)}
                           variant="outline"
-                          className="h-8 px-2 border-white/20 text-white hover:bg-white/10"
-                          title="Desfazer"
+                          className="h-8 px-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          title="Rejeitar"
                         >
-                          Desfazer
+                          <X className="w-4 h-4" />
                         </Button>
-                      )}
-                    </div>
+                      </>
+                    )}
+                    {jaDecidido && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          const nd = { ...decisoes }
+                          delete nd[item.extrato.id]
+                          setDecisoes(nd)
+                        }}
+                        variant="outline"
+                        className="h-8 px-2 border-white/20 text-white hover:bg-white/10"
+                        title="Desfazer"
+                      >
+                        Desfazer
+                      </Button>
+                    )}
                   </div>
                 </div>
               )
@@ -499,14 +540,16 @@ export default function RevisarConciliacaoPage() {
             <h2 className="text-lg font-semibold text-purple-300 mb-4">Lançamentos ERP sem correspondência no extrato ({erpsSobrando.length})</h2>
             <div className="space-y-2">
               {erpsSobrando.map((item, idx) => (
-                <div key={idx} className="p-3 bg-purple-500/10 border border-purple-500/20 rounded flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm text-white">{item.erp.descricao}</p>
-                    <p className="text-xs text-purple-300">
+                <div key={idx} className="p-3 bg-purple-500/10 border border-purple-500/20 rounded">
+                  <div className="space-y-1 text-sm">
+                    <p className="text-white">{item.erp.descricao}</p>
+                    <p className="text-purple-300">
                       {new Date(item.erp.data).toLocaleDateString('pt-BR')} • {item.erp.tipo} • R$ {Number(item.erp.valor).toFixed(2)}
                     </p>
+                    {item.erp.documento && <p className="text-purple-300">Doc: {item.erp.documento}</p>}
+                    {item.erp.fornecedor && <p className="text-purple-300">Fornecedor: {item.erp.fornecedor}</p>}
+                    {item.erp.categoria && <p className="text-purple-300">Categoria: {item.erp.categoria}</p>}
                   </div>
-                  <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">Sem match</span>
                 </div>
               ))}
             </div>

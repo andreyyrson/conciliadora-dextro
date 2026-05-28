@@ -72,53 +72,95 @@ export async function GET(
     // Gerar sugestões
     const resultado = gerarSugestoes(erpEntradas, extratoEntradas)
 
-    // Filtrar apenas inconsistências (não auto-confirmados)
-    const inconsistencias = resultado.itens.filter(
-      i => i.status !== "AUTO_CONFIRMADO"
-    )
+    // Buscar itens da conciliação para obter status final e quem aprovou
+    const conciliacaoItens = await prisma.conciliacaoItem.findMany({
+      where: { conciliacaoId: id },
+      include: {
+        erp: true,
+        extrato: true,
+        extratoImportado: true
+      }
+    })
 
-    // Criar planilha
-    const rows = inconsistencias.map((item, idx) => {
+    // Criar mapa de decisões por extratoId
+    const decisoesMap = new Map()
+    conciliacaoItens.forEach(item => {
+      const extratoId = item.extratoId || item.extratoImportadoId
+      if (extratoId) {
+        decisoesMap.set(extratoId, {
+          status: item.status,
+          resolvidoPor: item.resolvidoPor,
+          resolvidoEm: item.resolvidoEm
+        })
+      }
+    })
+
+    // Buscar nomes dos usuários que aprovaram
+    const userIds = [...new Set(conciliacaoItens.map(i => i.resolvidoPor).filter(Boolean))]
+    const usuarios = await prisma.user.findMany({
+      where: { id: { in: userIds as string[] } },
+      select: { id: true, name: true, email: true }
+    })
+    const usuarioMap = new Map(usuarios.map(u => [u.id, u.name || u.email]))
+
+    // Exportar TODOS os itens
+    const rows = resultado.itens.map((item, idx) => {
       const extrato = item.extrato
       const topSugestao = item.sugestoes[0]
       const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
+      const decisao = decisoesMap.get(extrato.id)
 
       return {
         "#": idx + 1,
+        "Status Final": decisao?.status || item.status,
+        "Aprovado Por": decisao?.resolvidoPor ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor : "",
+        "Data Aprovação": decisao?.resolvidoEm ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR") : "",
+        // Dados do Extrato
         "Data Extrato": new Date(extrato.data).toLocaleDateString("pt-BR"),
         "Descrição Extrato": extrato.descricao,
         "Valor Extrato": extrato.valor,
         "Tipo Extrato": extrato.tipo,
-        "Status": item.status,
-        "Confiança": item.confianca,
+        "ID Extrato": extrato.identificador || "",
+        // Dados do ERP
+        "Data ERP": erpSugerido ? new Date(erpSugerido.data).toLocaleDateString("pt-BR") : "",
+        "Descrição ERP": erpSugerido?.descricao || "",
+        "Valor ERP": erpSugerido?.valor || 0,
+        "Tipo ERP": erpSugerido?.tipo || "",
+        "Documento ERP": erpSugerido?.documento || "",
+        "Fornecedor ERP": erpSugerido?.fornecedor || "",
+        "Categoria ERP": erpSugerido?.categoria || "",
+        // Matching
         "Score": topSugestao?.score || 0,
-        "Explicações": topSugestao?.explicacoes.join("; ") || "",
-        "ERP Sugerido ID": erpSugerido?.id || "",
-        "ERP Sugerido Descrição": erpSugerido?.descricao || "",
-        "ERP Sugerido Valor": erpSugerido?.valor || 0,
-        "ERP Sugerido Documento": erpSugerido?.documento || ""
+        "Confiança": item.confianca,
+        "Explicações": topSugestao?.explicacoes.join("; ") || ""
       }
     })
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Inconsistências")
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Conciliação")
 
     // Ajustar largura das colunas
     const colWidths = [
       { wch: 5 },   // #
+      { wch: 20 },  // Status Final
+      { wch: 25 },  // Aprovado Por
+      { wch: 20 },  // Data Aprovação
       { wch: 12 },  // Data Extrato
       { wch: 40 },  // Descrição Extrato
       { wch: 12 },  // Valor Extrato
       { wch: 10 },  // Tipo Extrato
-      { wch: 15 },  // Status
-      { wch: 10 },  // Confiança
+      { wch: 15 },  // ID Extrato
+      { wch: 12 },  // Data ERP
+      { wch: 40 },  // Descrição ERP
+      { wch: 12 },  // Valor ERP
+      { wch: 10 },  // Tipo ERP
+      { wch: 20 },  // Documento ERP
+      { wch: 25 },  // Fornecedor ERP
+      { wch: 20 },  // Categoria ERP
       { wch: 8 },   // Score
-      { wch: 50 },  // Explicações
-      { wch: 30 },  // ERP Sugerido ID
-      { wch: 40 },  // ERP Sugerido Descrição
-      { wch: 12 },  // ERP Sugerido Valor
-      { wch: 20 }   // ERP Sugerido Documento
+      { wch: 10 },  // Confiança
+      { wch: 50 }   // Explicações
     ]
     worksheet["!cols"] = colWidths
 
@@ -127,7 +169,7 @@ export async function GET(
     return new NextResponse(buffer as ArrayBuffer, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="inconsistencias-${conciliacao.periodo}.xlsx"`
+        "Content-Disposition": `attachment; filename="conciliacao-${conciliacao.periodo}.xlsx"`
       }
     })
   } catch (error) {
