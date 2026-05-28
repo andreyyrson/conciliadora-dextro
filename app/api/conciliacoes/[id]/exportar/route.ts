@@ -130,10 +130,26 @@ export async function GET(
     // Se foram fornecidas decisões extras (antes de confirmar), sobrescrever
     if (decisoesExtras) {
       Object.entries(decisoesExtras).forEach(([extratoId, d]: [string, any]) => {
+        // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
+        let statusFinal = d.status
+        let resolvidoPor = null
+        let resolvidoEm = null
+
+        const resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
+
+        if (!resolvidoManualmente && d.confianca === "HIGH" && d.score >= 80) {
+          statusFinal = "AUTO_CONFIRMADO"
+          resolvidoPor = session.user.id
+          resolvidoEm = new Date()
+        } else if (resolvidoManualmente) {
+          resolvidoPor = session.user.id
+          resolvidoEm = new Date()
+        }
+
         decisoesMap.set(extratoId, {
-          status: d.status,
-          resolvidoPor: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? session.user.id : null,
-          resolvidoEm: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? new Date() : null
+          status: statusFinal,
+          resolvidoPor,
+          resolvidoEm
         })
       })
     }
