@@ -210,7 +210,7 @@ export default function DashboardPage() {
                         <Circle className="w-4 h-4 text-gray-600" />
                       )}
                       <span className={status.temContas ? "text-green-400" : "text-gray-500"}>
-                        Contas bancárias ({status.qtdContas})
+                        Contas bancárias Open Finance ({status.qtdContas})
                       </span>
                       {!status.temContas && (
                         <Button
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                         <Circle className="w-4 h-4 text-gray-600" />
                       )}
                       <span className={status.temImportacoes ? "text-green-400" : "text-gray-500"}>
-                        Importações de extrato ({status.qtdImportacoes})
+                        Importações de extrato CSV/OFX ({status.qtdImportacoes})
                       </span>
                       {!status.temImportacoes && !status.temContas && (
                         <Button
@@ -319,7 +319,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3 text-sm">
               <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">2</div>
-              <span className="text-gray-300">Configurar contas bancárias (Open Finance)</span>
+              <span className="text-gray-300">Configurar contas bancárias via Open Finance (opcional)</span>
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </div>
             <div className="flex items-center gap-3 text-sm">
@@ -329,7 +329,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3 text-sm">
               <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">4</div>
-              <span className="text-gray-300">Importar extrato bancário (CSV/OFX)</span>
+              <span className="text-gray-300">Importar extrato bancário via Open Finance OU CSV/OFX</span>
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </div>
             <div className="flex items-center gap-3 text-sm">
@@ -341,6 +341,9 @@ export default function DashboardPage() {
               <div className="w-6 h-6 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold">6</div>
               <span className="text-gray-300">Exportar relatório em Excel</span>
             </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-white/10 text-xs text-gray-400">
+            <p>💡 Você pode usar Open Finance para extrato automático OU importar manualmente via CSV/OFX</p>
           </div>
         </Card>
       </motion.div>
