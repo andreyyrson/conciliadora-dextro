@@ -252,6 +252,7 @@ export default function ConciliacoesPage() {
               value={selectedEmpresa}
               onChange={(e) => {
                 const newEmpresaId = e.target.value
+                console.log("Empresa selecionada no dropdown:", newEmpresaId)
                 setSelectedEmpresa(newEmpresaId)
                 setEmpresa(newEmpresaId) // Atualizar hook também
                 fetchConciliacoes(newEmpresaId)
