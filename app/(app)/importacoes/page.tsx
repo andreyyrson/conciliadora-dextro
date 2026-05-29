@@ -31,6 +31,7 @@ export default function ImportacoesPage() {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
+      console.log("Empresas recebidas (importacoes):", data)
       setEmpresas(data.empresas || [])
       if (data.empresas && data.empresas.length > 0) {
         setSelectedEmpresa(data.empresas[0].id)

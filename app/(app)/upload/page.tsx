@@ -58,6 +58,7 @@ export default function UploadPage() {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
+      console.log("Empresas recebidas (upload):", data)
       setEmpresas(data.empresas || [])
       if (data.empresas?.length > 0 && !selectedEmpresa) {
         setSelectedEmpresa(data.empresas[0].id)
