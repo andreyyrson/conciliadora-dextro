@@ -7,11 +7,11 @@ import { LayoutDashboard, FileText, Building2, Download, Upload, Building } from
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/conciliacoes', label: 'Conciliações', icon: FileText },
-  { href: '/contas', label: 'Contas Bancárias', icon: Building2 },
-  { href: '/importacoes', label: 'Importações', icon: Download },
-  { href: '/upload', label: 'Upload ERP', icon: Upload },
   { href: '/empresas', label: 'Empresas', icon: Building },
+  { href: '/contas', label: 'Contas Bancárias', icon: Building2 },
+  { href: '/upload', label: 'Upload ERP', icon: Upload },
+  { href: '/importacoes', label: 'Importações', icon: Download },
+  { href: '/conciliacoes', label: 'Conciliações', icon: FileText },
 ]
 
 export function Sidebar() {
