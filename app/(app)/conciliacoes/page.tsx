@@ -118,6 +118,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/upload?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Uploads recebidos:", data)
       setUploads(data.uploads || [])
     } catch (error) {
       console.error("Erro ao buscar uploads:", error)
@@ -128,6 +129,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/contas?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Contas recebidas:", data)
       setContas(data.contas || [])
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
