@@ -107,6 +107,7 @@ export default function ConciliacoesPage() {
       setEmpresas(data.empresas || [])
       if (data.empresas?.length > 0 && !selectedEmpresa) {
         setSelectedEmpresa(data.empresas[0].id)
+        setEmpresa(data.empresas[0].id) // Atualizar hook também
         fetchConciliacoes(data.empresas[0].id)
       }
     } catch (error) {
