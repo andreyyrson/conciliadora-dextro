@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Check, ArrowRight, ArrowLeft, MousePointerClick } from "lucide-react"
+import { AlertCircle, Check, ArrowRight, ArrowLeft, MousePointerClick, Sparkles, ChevronDown, ChevronUp } from "lucide-react"
 
 interface MapeamentoColunasProps {
   colunas: string[]
@@ -100,6 +100,7 @@ export function MapeamentoColunas({
 }: MapeamentoColunasProps) {
   const [mapeamentoLocal, setMapeamentoLocal] = useState<{ [campo: string]: string | null }>(mapeamento)
   const [mostrarTratado, setMostrarTratado] = useState(false)
+  const [expandedCampo, setExpandedCampo] = useState<string | null>(null)
 
   // Inverte o mapeamento: coluna original -> campo do sistema
   const colunaParaCampo = useMemo(() => {
@@ -160,36 +161,43 @@ export function MapeamentoColunas({
   }, [mapeamentoLocal])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <MousePointerClick className="w-5 h-5 text-blue-400" />
-            {mostrarTratado ? "Preview da Tabela Tratada" : "Arquivo do Cliente — Mapeie as Colunas"}
+          <h3 className="text-xl font-bold text-white flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg">
+              {mostrarTratado ? (
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              ) : (
+                <MousePointerClick className="w-5 h-5 text-blue-400" />
+              )}
+            </div>
+            {mostrarTratado ? "Preview da Tabela Tratada" : "Mapeamento de Colunas"}
           </h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-gray-400 mt-2">
             {mostrarTratado
               ? "Esta é a tabela após o mapeamento. Verifique se está correta."
-              : `Clique no header de cada coluna para indicar o que ela representa. ${preview.length} registros no arquivo.`}
+              : `Selecione o campo do sistema para cada coluna do arquivo. ${preview.length} registros no arquivo.`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {mapeamentoSalvo && (
-            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
-              Mapeamento anterior recuperado
+            <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+              <Check className="w-3 h-3" />
+              Mapeamento recuperado
             </span>
           )}
           <Button
             onClick={() => setMostrarTratado(!mostrarTratado)}
             variant="outline"
             size="sm"
-            className="border-white/20 text-white hover:bg-white/10"
+            className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
           >
             {mostrarTratado ? (
-              <><ArrowLeft className="w-4 h-4 mr-1" /> Voltar ao Mapeamento</>
+              <><ArrowLeft className="w-4 h-4 mr-2" /> Voltar</>
             ) : (
-              <><ArrowRight className="w-4 h-4 mr-1" /> Ver Tratado</>
+              <><ArrowRight className="w-4 h-4 mr-2" /> Ver Preview</>
             )}
           </Button>
         </div>
@@ -197,13 +205,15 @@ export function MapeamentoColunas({
 
       {/* Alerta campos obrigatórios */}
       {!mostrarTratado && camposObrigatoriosPendentes.length > 0 && (
-        <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-          <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
-          <div className="text-sm text-yellow-300">
-            <strong>Campos obrigatórios pendentes:</strong>{" "}
-            {camposObrigatoriosPendentes.map(c => c === "data" ? "📅 Data" : "💰 Valor").join(", ")}
-            <p className="text-xs text-yellow-400/70 mt-1">
-              Clique no header das colunas do arquivo e selecione o campo correspondente.
+        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <strong className="text-yellow-300">Campos obrigatórios pendentes:</strong>{" "}
+            <span className="text-yellow-200/80">
+              {camposObrigatoriosPendentes.map(c => c === "data" ? "📅 Data" : "💰 Valor").join(", ")}
+            </span>
+            <p className="text-xs text-yellow-400/70 mt-1.5">
+              Selecione o campo correspondente no dropdown de cada coluna.
             </p>
           </div>
         </div>
@@ -215,8 +225,9 @@ export function MapeamentoColunas({
           {Object.entries(mapeamentoLocal)
             .filter(([, coluna]) => coluna !== null)
             .map(([campo]) => (
-              <span key={campo} className={`text-xs px-2 py-1 rounded border ${CAMPO_CORES[campo] || ""}`}>
-                {LABEL_CURTO[campo]} → {mapeamentoLocal[campo]}
+              <span key={campo} className={`text-xs px-3 py-1.5 rounded-full border ${CAMPO_CORES[campo] || ""} flex items-center gap-1.5`}>
+                <Check className="w-3 h-3" />
+                {LABEL_CURTO[campo]}
               </span>
             ))}
         </div>
@@ -224,10 +235,10 @@ export function MapeamentoColunas({
 
       {/* TABELA ORIGINAL — para mapeamento */}
       {!mostrarTratado && (
-        <div className="border border-white/10 rounded-lg overflow-hidden">
+        <div className="border border-white/10 rounded-xl overflow-hidden shadow-lg shadow-black/20">
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10">
+              <thead className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm">
                 <tr>
                   {colunas.map(coluna => {
                     const campoAtribuido = colunaParaCampo[coluna]
@@ -235,24 +246,24 @@ export function MapeamentoColunas({
                     return (
                       <th
                         key={coluna}
-                        className={`p-2 text-left min-w-[140px] border-b border-white/10 ${
+                        className={`p-3 text-left min-w-[160px] border-b border-white/10 ${
                           campoAtribuido
-                            ? `${cor} border-l border-r`
-                            : "bg-white/10 text-gray-300"
+                            ? `${cor} border-l-2 border-r-2`
+                            : "bg-white/5 text-gray-300"
                         }`}
                       >
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <div className="font-mono text-xs text-gray-400 truncate" title={coluna}>
                             {coluna}
                           </div>
                           <select
                             value={campoAtribuido || "__null__"}
                             onChange={(e) => handleAtribuirCampo(coluna, e.target.value)}
-                            className={`w-full text-xs rounded px-1.5 py-1 border ${
+                            className={`w-full text-xs rounded-lg px-2 py-2 border transition-all ${
                               campoAtribuido
-                                ? `${cor} font-medium`
-                                : "bg-black/50 border-white/20 text-gray-400"
-                            } focus:outline-none focus:ring-1 focus:ring-white/30 cursor-pointer`}
+                                ? `${cor} font-medium shadow-sm`
+                                : "bg-black/50 border-white/20 text-gray-400 hover:border-white/30"
+                            } focus:outline-none focus:ring-2 focus:ring-white/20 cursor-pointer`}
                           >
                             {TODOS_CAMPOS.map(c => (
                               <option key={c.key} value={c.key}>{c.label}</option>
@@ -266,14 +277,14 @@ export function MapeamentoColunas({
               </thead>
               <tbody>
                 {preview.map((linha, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     {colunas.map(coluna => {
                       const campo = colunaParaCampo[coluna]
                       return (
                         <td
                           key={coluna}
-                          className={`p-2 text-gray-300 text-xs whitespace-nowrap ${
-                            campo ? "bg-white/[0.02]" : ""
+                          className={`p-3 text-gray-300 text-xs whitespace-nowrap ${
+                            campo ? "bg-white/[0.03]" : ""
                           }`}
                         >
                           {String(linha[coluna] ?? "")}
@@ -290,18 +301,19 @@ export function MapeamentoColunas({
 
       {/* TABELA TRATADA — preview do resultado */}
       {mostrarTratado && (
-        <div className="border border-white/10 rounded-lg overflow-hidden">
-          <div className="bg-green-500/10 px-4 py-2 border-b border-green-500/20">
-            <span className="text-sm font-medium text-green-300">
+        <div className="border border-white/10 rounded-xl overflow-hidden shadow-lg shadow-black/20">
+          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 px-4 py-3 border-b border-green-500/20">
+            <span className="text-sm font-medium text-green-300 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
               Preview do resultado após mapeamento — {preview.length} registros
             </span>
           </div>
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0">
-                <tr className="border-b border-white/10 bg-white/10">
+              <thead className="sticky top-0 bg-black/80 backdrop-blur-sm">
+                <tr className="border-b border-white/10 bg-white/5">
                   {colunasTratadas.map((header) => (
-                    <th key={header} className="text-left p-2 text-gray-200 font-medium whitespace-nowrap">
+                    <th key={header} className="text-left p-3 text-gray-200 font-medium whitespace-nowrap">
                       {header}
                     </th>
                   ))}
@@ -309,9 +321,9 @@ export function MapeamentoColunas({
               </thead>
               <tbody>
                 {previewTratado.map((linha, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     {colunasTratadas.map((header) => (
-                      <td key={header} className="p-2 text-gray-300 text-xs whitespace-nowrap">
+                      <td key={header} className="p-3 text-gray-300 text-xs whitespace-nowrap">
                         {linha[header] || <span className="text-gray-600 italic">—</span>}
                       </td>
                     ))}
@@ -324,12 +336,12 @@ export function MapeamentoColunas({
       )}
 
       {/* Ações */}
-      <div className="flex items-center gap-3 pt-2">
+      <div className="flex items-center gap-3 pt-4">
         {!mostrarTratado ? (
           <>
             <Button
               onClick={() => setMostrarTratado(true)}
-              className="bg-white text-black hover:bg-white/90 disabled:opacity-50"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
               disabled={!podeConfirmar}
             >
               <ArrowRight className="w-4 h-4 mr-2" />
@@ -338,7 +350,7 @@ export function MapeamentoColunas({
             <Button
               onClick={onCancelar}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
             >
               Cancelar
             </Button>
@@ -347,7 +359,7 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => onConfirmar(mapeamentoLocal)}
-              className="bg-green-500 text-black hover:bg-green-400"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
             >
               <Check className="w-4 h-4 mr-2" />
               Confirmar e Salvar
@@ -355,7 +367,7 @@ export function MapeamentoColunas({
             <Button
               onClick={() => setMostrarTratado(false)}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10"
+              className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Mapeamento
