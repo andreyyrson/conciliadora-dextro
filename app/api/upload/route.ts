@@ -10,6 +10,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
+    console.log("GET /api/upload - empresaId:", empresaId)
+
     if (!empresaId) {
       return NextResponse.json(
         { error: "empresaId é obrigatório" },
@@ -21,6 +23,8 @@ export async function GET(req: Request) {
       where: { empresaId },
       orderBy: { createdAt: "desc" }
     })
+
+    console.log("Uploads encontrados:", uploads.length)
 
     return NextResponse.json({ uploads })
   } catch (error) {
