@@ -17,6 +17,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
+    console.log("GET /api/importacoes - empresaId:", empresaId)
+
     if (!empresaId) {
       return NextResponse.json(
         { error: "empresaId é obrigatório" },
@@ -34,6 +36,8 @@ export async function GET(req: Request) {
         }
       }
     })
+
+    console.log("Importações encontradas:", importacoes.length)
 
     return NextResponse.json({ importacoes })
   } catch (error) {
