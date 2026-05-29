@@ -14,16 +14,21 @@ export async function GET(req: Request) {
       )
     }
 
+    console.log("Buscando empresas para userId:", session.user.id)
+
     const empresas = await prisma.empresa.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" }
     })
 
+    console.log("Empresas encontradas:", empresas.length)
+
     return NextResponse.json({ empresas })
   } catch (error) {
     console.error("Erro ao buscar empresas:", error)
+    console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { error: "Erro ao buscar empresas" },
+      { error: "Erro ao buscar empresas", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
