@@ -2,9 +2,16 @@
 
 import { signOut, useSession } from "next-auth/react"
 import { motion } from "framer-motion"
+import { useEmpresa } from "@/lib/use-empresa"
 
 export function Header() {
   const { data: session } = useSession()
+  const { clearEmpresa } = useEmpresa()
+
+  const handleSignOut = () => {
+    clearEmpresa()
+    signOut({ callbackUrl: "/" })
+  }
 
   return (
     <header className="border-b border-white/20 bg-black h-16 flex items-center justify-between px-6">
@@ -17,7 +24,7 @@ export function Header() {
         <motion.button 
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={handleSignOut}
           className="text-sm text-gray-300 hover:text-white transition-colors"
         >
           Sair
