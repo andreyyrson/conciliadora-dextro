@@ -292,8 +292,9 @@ export default function ConciliacoesPage() {
               Fonte do Extrato *
             </label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="modo-conta" className="flex items-center gap-2 cursor-pointer">
                 <input
+                  id="modo-conta"
                   type="radio"
                   name="modoExtrato"
                   value="conta"
@@ -303,8 +304,9 @@ export default function ConciliacoesPage() {
                 />
                 <span className="text-gray-300">Conta Bancária (Open Finance)</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="modo-importacao" className="flex items-center gap-2 cursor-pointer">
                 <input
+                  id="modo-importacao"
                   type="radio"
                   name="modoExtrato"
                   value="importacao"
