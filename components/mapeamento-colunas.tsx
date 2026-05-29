@@ -166,11 +166,11 @@ export function MapeamentoColunas({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-lg">
+            <div className="p-2 bg-white/10 rounded-lg">
               {mostrarTratado ? (
-                <Sparkles className="w-5 h-5 text-purple-400" />
+                <Sparkles className="w-5 h-5 text-white" />
               ) : (
-                <MousePointerClick className="w-5 h-5 text-blue-400" />
+                <MousePointerClick className="w-5 h-5 text-white" />
               )}
             </div>
             {mostrarTratado ? "Preview da Tabela Tratada" : "Mapeamento de Colunas"}
@@ -183,7 +183,7 @@ export function MapeamentoColunas({
         </div>
         <div className="flex items-center gap-3">
           {mapeamentoSalvo && (
-            <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+            <span className="text-xs text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
               <Check className="w-3 h-3" />
               Mapeamento recuperado
             </span>
@@ -205,14 +205,14 @@ export function MapeamentoColunas({
 
       {/* Alerta campos obrigatórios */}
       {!mostrarTratado && camposObrigatoriosPendentes.length > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl">
-          <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-white mt-0.5 shrink-0" />
           <div className="text-sm">
-            <strong className="text-yellow-300">Campos obrigatórios pendentes:</strong>{" "}
-            <span className="text-yellow-200/80">
+            <strong className="text-white">Campos obrigatórios pendentes:</strong>{" "}
+            <span className="text-gray-300">
               {camposObrigatoriosPendentes.map(c => c === "data" ? "📅 Data" : "💰 Valor").join(", ")}
             </span>
-            <p className="text-xs text-yellow-400/70 mt-1.5">
+            <p className="text-xs text-gray-400 mt-1.5">
               Selecione o campo correspondente no dropdown de cada coluna.
             </p>
           </div>
@@ -302,8 +302,8 @@ export function MapeamentoColunas({
       {/* TABELA TRATADA — preview do resultado */}
       {mostrarTratado && (
         <div className="border border-white/10 rounded-xl overflow-hidden shadow-lg shadow-black/20">
-          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 px-4 py-3 border-b border-green-500/20">
-            <span className="text-sm font-medium text-green-300 flex items-center gap-2">
+          <div className="bg-white/5 px-4 py-3 border-b border-white/10">
+            <span className="text-sm font-medium text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4" />
               Preview do resultado após mapeamento — {preview.length} registros
             </span>
@@ -341,7 +341,7 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => setMostrarTratado(true)}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+              className="bg-white text-black hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!podeConfirmar}
             >
               <ArrowRight className="w-4 h-4 mr-2" />
@@ -359,7 +359,7 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => onConfirmar(mapeamentoLocal)}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg shadow-green-500/20"
+              className="bg-white text-black hover:bg-white/90"
             >
               <Check className="w-4 h-4 mr-2" />
               Confirmar e Salvar
