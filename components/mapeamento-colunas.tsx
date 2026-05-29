@@ -341,7 +341,7 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => setMostrarTratado(true)}
-              className="bg-white text-black hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="!bg-white !text-black hover:!bg-white/90 disabled:!opacity-50 disabled:!cursor-not-allowed"
               disabled={!podeConfirmar}
             >
               <ArrowRight className="w-4 h-4 mr-2" />
@@ -350,7 +350,7 @@ export function MapeamentoColunas({
             <Button
               onClick={onCancelar}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
+              className="!border-white/20 !text-white hover:!bg-white/10 hover:!border-white/30 transition-all"
             >
               Cancelar
             </Button>
@@ -359,7 +359,7 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => onConfirmar(mapeamentoLocal)}
-              className="bg-white text-black hover:bg-white/90"
+              className="!bg-white !text-black hover:!bg-white/90"
             >
               <Check className="w-4 h-4 mr-2" />
               Confirmar e Salvar
@@ -367,7 +367,7 @@ export function MapeamentoColunas({
             <Button
               onClick={() => setMostrarTratado(false)}
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
+              className="!border-white/20 !text-white hover:!bg-white/10 hover:!border-white/30 transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Mapeamento
