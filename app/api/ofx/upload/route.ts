@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { prisma } from "@/lib/db"
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Não autenticado" },
+        { status: 401 }
+      )
+    }
+
     const formData = await req.formData()
     const file = formData.get("file") as File
     const empresaId = formData.get("empresaId") as string
@@ -19,6 +30,18 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Empresa não fornecida" },
         { status: 400 }
+      )
+    }
+
+    // Verificar se a empresa pertence ao usuário
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId }
+    })
+
+    if (!empresa || empresa.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Empresa não encontrada ou não pertence ao usuário" },
+        { status: 403 }
       )
     }
 
