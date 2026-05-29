@@ -154,6 +154,7 @@ export default function ConciliacoesPage() {
   }, [session])
 
   useEffect(() => {
+    console.log("useEffect disparado - empresaId:", empresaId)
     if (empresaId) {
       setSelectedEmpresa(empresaId)
       fetchConciliacoes(empresaId)
