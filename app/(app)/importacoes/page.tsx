@@ -6,6 +6,7 @@ import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
 import { motion, AnimatePresence } from "framer-motion"
 import { Trash2, FileText, Calendar, AlertTriangle } from "lucide-react"
 
@@ -118,19 +119,12 @@ export default function ImportacoesPage() {
             <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
               Empresa *
             </label>
-            <select
-              id="empresa"
+            <Select
+              options={empresas.map(e => ({ value: e.id, label: e.nome }))}
               value={selectedEmpresa}
-              onChange={(e) => setSelectedEmpresa(e.target.value)}
-              className="w-full p-2 border rounded bg-black border-white/20 text-white"
-            >
-              <option value="">Selecione uma empresa</option>
-              {empresas.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedEmpresa}
+              placeholder="Selecione uma empresa"
+            />
           </div>
 
           {error && (
