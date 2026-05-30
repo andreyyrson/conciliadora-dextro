@@ -454,8 +454,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoPluggy(true)}
-                className="!bg-white !text-black hover:!bg-gray-200"
-                style={{ backgroundColor: 'white', color: 'black' }}
+                className="bg-white text-black hover:bg-gray-200"
               >
                 Open Finance
               </Button>
@@ -463,8 +462,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoOFX(true)}
-                className="!bg-black !text-white !border !border-white/40 hover:!bg-white/10"
-                style={{ backgroundColor: 'black', color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+                className="bg-black text-white border border-white/40 hover:bg-white/10"
               >
                 Importar OFX
               </Button>
@@ -472,8 +470,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoCSV(true)}
-                className="!bg-black !text-white !border !border-white/40 hover:!bg-white/10"
-                style={{ backgroundColor: 'black', color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+                className="bg-black text-white border border-white/40 hover:bg-white/10"
               >
                 Importar CSV
               </Button>
@@ -481,8 +478,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoManual(true)}
-                className="!bg-black !text-white !border !border-white/40 hover:!bg-white/10"
-                style={{ backgroundColor: 'black', color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}
+                className="bg-black text-white border border-white/40 hover:bg-white/10"
               >
                 Adicionar Manualmente
               </Button>
@@ -518,8 +514,7 @@ export default function ContasPage() {
                 <Button
                   onClick={handleUploadOFX}
                   disabled={loading}
-                  className="!bg-white !text-black hover:!bg-gray-200"
-                  style={{ backgroundColor: 'white', color: 'black' }}
+                  className="bg-white text-black hover:bg-gray-200 disabled:opacity-50"
                 >
                   {loading ? "Processando..." : "Importar"}
                 </Button>
@@ -528,8 +523,7 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoOFX(false)}
                   variant="outline"
-                  className="!border-white/20 !text-white hover:!bg-white/10"
-                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -566,8 +560,7 @@ export default function ContasPage() {
                 <Button
                   onClick={handleAnalisarCSV}
                   disabled={loading || !csvFile}
-                  className="!bg-white !text-black hover:!bg-gray-200 disabled:!opacity-50"
-                  style={{ backgroundColor: 'white', color: 'black' }}
+                  className="bg-white text-black hover:bg-gray-200 disabled:opacity-50"
                 >
                   {loading ? "Analisando..." : "Analisar e Mapear Colunas"}
                 </Button>
@@ -576,8 +569,7 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoCSV(false)}
                   variant="outline"
-                  className="!border-white/20 !text-white hover:!bg-white/10"
-                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -706,8 +698,7 @@ export default function ContasPage() {
                 <Button
                   onClick={handleConectarPluggy}
                   disabled={loading || polling}
-                  className="!bg-white !text-black hover:!bg-gray-200"
-                  style={{ backgroundColor: 'white', color: 'black' }}
+                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {loading ? "Conectando..." : polling ? "Sincronizando..." : "Conectar"}
                 </Button>
@@ -716,8 +707,7 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoPluggy(false)}
                   variant="outline"
-                  className="!border-white/20 !text-white hover:!bg-white/10"
-                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -778,8 +768,7 @@ export default function ContasPage() {
                 <Button
                   onClick={handleAdicionarManual}
                   disabled={loading}
-                  className="!bg-white !text-black hover:!bg-gray-200"
-                  style={{ backgroundColor: 'white', color: 'black' }}
+                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {loading ? "Adicionando..." : "Adicionar Conta"}
                 </Button>
@@ -788,8 +777,7 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoManual(false)}
                   variant="outline"
-                  className="!border-white/20 !text-white hover:!bg-white/10"
-                  style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -846,8 +834,7 @@ export default function ContasPage() {
                         size="sm"
                         onClick={() => handleSincronizar(conta.id)}
                         disabled={loading}
-                        className="!bg-white !text-black hover:!bg-gray-200"
-                        style={{ backgroundColor: 'white', color: 'black' }}
+                        className="bg-white text-black hover:bg-gray-200"
                       >
                         Sincronizar
                       </Button>
@@ -856,8 +843,7 @@ export default function ContasPage() {
                         variant="outline"
                         onClick={() => setDeleteConfirm(conta.id)}
                         disabled={loading}
-                        className="!border-red-500/50 !text-red-400 hover:!bg-red-900/20"
-                        style={{ borderColor: 'rgba(239,68,68,0.5)', color: 'rgb(248,113,113)' }}
+                        className="border-red-500/50 text-red-400 hover:bg-red-900/20"
                       >
                         Excluir
                       </Button>
