@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion, AnimatePresence } from "framer-motion"
 import { Eye, Trash2, CheckCircle } from "lucide-react"
 
@@ -67,6 +68,8 @@ export default function ConciliacoesPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (showSuccessAnimation) {
@@ -88,9 +91,7 @@ export default function ConciliacoesPage() {
   }
 
   const handleDeletar = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta conciliação?")) {
-      return
-    }
+    setDeleting(true)
 
     try {
       const response = await fetch(`/api/conciliacoes/${id}`, {
@@ -98,14 +99,17 @@ export default function ConciliacoesPage() {
       })
 
       if (response.ok) {
+        setDeleteConfirm(null)
         fetchConciliacoes(selectedEmpresa)
       } else {
         const data = await response.json()
-        alert(data.error || "Erro ao deletar conciliação")
+        setError(data.error || "Erro ao deletar conciliação")
+        setDeleting(false)
       }
     } catch (error) {
       console.error("Erro ao deletar conciliação:", error)
-      alert("Erro ao deletar conciliação")
+      setError("Erro ao deletar conciliação")
+      setDeleting(false)
     }
   }
 
@@ -448,7 +452,7 @@ export default function ConciliacoesPage() {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => handleDeletar(conciliacao.id)}
+                        onClick={() => setDeleteConfirm(conciliacao.id)}
                         variant="outline"
                         className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
                       >
@@ -509,6 +513,17 @@ export default function ConciliacoesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDeletar(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja deletar esta conciliação? Esta ação não pode ser desfeita."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }

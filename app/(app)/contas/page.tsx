@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { MapeamentoColunas } from "@/components/mapeamento-colunas"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface ContaBancaria {
@@ -69,6 +70,8 @@ export default function ContasPage() {
   const [itemId, setItemId] = useState<string | null>(null)
   const [polling, setPolling] = useState(false)
   const [connectors, setConnectors] = useState<any[]>([])
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchContas = async (empresaId: string) => {
     try {
@@ -303,12 +306,8 @@ export default function ContasPage() {
   }
 
   const handleDeleteConta = async (contaId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta conta e todos os seus lançamentos?")) {
-      return
-    }
-
+    setDeleting(true)
     setError("")
-    setLoading(true)
 
     try {
       const response = await fetch(`/api/contas/${contaId}`, {
@@ -318,15 +317,16 @@ export default function ContasPage() {
       if (!response.ok) {
         const data = await response.json()
         setError(data.error || "Erro ao excluir conta")
-        setLoading(false)
+        setDeleting(false)
         return
       }
 
-      setLoading(false)
+      setDeleteConfirm(null)
       fetchContas(selectedEmpresa)
     } catch (error) {
       setError("Erro ao excluir conta")
-      setLoading(false)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -854,7 +854,7 @@ export default function ContasPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDeleteConta(conta.id)}
+                        onClick={() => setDeleteConfirm(conta.id)}
                         disabled={loading}
                         className="!border-red-500/50 !text-red-400 hover:!bg-red-900/20"
                         style={{ borderColor: 'rgba(239,68,68,0.5)', color: 'rgb(248,113,113)' }}
@@ -870,6 +870,17 @@ export default function ContasPage() {
         )}
         </Card>
       </motion.div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDeleteConta(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja excluir esta conta e todos os seus lançamentos? Esta ação não pode ser desfeita."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }

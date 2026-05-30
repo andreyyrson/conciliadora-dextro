@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
-import { motion, AnimatePresence } from "framer-motion"
-import { Trash2, FileText, Calendar, AlertTriangle } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { motion } from "framer-motion"
+import { Trash2, FileText, Calendar } from "lucide-react"
 
 interface Importacao {
   id: string
@@ -191,62 +192,16 @@ export default function ImportacoesPage() {
         </Card>
       </motion.div>
 
-      {/* Modal de Confirmação de Exclusão */}
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-            onClick={() => setDeleteConfirm(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-black border border-white/20 rounded-lg p-6 max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-red-900/30 rounded-full">
-                  <AlertTriangle className="w-6 h-6 text-red-400" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Confirmar Exclusão</h3>
-              </div>
-              
-              <p className="text-gray-300 mb-2">
-                Tem certeza que deseja deletar esta importação?
-              </p>
-              <p className="text-sm text-red-400 mb-6">
-                Esta ação irá deletar permanentemente todos os lançamentos associados a esta importação.
-              </p>
-              
-              <div className="flex gap-3">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                  <Button
-                    onClick={() => setDeleteConfirm(null)}
-                    variant="outline"
-                    className="w-full border-white/20 text-white hover:bg-white/10"
-                    disabled={deleting}
-                  >
-                    Cancelar
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
-                  <Button
-                    onClick={() => handleDeleteImportacao(deleteConfirm)}
-                    className="w-full bg-red-600 text-white hover:bg-red-700"
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deletando..." : "Confirmar Exclusão"}
-                  </Button>
-                </motion.div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDeleteImportacao(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja deletar esta importação? Esta ação irá deletar permanentemente todos os lançamentos associados a esta importação."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }
