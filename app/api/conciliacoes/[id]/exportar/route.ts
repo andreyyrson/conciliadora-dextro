@@ -182,6 +182,9 @@ export async function POST(
       const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
       const decisao = decisoesMap.get(extrato.id)
 
+      // Aplicar valor editado se existir
+      const valorExtratoFinal = decisao?.valorEditado !== undefined ? decisao.valorEditado : extrato.valor
+
       // Determinar status de aprovação
       const statusFinal = decisao?.status || item.status
       const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" ? "APROVADO AUTOMATICAMENTE" :
@@ -210,7 +213,8 @@ export async function POST(
         // Dados do Extrato
         "Data Extrato": new Date(extrato.data).toLocaleDateString("pt-BR"),
         "Descrição Extrato": extrato.descricao,
-        "Valor Extrato": extrato.valor,
+        "Valor Extrato": valorExtratoFinal,
+        "Valor Original": decisao?.valorEditado !== undefined ? extrato.valor : "",
         "Tipo Extrato": extrato.tipo,
         "ID Extrato": extrato.identificador || "",
         // Dados do ERP
@@ -242,6 +246,7 @@ export async function POST(
       { wch: 12 },  // Data Extrato
       { wch: 40 },  // Descrição Extrato
       { wch: 12 },  // Valor Extrato
+      { wch: 12 },  // Valor Original
       { wch: 10 },  // Tipo Extrato
       { wch: 15 },  // ID Extrato
       { wch: 12 },  // Data ERP
