@@ -140,10 +140,9 @@ function scoreValor(v1: number, v2: number): number {
 function scoreData(d1: Date, d2: Date): number {
   const diffMs = Math.abs(d1.getTime() - d2.getTime())
   const diffDays = diffMs / (1000 * 60 * 60 * 24)
-  if (diffDays <= 0) return 25
-  if (diffDays <= 1) return 20
-  if (diffDays <= 3) return 15
-  if (diffDays <= 7) return 10
+  if (diffDays <= 0) return 10
+  if (diffDays <= 3) return 10
+  if (diffDays <= 7) return 5
   return 0
 }
 
@@ -172,10 +171,24 @@ function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): b
   // Valor aproximado (<= 5%)
   const maxVal = Math.max(erp.valor, extrato.valor)
   if (maxVal > 0 && Math.abs(erp.valor - extrato.valor) / maxVal > 0.05) return false
-  // Data próxima (<= 7 dias)
+  // Data próxima (<= 7 dias) - filtro organizacional
   const diffDays = Math.abs(erp.data.getTime() - extrato.data.getTime()) / (1000 * 60 * 60 * 24)
   if (diffDays > 7) return false
   return true
+}
+
+// ========== AGRUPAMENTO POR DIA ==========
+
+function agruparPorDia(entradas: EntradaConciliacao[]): Map<string, EntradaConciliacao[]> {
+  const grupos = new Map<string, EntradaConciliacao[]>()
+  for (const entrada of entradas) {
+    const dataKey = entrada.data.toISOString().split('T')[0] // YYYY-MM-DD
+    if (!grupos.has(dataKey)) {
+      grupos.set(dataKey, [])
+    }
+    grupos.get(dataKey)!.push(entrada)
+  }
+  return grupos
 }
 
 // ========== GERAÇÃO DE EXPLICAÇÕES ==========
@@ -188,10 +201,8 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   else if (sd.valor >= 30) exps.push("Valor aproximado (≤ 2%)")
   else if (sd.valor >= 15) exps.push("Valor aproximado (≤ 5%)")
 
-  if (sd.data >= 25) exps.push("Data idêntica")
-  else if (sd.data >= 20) exps.push("Data com diferença de 1 dia")
-  else if (sd.data >= 15) exps.push("Data com diferença de até 3 dias")
-  else if (sd.data >= 10) exps.push("Data com diferença de até 7 dias")
+  if (sd.data >= 10) exps.push("Data próxima (≤ 3 dias)")
+  else if (sd.data >= 5) exps.push("Data próxima (≤ 7 dias)")
   else if (sd.data > 0) exps.push("Data próxima")
 
   if (sd.descricao >= 22) exps.push(`Descrição muito similar (${Math.round((sd.descricao / 25) * 100)}%)`)
@@ -217,6 +228,10 @@ export function gerarSugestoes(
   erpEntradas: EntradaConciliacao[],
   extratoEntradas: EntradaConciliacao[]
 ): ResultadoMatching {
+  // Fase 0: Agrupar por dia para otimizar matching
+  const erpPorDia = agruparPorDia(erpEntradas)
+  const extratoPorDia = agruparPorDia(extratoEntradas)
+
   // Fase 1: Gerar TODOS os candidatos (com pré-filtro)
   interface Candidato {
     extratoId: string
@@ -230,43 +245,102 @@ export function gerarSugestoes(
 
   const candidatos: Candidato[] = []
 
-  for (const extrato of extratoEntradas) {
-    for (const erp of erpEntradas) {
-      if (!passaPreFiltro(erp, extrato)) continue
+  // Comparar primeiro dentro do mesmo dia, depois expandir para dias próximos
+  for (const [dataExtrato, extratosDoDia] of extratoPorDia) {
+    // Primeiro: tentar match no mesmo dia
+    const erpsMesmoDia = erpPorDia.get(dataExtrato) || []
+    for (const extrato of extratosDoDia) {
+      for (const erp of erpsMesmoDia) {
+        if (!passaPreFiltro(erp, extrato)) continue
 
-      const sv = scoreValor(erp.valor, extrato.valor)
-      const sd = scoreData(erp.data, extrato.data)
-      const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
-      const sdoc = scoreDocumento(erp.documento, extrato.identificador)
+        const sv = scoreValor(erp.valor, extrato.valor)
+        const sd = scoreData(erp.data, extrato.data)
+        const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+        const sdoc = scoreDocumento(erp.documento, extrato.identificador)
 
-      const scoreDetalhado: ScoreDetalhado = {
-        valor: sv,
-        tipo: 0, // tipo é pré-filtro, não soma no score
-        data: sd,
-        descricao: sdesc,
-        documento: sdoc
+        const scoreDetalhado: ScoreDetalhado = {
+          valor: sv,
+          tipo: 0, // tipo é pré-filtro, não soma no score
+          data: sd,
+          descricao: sdesc,
+          documento: sdoc
+        }
+
+        const score = sv + sd + sdesc + sdoc
+        if (score < 20) continue // muito fraco, descarta
+
+        const explicacoes = gerarExplicacoes(scoreDetalhado)
+        const confianca = calcularConfianca(score)
+        const autoConfirmado =
+          score >= 75 &&
+          sv >= 40 && // valor muito próximo (≤ 1%)
+          sdesc >= 15 // descrição similar (≥ 75%)
+
+        candidatos.push({
+          extratoId: extrato.id,
+          erpId: erp.id,
+          score,
+          scoreDetalhado,
+          explicacoes,
+          confianca,
+          autoConfirmado
+        })
       }
+    }
 
-      const score = sv + sd + sdesc + sdoc
-      if (score < 20) continue // muito fraco, descarta
+    // Segundo: se não encontrou match no mesmo dia, tentar dias próximos (±3 dias)
+    const dataExtratoDate = new Date(dataExtrato)
+    for (let offset = -3; offset <= 3; offset++) {
+      if (offset === 0) continue // já verificado
+      const dataOffset = new Date(dataExtratoDate)
+      dataOffset.setDate(dataOffset.getDate() + offset)
+      const dataOffsetKey = dataOffset.toISOString().split('T')[0]
+      const erpsDiaOffset = erpPorDia.get(dataOffsetKey) || []
 
-      const explicacoes = gerarExplicacoes(scoreDetalhado)
-      const confianca = calcularConfianca(score)
-      const autoConfirmado =
-        score >= 85 &&
-        sv >= 40 && // valor muito próximo (≤ 1%)
-        sd >= 20 && // data próxima (≤ 1 dia)
-        sdesc >= 15 // descrição similar (≥ 75%)
+      for (const extrato of extratosDoDia) {
+        // Verificar se já tem candidato bom para este extrato
+        const jaTemCandidatoBom = candidatos.some(c => 
+          c.extratoId === extrato.id && c.score >= 70
+        )
+        if (jaTemCandidatoBom) continue
 
-      candidatos.push({
-        extratoId: extrato.id,
-        erpId: erp.id,
-        score,
-        scoreDetalhado,
-        explicacoes,
-        confianca,
-        autoConfirmado
-      })
+        for (const erp of erpsDiaOffset) {
+          if (!passaPreFiltro(erp, extrato)) continue
+
+          const sv = scoreValor(erp.valor, extrato.valor)
+          const sd = scoreData(erp.data, extrato.data)
+          const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+          const sdoc = scoreDocumento(erp.documento, extrato.identificador)
+
+          const scoreDetalhado: ScoreDetalhado = {
+            valor: sv,
+            tipo: 0,
+            data: sd,
+            descricao: sdesc,
+            documento: sdoc
+          }
+
+          const score = sv + sd + sdesc + sdoc
+          if (score < 20) continue
+
+          const explicacoes = gerarExplicacoes(scoreDetalhado)
+          const confianca = calcularConfianca(score)
+          const autoConfirmado =
+            score >= 75 &&
+            sv >= 40 &&
+            sdesc >= 15
+
+          candidatos.push({
+            extratoId: extrato.id,
+            erpId: erp.id,
+            score,
+            scoreDetalhado,
+            explicacoes,
+            confianca,
+            autoConfirmado
+          })
+        }
+      }
     }
   }
 

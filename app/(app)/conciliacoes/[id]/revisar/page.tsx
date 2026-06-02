@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import React from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
 import { ChevronLeft, Check, X, AlertTriangle, ChevronDown, Download } from "lucide-react"
 
@@ -394,47 +396,47 @@ export default function RevisarConciliacaoPage() {
     const d = decisoes[item.extrato.id]
     const status = d?.status || item.status
     switch (status) {
-      case "AUTO_CONFIRMADO": return { label: "Auto-confirmado", className: "bg-green-500/20 text-green-400" }
-      case "CONFIRMADO_MANUAL": return { label: "Confirmado", className: "bg-green-500/20 text-green-400" }
-      case "SUGERIDO": return { label: "Sugerido", className: "bg-yellow-500/20 text-yellow-400" }
-      case "AMBIGUO": return { label: "Ambíguo", className: "bg-orange-500/20 text-orange-400" }
-      case "REJEITADO": return { label: "Rejeitado", className: "bg-red-500/20 text-red-400" }
-      case "SEM_MATCH": return { label: "Sem match", className: "bg-gray-500/20 text-gray-400" }
-      default: return { label: status, className: "bg-gray-500/20 text-gray-400" }
+      case "AUTO_CONFIRMADO": return { label: "Auto-confirmado", className: "bg-success/20 text-success" }
+      case "CONFIRMADO_MANUAL": return { label: "Confirmado", className: "bg-success/20 text-success" }
+      case "SUGERIDO": return { label: "Sugerido", className: "bg-warning/20 text-warning" }
+      case "AMBIGUO": return { label: "Ambíguo", className: "bg-warning/20 text-warning" }
+      case "REJEITADO": return { label: "Rejeitado", className: "bg-destructive/20 text-destructive" }
+      case "SEM_MATCH": return { label: "Sem match", className: "bg-muted text-muted-foreground" }
+      default: return { label: status, className: "bg-muted text-muted-foreground" }
     }
   }
 
   const getConfiancaBadge = (conf: string) => {
     switch (conf) {
-      case "HIGH": return "text-green-400"
-      case "MEDIUM": return "text-yellow-400"
-      case "LOW": return "text-gray-400"
-      default: return "text-gray-400"
+      case "HIGH": return "text-success"
+      case "MEDIUM": return "text-warning"
+      case "LOW": return "text-muted-foreground"
+      default: return "text-muted-foreground"
     }
   }
 
   if (!session) return null
-  if (loading) return <div className="p-6 text-white">Carregando sugestões...</div>
-  if (erro) return <div className="p-6 text-red-400">Erro: {erro}</div>
+  if (loading) return <div className="p-6 text-foreground">Carregando sugestões...</div>
+  if (erro) return <div className="p-6 text-destructive">Erro: {erro}</div>
 
   return (
     <div className="p-6 space-y-6">
       <motion.div className="flex items-center gap-4" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-        <Button onClick={() => router.back()} variant="outline" className="border-white/20 text-white hover:bg-white/10">
+        <Button onClick={() => router.back()} variant="outline">
           ← Voltar
         </Button>
-        <h1 className="text-2xl font-bold text-white">Revisar Conciliação — {conciliacao?.periodo}</h1>
+        <h1 className="text-2xl font-bold text-foreground">Revisar Conciliação — {conciliacao?.periodo}</h1>
       </motion.div>
 
       {/* Abas de navegação */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <div className="flex gap-2 border-b border-white/10 pb-2">
+        <div className="flex gap-2 border-b border-border pb-2">
           <button
             onClick={() => setAbaAtiva("lancamentos")}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               abaAtiva === "lancamentos"
-                ? "text-white border-b-2 border-white"
-                : "text-gray-400 hover:text-white"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Lançamentos
@@ -443,8 +445,8 @@ export default function RevisarConciliacaoPage() {
             onClick={() => setAbaAtiva("visao-dia")}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               abaAtiva === "visao-dia"
-                ? "text-white border-b-2 border-white"
-                : "text-gray-400 hover:text-white"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Visão por Dia
@@ -455,11 +457,11 @@ export default function RevisarConciliacaoPage() {
       {/* Alerta de pendentes */}
       {totalPendentes > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 shrink-0" />
+          <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-medium text-red-300">{totalPendentes} lançamento{totalPendentes > 1 ? "s" : ""} pendente{totalPendentes > 1 ? "s" : ""} de revisão</p>
-              <p className="text-xs text-red-400/70 mt-1">O extrato é a referência. Revise os itens abaixo antes de confirmar.</p>
+              <p className="text-sm font-medium text-destructive">{totalPendentes} lançamento{totalPendentes > 1 ? "s" : ""} pendente{totalPendentes > 1 ? "s" : ""} de revisão</p>
+              <p className="text-xs text-destructive/70 mt-1">O extrato é a referência. Revise os itens abaixo antes de confirmar.</p>
             </div>
           </div>
         </motion.div>
@@ -467,34 +469,34 @@ export default function RevisarConciliacaoPage() {
 
       {/* Cards de resumo */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="p-6 bg-black border border-white/20">
+        <Card className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="bg-white/5 p-4 rounded">
-              <p className="text-gray-400 text-xs">Auto-confirmados</p>
-              <p className="text-2xl font-bold text-green-400">{autoConfirmados}</p>
+            <div className="bg-accent p-4 rounded">
+              <p className="text-muted-foreground text-xs">Auto-confirmados</p>
+              <p className="text-2xl font-bold text-success">{autoConfirmados}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded">
-              <p className="text-gray-400 text-xs">Sugeridos</p>
-              <p className="text-2xl font-bold text-yellow-400">{sugeridosPendentes}</p>
+            <div className="bg-accent p-4 rounded">
+              <p className="text-muted-foreground text-xs">Sugeridos</p>
+              <p className="text-2xl font-bold text-warning">{sugeridosPendentes}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded">
-              <p className="text-gray-400 text-xs">Ambíguos</p>
-              <p className="text-2xl font-bold text-orange-400">{ambiguos}</p>
+            <div className="bg-accent p-4 rounded">
+              <p className="text-muted-foreground text-xs">Ambíguos</p>
+              <p className="text-2xl font-bold text-warning">{ambiguos}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded">
-              <p className="text-gray-400 text-xs">Sem match</p>
-              <p className="text-2xl font-bold text-gray-400">{semMatch}</p>
+            <div className="bg-accent p-4 rounded">
+              <p className="text-muted-foreground text-xs">Sem match</p>
+              <p className="text-2xl font-bold text-muted-foreground">{semMatch}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded">
-              <p className="text-gray-400 text-xs">ERP sobrando</p>
-              <p className="text-2xl font-bold text-purple-400">{totalErpsSobrando}</p>
+            <div className="bg-accent p-4 rounded">
+              <p className="text-muted-foreground text-xs">ERP sobrando</p>
+              <p className="text-2xl font-bold text-brand">{totalErpsSobrando}</p>
             </div>
-            <div className="bg-white/5 p-4 rounded flex flex-col justify-center">
+            <div className="bg-accent p-4 rounded flex flex-col justify-center">
               <Button
                 size="sm"
                 onClick={confirmarTodosSugeridos}
                 disabled={sugeridosPendentes === 0}
-                className="bg-yellow-600 hover:bg-yellow-500 text-white"
+                className="bg-warning hover:bg-warning/90 text-background"
               >
                 Confirmar sugeridos (≥80%)
               </Button>
@@ -506,14 +508,13 @@ export default function RevisarConciliacaoPage() {
       {/* Tabela de revisão - Aba Lançamentos */}
       {abaAtiva === "lancamentos" && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="p-6 bg-black border border-white/20">
+          <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Lançamentos do Extrato</h2>
+              <h2 className="text-lg font-semibold">Lançamentos do Extrato</h2>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={downloadExcel}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Exportar Excel
@@ -521,7 +522,7 @@ export default function RevisarConciliacaoPage() {
                 <Button
                   onClick={salvar}
                   disabled={confirmando || totalPendentes > 0}
-                  className="bg-green-600 hover:bg-green-500 text-white"
+                  className="bg-success hover:bg-success/90 text-background"
                 >
                   {confirmando ? "Salvando..." : totalPendentes > 0 ? `Faltam ${totalPendentes} revisões` : "Confirmar tudo"}
                 </Button>
@@ -537,14 +538,14 @@ export default function RevisarConciliacaoPage() {
               return (
                 <div
                   key={item.extrato.id}
-                  className={`p-4 rounded border ${jaDecidido ? "border-white/10 bg-white/5" : item.status === "AMBIGUO" ? "border-orange-500/50 bg-orange-500/5" : "border-white/20 bg-white/[0.02]"}`}
+                  className={`p-4 rounded border ${jaDecidido ? "border-border bg-accent" : item.status === "AMBIGUO" ? "border-warning/50 bg-warning/5" : "border-border bg-background"}`}
                 >
                   <div className="space-y-4">
                     {/* Header com status */}
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${badge.className}`}>{badge.label}</span>
                       {item.status === "AMBIGUO" && !jaDecidido && (
-                        <span className="text-xs font-medium text-orange-400 animate-pulse">⚠️ Requer decisão manual</span>
+                        <span className="text-xs font-medium text-warning animate-pulse">⚠️ Requer decisão manual</span>
                       )}
                       {item.sugestoes[0] && !jaDecidido && (
                         <span className={`text-xs font-medium ${getConfiancaBadge(item.sugestoes[0].confianca)}`}>
@@ -552,77 +553,77 @@ export default function RevisarConciliacaoPage() {
                         </span>
                       )}
                       {item.diferencaValor !== undefined && item.diferencaValor > 0 && (
-                        <span className="text-xs text-red-400">Dif: R$ {item.diferencaValor.toFixed(2)}</span>
+                        <span className="text-xs text-destructive">Dif: R$ {item.diferencaValor.toFixed(2)}</span>
                       )}
                     </div>
 
                     {/* Cards lado a lado */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Extrato */}
-                      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded">
-                        <h4 className="text-xs font-semibold text-blue-300 mb-2">EXTRATO</h4>
+                      <div className="p-3 bg-brand/10 border border-brand/20 rounded">
+                        <h4 className="text-xs font-semibold text-brand mb-2">EXTRATO</h4>
                         <div className="space-y-1 text-sm">
-                          <p className="text-gray-400">Data: <span className="text-white">{new Date(item.extrato.data).toLocaleDateString("pt-BR")}</span></p>
-                          <p className="text-gray-400">Descrição: <span className="text-white">{item.extrato.descricao}</span></p>
-                          <p className="text-gray-400">Valor: <span className="text-white">R$ {item.extrato.valor.toFixed(2)}</span></p>
-                          <p className="text-gray-400">Tipo: <span className="text-white">{item.extrato.tipo}</span></p>
+                          <p className="text-muted-foreground">Data: <span className="text-foreground">{new Date(item.extrato.data).toLocaleDateString("pt-BR")}</span></p>
+                          <p className="text-muted-foreground">Descrição: <span className="text-foreground">{item.extrato.descricao}</span></p>
+                          <p className="text-muted-foreground">Valor: <span className="text-foreground">R$ {item.extrato.valor.toFixed(2)}</span></p>
+                          <p className="text-muted-foreground">Tipo: <span className="text-foreground">{item.extrato.tipo}</span></p>
                           {item.extrato.identificador && (
-                            <p className="text-gray-400">ID: <span className="text-white">{item.extrato.identificador}</span></p>
+                            <p className="text-muted-foreground">ID: <span className="text-foreground">{item.extrato.identificador}</span></p>
                           )}
                         </div>
                       </div>
 
                       {/* ERP */}
                       {item.status === "AUTO_CONFIRMADO" && item.erpPareado ? (
-                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded">
-                          <h4 className="text-xs font-semibold text-green-300 mb-2">ERP (MATCH)</h4>
+                        <div className="p-3 bg-success/10 border border-success/20 rounded">
+                          <h4 className="text-xs font-semibold text-success mb-2">ERP (MATCH)</h4>
                           <div className="space-y-1 text-sm">
-                            <p className="text-gray-400">Data: <span className="text-white">{new Date(item.erpPareado.data).toLocaleDateString("pt-BR")}</span></p>
-                            <p className="text-gray-400">Descrição: <span className="text-white">{item.erpPareado.descricao}</span></p>
-                            <p className="text-gray-400">Valor: <span className="text-white">R$ {item.erpPareado.valor.toFixed(2)}</span></p>
-                            <p className="text-gray-400">Tipo: <span className="text-white">{item.erpPareado.tipo}</span></p>
+                            <p className="text-muted-foreground">Data: <span className="text-foreground">{new Date(item.erpPareado.data).toLocaleDateString("pt-BR")}</span></p>
+                            <p className="text-muted-foreground">Descrição: <span className="text-foreground">{item.erpPareado.descricao}</span></p>
+                            <p className="text-muted-foreground">Valor: <span className="text-foreground">R$ {item.erpPareado.valor.toFixed(2)}</span></p>
+                            <p className="text-muted-foreground">Tipo: <span className="text-foreground">{item.erpPareado.tipo}</span></p>
                             {item.erpPareado.documento && (
-                              <p className="text-gray-400">Doc: <span className="text-white">{item.erpPareado.documento}</span></p>
+                              <p className="text-muted-foreground">Doc: <span className="text-foreground">{item.erpPareado.documento}</span></p>
                             )}
                             {item.erpPareado.fornecedor && (
-                              <p className="text-gray-400">Fornecedor: <span className="text-white">{item.erpPareado.fornecedor}</span></p>
+                              <p className="text-muted-foreground">Fornecedor: <span className="text-foreground">{item.erpPareado.fornecedor}</span></p>
                             )}
                             {item.erpPareado.categoria && (
-                              <p className="text-gray-400">Categoria: <span className="text-white">{item.erpPareado.categoria}</span></p>
+                              <p className="text-muted-foreground">Categoria: <span className="text-foreground">{item.erpPareado.categoria}</span></p>
                             )}
                           </div>
                         </div>
                       ) : d?.status === "REJEITADO" ? (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded">
-                          <h4 className="text-xs font-semibold text-red-300 mb-2">REJEITADO</h4>
-                          <p className="text-sm text-red-400">Match rejeitado pelo usuário</p>
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded">
+                          <h4 className="text-xs font-semibold text-destructive mb-2">REJEITADO</h4>
+                          <p className="text-sm text-destructive">Match rejeitado pelo usuário</p>
                         </div>
                       ) : d?.erpId ? (
-                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded">
-                          <h4 className="text-xs font-semibold text-green-300 mb-2">ERP (CONFIRMADO)</h4>
+                        <div className="p-3 bg-success/10 border border-success/20 rounded">
+                          <h4 className="text-xs font-semibold text-success mb-2">ERP (CONFIRMADO)</h4>
                           <div className="space-y-1 text-sm">
-                            <p className="text-gray-400">Score: <span className="text-white">{d.score}%</span></p>
-                            <p className="text-gray-400">Explicações: <span className="text-white">{item.sugestoes.find(s => s.entradaOrigemId === d.erpId)?.explicacoes.join(" · ") || "Match confirmado"}</span></p>
+                            <p className="text-muted-foreground">Score: <span className="text-foreground">{d.score}%</span></p>
+                            <p className="text-muted-foreground">Explicações: <span className="text-foreground">{item.sugestoes.find(s => s.entradaOrigemId === d.erpId)?.explicacoes.join(" · ") || "Match confirmado"}</span></p>
                           </div>
                         </div>
                       ) : item.sugestoes.length > 0 ? (
-                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded">
-                          <h4 className="text-xs font-semibold text-yellow-300 mb-2">ERP SUGERIDO</h4>
+                        <div className="p-3 bg-warning/10 border border-warning/20 rounded">
+                          <h4 className="text-xs font-semibold text-warning mb-2">ERP SUGERIDO</h4>
                           <div className="space-y-1 text-sm">
-                            <p className="text-gray-400">Score: <span className="text-white">{item.sugestoes[0].score}%</span></p>
-                            <p className="text-gray-400">Explicações: <span className="text-white">{item.sugestoes[0].explicacoes.join(" · ")}</span></p>
+                            <p className="text-muted-foreground">Score: <span className="text-foreground">{item.sugestoes[0].score}%</span></p>
+                            <p className="text-muted-foreground">Explicações: <span className="text-foreground">{item.sugestoes[0].explicacoes.join(" · ")}</span></p>
                             {(() => {
                               const erpSugerido = erpEntradas?.find(e => e.id === item.sugestoes[0].entradaOrigemId)
                               if (!erpSugerido) return null
                               return (
                                 <>
-                                  <p className="text-gray-400">Data: <span className="text-white">{new Date(erpSugerido.data).toLocaleDateString("pt-BR")}</span></p>
-                                  <p className="text-gray-400">Descrição: <span className="text-white">{erpSugerido.descricao}</span></p>
-                                  <p className="text-gray-400">Valor: <span className="text-white">R$ {erpSugerido.valor.toFixed(2)}</span></p>
-                                  <p className="text-gray-400">Tipo: <span className="text-white">{erpSugerido.tipo}</span></p>
-                                  {erpSugerido.documento && <p className="text-gray-400">Doc: <span className="text-white">{erpSugerido.documento}</span></p>}
-                                  {erpSugerido.fornecedor && <p className="text-gray-400">Fornecedor: <span className="text-white">{erpSugerido.fornecedor}</span></p>}
-                                  {erpSugerido.categoria && <p className="text-gray-400">Categoria: <span className="text-white">{erpSugerido.categoria}</span></p>}
+                                  <p className="text-muted-foreground">Data: <span className="text-foreground">{new Date(erpSugerido.data).toLocaleDateString("pt-BR")}</span></p>
+                                  <p className="text-muted-foreground">Descrição: <span className="text-foreground">{erpSugerido.descricao}</span></p>
+                                  <p className="text-muted-foreground">Valor: <span className="text-foreground">R$ {erpSugerido.valor.toFixed(2)}</span></p>
+                                  <p className="text-muted-foreground">Tipo: <span className="text-foreground">{erpSugerido.tipo}</span></p>
+                                  {erpSugerido.documento && <p className="text-muted-foreground">Doc: <span className="text-foreground">{erpSugerido.documento}</span></p>}
+                                  {erpSugerido.fornecedor && <p className="text-muted-foreground">Fornecedor: <span className="text-foreground">{erpSugerido.fornecedor}</span></p>}
+                                  {erpSugerido.categoria && <p className="text-muted-foreground">Categoria: <span className="text-foreground">{erpSugerido.categoria}</span></p>}
                                 </>
                               )
                             })()}
@@ -632,7 +633,7 @@ export default function RevisarConciliacaoPage() {
                                   onChange={(e) => {
                                     if (e.target.value) trocarSugestao(item, e.target.value)
                                   }}
-                                  className="text-xs bg-black border border-white/20 text-white rounded p-1"
+                                  className="text-xs bg-background border border-border text-foreground rounded p-1"
                                   defaultValue=""
                                 >
                                   <option value="" disabled>Trocar sugestão...</option>
@@ -647,9 +648,9 @@ export default function RevisarConciliacaoPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 bg-gray-500/10 border border-gray-500/20 rounded">
-                          <h4 className="text-xs font-semibold text-gray-300 mb-2">SEM MATCH</h4>
-                          <p className="text-sm text-gray-500">Nenhum candidato encontrado</p>
+                        <div className="p-3 bg-muted border border-border rounded">
+                          <h4 className="text-xs font-semibold text-muted-foreground mb-2">SEM MATCH</h4>
+                          <p className="text-sm text-muted-foreground">Nenhum candidato encontrado</p>
                         </div>
                       )}
                     </div>
@@ -663,7 +664,7 @@ export default function RevisarConciliacaoPage() {
                           <Button
                             size="sm"
                             onClick={() => confirmarSugerido(item)}
-                            className="h-8 px-2 bg-green-600 hover:bg-green-500"
+                            className="h-8 px-2 bg-success hover:bg-success/90"
                             title="Confirmar"
                           >
                             <Check className="w-4 h-4" />
@@ -673,7 +674,7 @@ export default function RevisarConciliacaoPage() {
                           size="sm"
                           onClick={() => rejeitar(item)}
                           variant="outline"
-                          className="h-8 px-2 border-red-500/30 text-red-400 hover:bg-red-500/10"
+                          className="h-8 px-2 border-destructive/30 text-destructive hover:bg-destructive/10"
                           title="Rejeitar"
                         >
                           <X className="w-4 h-4" />
@@ -689,7 +690,7 @@ export default function RevisarConciliacaoPage() {
                           setDecisoes(nd)
                         }}
                         variant="outline"
-                        className="h-8 px-2 border-white/20 text-white hover:bg-white/10"
+                        className="h-8 px-2"
                         title="Desfazer"
                       >
                         Desfazer
@@ -707,19 +708,19 @@ export default function RevisarConciliacaoPage() {
       {/* ERPs sobrando - apenas na aba lançamentos */}
       {abaAtiva === "lancamentos" && erpsSobrando.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="p-6 bg-black border border-purple-500/30">
-            <h2 className="text-lg font-semibold text-purple-300 mb-4">Lançamentos ERP sem correspondência no extrato ({erpsSobrando.length})</h2>
+          <Card className="p-6 border-brand/30">
+            <h2 className="text-lg font-semibold text-brand mb-4">Lançamentos ERP sem correspondência no extrato ({erpsSobrando.length})</h2>
             <div className="space-y-2">
               {erpsSobrando.map((item, idx) => (
-                <div key={idx} className="p-3 bg-purple-500/10 border border-purple-500/20 rounded">
+                <div key={idx} className="p-3 bg-brand/10 border border-brand/20 rounded">
                   <div className="space-y-1 text-sm">
-                    <p className="text-white">{item.erp.descricao}</p>
-                    <p className="text-purple-300">
+                    <p className="text-foreground">{item.erp.descricao}</p>
+                    <p className="text-brand">
                       {new Date(item.erp.data).toLocaleDateString('pt-BR')} • {item.erp.tipo} • R$ {Number(item.erp.valor).toFixed(2)}
                     </p>
-                    {item.erp.documento && <p className="text-purple-300">Doc: {item.erp.documento}</p>}
-                    {item.erp.fornecedor && <p className="text-purple-300">Fornecedor: {item.erp.fornecedor}</p>}
-                    {item.erp.categoria && <p className="text-purple-300">Categoria: {item.erp.categoria}</p>}
+                    {item.erp.documento && <p className="text-brand">Doc: {item.erp.documento}</p>}
+                    {item.erp.fornecedor && <p className="text-brand">Fornecedor: {item.erp.fornecedor}</p>}
+                    {item.erp.categoria && <p className="text-brand">Categoria: {item.erp.categoria}</p>}
                   </div>
                 </div>
               ))}
@@ -731,14 +732,13 @@ export default function RevisarConciliacaoPage() {
       {/* Tabela por Dia - Aba Visão por Dia */}
       {abaAtiva === "visao-dia" && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card className="p-6 bg-black border border-white/20">
+          <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Visão por Dia</h2>
+              <h2 className="text-lg font-semibold">Visão por Dia</h2>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={downloadExcel}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Exportar Excel
@@ -746,7 +746,7 @@ export default function RevisarConciliacaoPage() {
                 <Button
                   onClick={salvar}
                   disabled={confirmando || totalPendentes > 0}
-                  className="bg-green-600 hover:bg-green-500 text-white"
+                  className="bg-success hover:bg-success/90 text-background"
                 >
                   {confirmando ? "Salvando..." : totalPendentes > 0 ? `Faltam ${totalPendentes} revisões` : "Confirmar tudo"}
                 </Button>
@@ -756,15 +756,15 @@ export default function RevisarConciliacaoPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left p-3 text-gray-400 font-medium">Data</th>
-                    <th className="text-right p-3 text-gray-400 font-medium">Rec. ERP</th>
-                    <th className="text-right p-3 text-gray-400 font-medium">Desp. ERP</th>
-                    <th className="text-right p-3 text-gray-400 font-medium">Rec. Extrato</th>
-                    <th className="text-right p-3 text-gray-400 font-medium">Desp. Extrato</th>
-                    <th className="text-right p-3 text-gray-400 font-medium">Diferença</th>
-                    <th className="text-center p-3 text-gray-400 font-medium">Status</th>
-                    <th className="text-center p-3 text-gray-400 font-medium">Ações</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-3 text-muted-foreground font-medium">Data</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Rec. ERP</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Desp. ERP</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Rec. Extrato</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Desp. Extrato</th>
+                    <th className="text-right p-3 text-muted-foreground font-medium">Diferença</th>
+                    <th className="text-center p-3 text-muted-foreground font-medium">Status</th>
+                    <th className="text-center p-3 text-muted-foreground font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -773,20 +773,20 @@ export default function RevisarConciliacaoPage() {
                     const diffExtrato = grupo.receitasExtrato - grupo.despesasExtrato
                     const diferenca = Math.abs(diffErp - diffExtrato)
                     const statusDia = diferenca < 0.01 ? "Conciliado" : "Divergente"
-                    const statusColor = diferenca < 0.01 ? "text-green-400" : "text-red-400"
+                    const statusColor = diferenca < 0.01 ? "text-success" : "text-destructive"
                     const isExpandido = diaExpandido === grupo.data
 
                     return (
-                      <>
-                        <tr key={idx} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => setDiaExpandido(isExpandido ? null : grupo.data)}>
-                          <td className="p-3 text-white font-medium">{grupo.data}</td>
-                          <td className="p-3 text-right text-green-400">R$ {grupo.receitasErp.toFixed(2)}</td>
-                          <td className="p-3 text-right text-red-400">R$ {grupo.despesasErp.toFixed(2)}</td>
-                          <td className="p-3 text-right text-green-400">R$ {grupo.receitasExtrato.toFixed(2)}</td>
-                          <td className="p-3 text-right text-red-400">R$ {grupo.despesasExtrato.toFixed(2)}</td>
+                      <React.Fragment key={idx}>
+                        <tr className="border-b border-border hover:bg-accent cursor-pointer" onClick={() => setDiaExpandido(isExpandido ? null : grupo.data)}>
+                          <td className="p-3 text-foreground font-medium">{grupo.data}</td>
+                          <td className="p-3 text-right text-success">R$ {grupo.receitasErp.toFixed(2)}</td>
+                          <td className="p-3 text-right text-destructive">R$ {grupo.despesasErp.toFixed(2)}</td>
+                          <td className="p-3 text-right text-success">R$ {grupo.receitasExtrato.toFixed(2)}</td>
+                          <td className="p-3 text-right text-destructive">R$ {grupo.despesasExtrato.toFixed(2)}</td>
                           <td className={`p-3 text-right ${statusColor}`}>R$ {diferenca.toFixed(2)}</td>
                           <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${diferenca < 0.01 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${diferenca < 0.01 ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
                               {statusDia}
                             </span>
                           </td>
@@ -794,7 +794,6 @@ export default function RevisarConciliacaoPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-white/20 text-white hover:bg-white/10"
                               onClick={(e) => { e.stopPropagation(); setAbaAtiva("lancamentos") }}
                             >
                               Ver Detalhes
@@ -803,9 +802,9 @@ export default function RevisarConciliacaoPage() {
                         </tr>
                         {isExpandido && (
                           <tr key={`${idx}-detalhes`}>
-                            <td colSpan={8} className="p-4 bg-white/5">
+                            <td colSpan={8} className="p-4 bg-accent">
                               <div className="space-y-3">
-                                <h4 className="text-sm font-semibold text-white mb-2">Lançamentos do Extrato</h4>
+                                <h4 className="text-sm font-semibold text-foreground mb-2">Lançamentos do Extrato</h4>
                                 {grupo.itens.map((item) => {
                                   const edicao = edicoesLocais[item.extrato.id]
                                   const valorEditado = edicao?.valor !== undefined ? edicao.valor : item.extrato.valor
@@ -814,33 +813,33 @@ export default function RevisarConciliacaoPage() {
                                   const erp = erpId ? erpEntradas.find(e => e.id === erpId) : null
 
                                   return (
-                                    <div key={item.extrato.id} className="p-3 bg-black/50 border border-white/10 rounded">
+                                    <div key={item.extrato.id} className="p-3 bg-background border border-border rounded">
                                       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                         <div>
-                                          <p className="text-xs text-gray-400">Descrição</p>
-                                          <p className="text-sm text-white">{item.extrato.descricao}</p>
+                                          <p className="text-xs text-muted-foreground">Descrição</p>
+                                          <p className="text-sm text-foreground">{item.extrato.descricao}</p>
                                         </div>
                                         <div>
-                                          <p className="text-xs text-gray-400">Tipo</p>
-                                          <p className="text-sm text-white">{item.extrato.tipo}</p>
+                                          <p className="text-xs text-muted-foreground">Tipo</p>
+                                          <p className="text-sm text-foreground">{item.extrato.tipo}</p>
                                         </div>
                                         <div>
-                                          <p className="text-xs text-gray-400">Valor (editável)</p>
+                                          <p className="text-xs text-muted-foreground">Valor (editável)</p>
                                           <input
                                             type="number"
                                             step="0.01"
                                             value={valorEditado}
                                             onChange={(e) => atualizarEdicao(item.extrato.id, "valor", parseFloat(e.target.value) || 0)}
-                                            className="w-full bg-black border border-white/20 text-white text-sm p-1 rounded"
+                                            className="w-full bg-background border border-border text-foreground text-sm p-1 rounded"
                                             onClick={(e) => e.stopPropagation()}
                                           />
                                         </div>
                                         <div>
-                                          <p className="text-xs text-gray-400">Status</p>
+                                          <p className="text-xs text-muted-foreground">Status</p>
                                           <select
                                             value={edicao?.status || (d?.status || item.status)}
                                             onChange={(e) => atualizarEdicao(item.extrato.id, "status", e.target.value)}
-                                            className="w-full bg-black border border-white/20 text-white text-sm p-1 rounded"
+                                            className="w-full bg-background border border-border text-foreground text-sm p-1 rounded"
                                             onClick={(e) => e.stopPropagation()}
                                           >
                                             <option value="AUTO_CONFIRMADO">Auto-confirmado</option>
@@ -852,8 +851,8 @@ export default function RevisarConciliacaoPage() {
                                           </select>
                                         </div>
                                         <div>
-                                          <p className="text-xs text-gray-400">ERP Match</p>
-                                          <p className="text-sm text-white">{erp ? erp.descricao : "Sem match"}</p>
+                                          <p className="text-xs text-muted-foreground">ERP Match</p>
+                                          <p className="text-sm text-foreground">{erp ? erp.descricao : "Sem match"}</p>
                                         </div>
                                       </div>
                                     </div>
@@ -861,11 +860,11 @@ export default function RevisarConciliacaoPage() {
                                 })}
                                 {grupo.erpsSobrando.length > 0 && (
                                   <>
-                                    <h4 className="text-sm font-semibold text-purple-300 mb-2 mt-4">ERPs Sobrando</h4>
+                                    <h4 className="text-sm font-semibold text-brand mb-2 mt-4">ERPs Sobrando</h4>
                                     {grupo.erpsSobrando.map((item, idx) => (
-                                      <div key={idx} className="p-3 bg-purple-500/10 border border-purple-500/20 rounded">
-                                        <p className="text-sm text-white">{item.erp.descricao}</p>
-                                        <p className="text-xs text-purple-300">
+                                      <div key={idx} className="p-3 bg-brand/10 border border-brand/20 rounded">
+                                        <p className="text-sm text-foreground">{item.erp.descricao}</p>
+                                        <p className="text-xs text-brand">
                                           {new Date(item.erp.data).toLocaleDateString('pt-BR')} • {item.erp.tipo} • R$ {Number(item.erp.valor).toFixed(2)}
                                         </p>
                                       </div>
@@ -876,7 +875,7 @@ export default function RevisarConciliacaoPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     )
                   })}
                 </tbody>

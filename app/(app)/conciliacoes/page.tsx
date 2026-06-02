@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PageHeader } from "@/components/page-header"
 import { motion, AnimatePresence } from "framer-motion"
 import { Eye, Trash2, CheckCircle } from "lucide-react"
 
@@ -239,27 +240,23 @@ export default function ConciliacoesPage() {
   }
 
   return (
-    <div>
-      <motion.h1 
-        className="text-2xl font-bold text-white mb-6"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Conciliações
-      </motion.h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Conciliações"
+        description="Gerencie as conciliações bancárias"
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="p-6 mb-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Nova Conciliação</h2>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Nova Conciliação</h2>
         
         <div className="space-y-4">
           <div>
-            <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="empresa" className="block text-sm font-medium text-muted-foreground mb-1">
               Empresa
             </label>
             <select
@@ -275,7 +272,7 @@ export default function ConciliacoesPage() {
                 fetchContas(newEmpresaId)
                 fetchImportacoes(newEmpresaId)
               }}
-              className="w-full p-2 border rounded bg-black border-white/20 text-white"
+              className="w-full p-2 border rounded bg-background border-border text-foreground"
             >
               {empresas.map((empresa) => (
                 <option key={empresa.id} value={empresa.id}>
@@ -286,14 +283,14 @@ export default function ConciliacoesPage() {
           </div>
 
           <div>
-            <label htmlFor="upload" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="upload" className="block text-sm font-medium text-muted-foreground mb-1">
               Upload ERP *
             </label>
             <select
               id="upload"
               value={selectedUpload}
               onChange={(e) => setSelectedUpload(e.target.value)}
-              className="w-full p-2 border rounded bg-black border-white/20 text-white"
+              className="w-full p-2 border rounded bg-background border-border text-foreground"
             >
               <option value="">Selecione um upload</option>
               {uploads.map((upload) => (
@@ -305,7 +302,7 @@ export default function ConciliacoesPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Fonte do Extrato *
             </label>
             <div className="flex gap-4">
@@ -317,9 +314,9 @@ export default function ConciliacoesPage() {
                   value="conta"
                   checked={modoExtrato === "conta"}
                   onChange={(e) => setModoExtrato(e.target.value as "conta" | "importacao")}
-                  className="bg-black border-white/20"
+                  className="bg-background border-border"
                 />
-                <span className="text-gray-300">Conta Bancária (Open Finance)</span>
+                <span className="text-foreground">Conta Bancária (Open Finance)</span>
               </label>
               <label htmlFor="modo-importacao" className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -329,23 +326,23 @@ export default function ConciliacoesPage() {
                   value="importacao"
                   checked={modoExtrato === "importacao"}
                   onChange={(e) => setModoExtrato(e.target.value as "conta" | "importacao")}
-                  className="bg-black border-white/20"
+                  className="bg-background border-border"
                 />
-                <span className="text-gray-300">Importação (CSV/OFX)</span>
+                <span className="text-foreground">Importação (CSV/OFX)</span>
               </label>
             </div>
           </div>
 
           {modoExtrato === "conta" && (
             <div>
-              <label htmlFor="conta" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="conta" className="block text-sm font-medium text-muted-foreground mb-1">
                 Conta Bancária *
               </label>
               <select
                 id="conta"
                 value={selectedConta}
                 onChange={(e) => setSelectedConta(e.target.value)}
-                className="w-full p-2 border rounded bg-black border-white/20 text-white"
+                className="w-full p-2 border rounded bg-background border-border text-foreground"
               >
                 <option value="">Selecione uma conta</option>
                 {contas.map((conta) => (
@@ -359,14 +356,14 @@ export default function ConciliacoesPage() {
 
           {modoExtrato === "importacao" && (
             <div>
-              <label htmlFor="importacao" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="importacao" className="block text-sm font-medium text-muted-foreground mb-1">
                 Importação de Extrato *
               </label>
               <select
                 id="importacao"
                 value={selectedImportacao}
                 onChange={(e) => setSelectedImportacao(e.target.value)}
-                className="w-full p-2 border rounded bg-black border-white/20 text-white"
+                className="w-full p-2 border rounded bg-background border-border text-foreground"
               >
                 <option value="">Selecione uma importação</option>
                 {importacoes.map((importacao) => (
@@ -379,13 +376,13 @@ export default function ConciliacoesPage() {
           )}
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-900/20 p-3 rounded animate-pulse">
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
               {error}
             </div>
           )}
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button onClick={handleIniciarConciliacao} disabled={loading} className="bg-white text-black hover:bg-gray-200">
+            <Button onClick={handleIniciarConciliacao} disabled={loading}>
               {loading ? "Processando..." : "Iniciar Conciliação"}
             </Button>
           </motion.div>
@@ -398,46 +395,46 @@ export default function ConciliacoesPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="p-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Histórico de Conciliações</h2>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Histórico de Conciliações</h2>
           {conciliacoes.length === 0 ? (
-            <p className="text-gray-500">Nenhuma conciliação realizada</p>
+            <p className="text-muted-foreground">Nenhuma conciliação realizada</p>
         ) : (
           <Table>
             <thead>
-              <tr className="border-b border-white/20">
-                <th className="text-left p-2 text-white font-medium">Período</th>
-                <th className="text-left p-2 text-white font-medium">Arquivo</th>
-                <th className="text-left p-2 text-white font-medium">Status</th>
-                <th className="text-left p-2 text-white font-medium">Conciliados</th>
-                <th className="text-left p-2 text-white font-medium">Divergentes</th>
-                <th className="text-left p-2 text-white font-medium">Faltando ERP</th>
-                <th className="text-left p-2 text-white font-medium">Faltando Banco</th>
-                <th className="text-left p-2 text-white font-medium">Data</th>
-                <th className="text-left p-2 text-white font-medium">Ações</th>
+              <tr className="border-b border-border">
+                <th className="text-left p-2 text-foreground font-medium">Período</th>
+                <th className="text-left p-2 text-foreground font-medium">Arquivo</th>
+                <th className="text-left p-2 text-foreground font-medium">Status</th>
+                <th className="text-left p-2 text-foreground font-medium">Conciliados</th>
+                <th className="text-left p-2 text-foreground font-medium">Divergentes</th>
+                <th className="text-left p-2 text-foreground font-medium">Faltando ERP</th>
+                <th className="text-left p-2 text-foreground font-medium">Faltando Banco</th>
+                <th className="text-left p-2 text-foreground font-medium">Data</th>
+                <th className="text-left p-2 text-foreground font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {conciliacoes.map((conciliacao) => (
-                <tr key={conciliacao.id} className="border-t border-white/10 hover:bg-white/5">
-                  <td className="p-2 text-gray-300">{conciliacao.periodo}</td>
-                  <td className="p-2 text-gray-300">{conciliacao.upload.nomeArquivo}</td>
+                <tr key={conciliacao.id} className="border-t border-border hover:bg-accent">
+                  <td className="p-2 text-foreground">{conciliacao.periodo}</td>
+                  <td className="p-2 text-foreground">{conciliacao.upload.nomeArquivo}</td>
                   <td className="p-2">
                     <span className={`px-2 py-1 rounded text-xs ${
                       conciliacao.status === "CONCLUIDA" 
-                        ? "bg-green-900/30 text-green-400" 
+                        ? "bg-success/20 text-success" 
                         : conciliacao.status === "PROCESSANDO"
-                        ? "bg-blue-900/30 text-blue-400"
-                        : "bg-red-900/30 text-red-400"
+                        ? "bg-brand/20 text-brand"
+                        : "bg-destructive/20 text-destructive"
                     }`}>
                       {conciliacao.status}
                     </span>
                   </td>
-                  <td className="p-2 text-gray-300">{conciliacao.qtdConciliados}</td>
-                  <td className="p-2 text-gray-300">{conciliacao.qtdDivergentes}</td>
-                  <td className="p-2 text-gray-300">{conciliacao.qtdFaltandoErp}</td>
-                  <td className="p-2 text-gray-300">{conciliacao.qtdFaltandoBanco}</td>
-                  <td className="p-2 text-gray-300">
+                  <td className="p-2 text-foreground">{conciliacao.qtdConciliados}</td>
+                  <td className="p-2 text-foreground">{conciliacao.qtdDivergentes}</td>
+                  <td className="p-2 text-foreground">{conciliacao.qtdFaltandoErp}</td>
+                  <td className="p-2 text-foreground">{conciliacao.qtdFaltandoBanco}</td>
+                  <td className="p-2 text-foreground">
                     {new Date(conciliacao.criadoEm).toLocaleString("pt-BR")}
                   </td>
                   <td className="p-2">
@@ -446,15 +443,13 @@ export default function ConciliacoesPage() {
                         size="sm"
                         onClick={() => router.push(`/conciliacoes/${conciliacao.id}`)}
                         variant="outline"
-                        className="border-white/40 text-white hover:bg-white/20 hover:border-white/60"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
                         onClick={() => setDeleteConfirm(conciliacao.id)}
-                        variant="outline"
-                        className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                        variant="destructive"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -475,7 +470,7 @@ export default function ConciliacoesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-green-900/95 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-success/95 flex items-center justify-center z-50"
             onClick={() => setShowSuccessAnimation(false)}
           >
             <motion.div
@@ -491,13 +486,13 @@ export default function ConciliacoesPage() {
                 transition={{ delay: 0.2, type: "spring", damping: 15, stiffness: 200 }}
                 className="mb-6"
               >
-                <CheckCircle className="w-48 h-48 text-green-400 mx-auto" />
+                <CheckCircle className="w-48 h-48 text-success mx-auto" />
               </motion.div>
               <motion.h2
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-4xl font-bold text-white mb-4"
+                className="text-4xl font-bold text-foreground mb-4"
               >
                 Conciliação Realizada!
               </motion.h2>
@@ -505,7 +500,7 @@ export default function ConciliacoesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="text-xl text-green-200"
+                className="text-xl text-success"
               >
                 Com Sucesso
               </motion.p>

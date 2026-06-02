@@ -175,6 +175,62 @@ export async function POST(
       })
     }
 
+    // Calcular saldo por dia
+    const saldoPorDia = new Map<string, { receitasExtrato: number, despesasExtrato: number, receitasErp: number, despesasErp: number, saldoAcumuladoExtrato: number, saldoAcumuladoErp: number }>()
+    const datasOrdenadas = [...new Set(resultado.itens.map((item: any) => new Date(item.extrato.data).toLocaleDateString("pt-BR")))].sort((a, b) => {
+      const dateA = new Date(a.split('/').reverse().join('-'))
+      const dateB = new Date(b.split('/').reverse().join('-'))
+      return dateA.getTime() - dateB.getTime()
+    })
+
+    let saldoAcumuladoExtrato = 0
+    let saldoAcumuladoErp = 0
+
+    datasOrdenadas.forEach(data => {
+      const itensDoDia = resultado.itens.filter((item: any) => new Date(item.extrato.data).toLocaleDateString("pt-BR") === data)
+
+      let receitasExtrato = 0
+      let despesasExtrato = 0
+      let receitasErp = 0
+      let despesasErp = 0
+
+      itensDoDia.forEach((item: any) => {
+        const decisao = decisoesMap.get(item.extrato.id)
+        const valorExtratoFinal = decisao?.valorEditado !== undefined ? decisao.valorEditado : item.extrato.valor
+
+        if (item.extrato.tipo === "CREDITO") {
+          receitasExtrato += valorExtratoFinal
+        } else {
+          despesasExtrato += valorExtratoFinal
+        }
+
+        const topSugestao = item.sugestoes[0]
+        const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
+        if (erpSugerido) {
+          if (erpSugerido.tipo === "CREDITO") {
+            receitasErp += Number(erpSugerido.valor)
+          } else {
+            despesasErp += Number(erpSugerido.valor)
+          }
+        }
+      })
+
+      const saldoDiaExtrato = receitasExtrato - despesasExtrato
+      const saldoDiaErp = receitasErp - despesasErp
+
+      saldoAcumuladoExtrato += saldoDiaExtrato
+      saldoAcumuladoErp += saldoDiaErp
+
+      saldoPorDia.set(data, {
+        receitasExtrato,
+        despesasExtrato,
+        receitasErp,
+        despesasErp,
+        saldoAcumuladoExtrato,
+        saldoAcumuladoErp
+      })
+    })
+
     // Exportar TODOS os itens
     const rows = resultado.itens.map((item, idx) => {
       const extrato = item.extrato
@@ -204,6 +260,10 @@ export async function POST(
         dataAprovacao = decisao?.resolvidoEm ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR") : ""
       }
 
+      // Obter saldo do dia
+      const dataKey = new Date(extrato.data).toLocaleDateString("pt-BR")
+      const saldoDia = saldoPorDia.get(dataKey)
+
       return {
         "#": idx + 1,
         "Status Final": statusFinal,
@@ -225,6 +285,15 @@ export async function POST(
         "Documento ERP": erpSugerido?.documento || "",
         "Fornecedor ERP": erpSugerido?.fornecedor || "",
         "Categoria ERP": erpSugerido?.categoria || "",
+        // Saldo por dia
+        "Receitas Dia Extrato": saldoDia?.receitasExtrato || 0,
+        "Despesas Dia Extrato": saldoDia?.despesasExtrato || 0,
+        "Saldo Dia Extrato": (saldoDia?.receitasExtrato || 0) - (saldoDia?.despesasExtrato || 0),
+        "Receitas Dia ERP": saldoDia?.receitasErp || 0,
+        "Despesas Dia ERP": saldoDia?.despesasErp || 0,
+        "Saldo Dia ERP": (saldoDia?.receitasErp || 0) - (saldoDia?.despesasErp || 0),
+        "Saldo Acumulado Extrato": saldoDia?.saldoAcumuladoExtrato || 0,
+        "Saldo Acumulado ERP": saldoDia?.saldoAcumuladoErp || 0,
         // Matching
         "Score": topSugestao?.score || 0,
         "Confiança": item.confianca,
@@ -256,6 +325,14 @@ export async function POST(
       { wch: 20 },  // Documento ERP
       { wch: 25 },  // Fornecedor ERP
       { wch: 20 },  // Categoria ERP
+      { wch: 15 },  // Receitas Dia Extrato
+      { wch: 15 },  // Despesas Dia Extrato
+      { wch: 15 },  // Saldo Dia Extrato
+      { wch: 15 },  // Receitas Dia ERP
+      { wch: 15 },  // Despesas Dia ERP
+      { wch: 15 },  // Saldo Dia ERP
+      { wch: 15 },  // Saldo Acumulado Extrato
+      { wch: 15 },  // Saldo Acumulado ERP
       { wch: 8 },   // Score
       { wch: 10 },  // Confiança
       { wch: 50 }   // Explicações
