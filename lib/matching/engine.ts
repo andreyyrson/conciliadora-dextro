@@ -130,35 +130,37 @@ function scoreValor(v1: number, v2: number): number {
   if (diff < 0.01) return 50
   const max = Math.max(v1, v2)
   const pct = max === 0 ? 1 : diff / max
-  if (pct <= 0.01) return 40
-  if (pct <= 0.05) return 20
+  if (pct <= 0.005) return 45 // 0,5% de diferença
+  if (pct <= 0.01) return 40  // 1% de diferença
+  if (pct <= 0.02) return 30  // 2% de diferença
+  if (pct <= 0.05) return 15  // 5% de diferença
   return 0
 }
 
 function scoreData(d1: Date, d2: Date): number {
   const diffMs = Math.abs(d1.getTime() - d2.getTime())
   const diffDays = diffMs / (1000 * 60 * 60 * 24)
-  if (diffDays <= 0) return 30
+  if (diffDays <= 0) return 25
   if (diffDays <= 1) return 20
-  if (diffDays <= 3) return 10
-  if (diffDays <= 7) return 5
+  if (diffDays <= 3) return 15
+  if (diffDays <= 7) return 10
   return 0
 }
 
 function scoreDescricao(d1: string, d2: string): number {
   const sim = similaridadeHibrida(d1, d2)
-  return Math.round(sim * 20)
+  return Math.round(sim * 25)
 }
 
 function scoreDocumento(docErp: string | null | undefined, idExtrato: string | null | undefined): number {
   const a = normalizarDocumento(docErp || "")
   const b = normalizarDocumento(idExtrato || "")
   if (!a || !b) return 0
-  if (a === b) return 15
+  if (a === b) return 10
   const numA = a.replace(/\D/g, "")
   const numB = b.replace(/\D/g, "")
-  if (numA && numB && numA === numB) return 10
-  if (a.includes(b) || b.includes(a)) return 5
+  if (numA && numB && numA === numB) return 7
+  if (a.includes(b) || b.includes(a)) return 3
   return 0
 }
 
@@ -181,20 +183,23 @@ function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): b
 function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   const exps: string[] = []
   if (sd.valor >= 50) exps.push("Valor idêntico")
-  else if (sd.valor >= 40) exps.push("Valor muito próximo")
-  else if (sd.valor >= 20) exps.push("Valor aproximado")
+  else if (sd.valor >= 45) exps.push("Valor muito próximo (≤ 0,5%)")
+  else if (sd.valor >= 40) exps.push("Valor muito próximo (≤ 1%)")
+  else if (sd.valor >= 30) exps.push("Valor aproximado (≤ 2%)")
+  else if (sd.valor >= 15) exps.push("Valor aproximado (≤ 5%)")
 
-  if (sd.data >= 30) exps.push("Data idêntica")
+  if (sd.data >= 25) exps.push("Data idêntica")
   else if (sd.data >= 20) exps.push("Data com diferença de 1 dia")
-  else if (sd.data >= 10) exps.push("Data com diferença de até 3 dias")
+  else if (sd.data >= 15) exps.push("Data com diferença de até 3 dias")
+  else if (sd.data >= 10) exps.push("Data com diferença de até 7 dias")
   else if (sd.data > 0) exps.push("Data próxima")
 
-  if (sd.descricao >= 18) exps.push(`Descrição muito similar (${Math.round((sd.descricao / 20) * 100)}%)`)
-  else if (sd.descricao >= 12) exps.push(`Descrição similar (${Math.round((sd.descricao / 20) * 100)}%)`)
-  else if (sd.descricao > 0) exps.push(`Descrição parcialmente similar (${Math.round((sd.descricao / 20) * 100)}%)`)
+  if (sd.descricao >= 22) exps.push(`Descrição muito similar (${Math.round((sd.descricao / 25) * 100)}%)`)
+  else if (sd.descricao >= 18) exps.push(`Descrição similar (${Math.round((sd.descricao / 25) * 100)}%)`)
+  else if (sd.descricao > 0) exps.push(`Descrição parcialmente similar (${Math.round((sd.descricao / 25) * 100)}%)`)
 
-  if (sd.documento >= 15) exps.push("Documento/Identificador idêntico")
-  else if (sd.documento >= 10) exps.push("Documento/Identificador numérico igual")
+  if (sd.documento >= 10) exps.push("Documento/Identificador idêntico")
+  else if (sd.documento >= 7) exps.push("Documento/Identificador numérico igual")
   else if (sd.documento > 0) exps.push("Documento/Identificador parcialmente igual")
 
   return exps
@@ -248,9 +253,10 @@ export function gerarSugestoes(
       const explicacoes = gerarExplicacoes(scoreDetalhado)
       const confianca = calcularConfianca(score)
       const autoConfirmado =
-        score >= 80 &&
-        sv >= 50 && // valor exato
-        sdoc >= 15 // documento exato
+        score >= 85 &&
+        sv >= 40 && // valor muito próximo (≤ 1%)
+        sd >= 20 && // data próxima (≤ 1 dia)
+        sdesc >= 15 // descrição similar (≥ 75%)
 
       candidatos.push({
         extratoId: extrato.id,
@@ -318,13 +324,13 @@ export function gerarSugestoes(
     } else if (match) {
       const erp = erpEntradas.find(e => e.id === match.erpId)!
       const diffValor = Math.abs(erp.valor - extrato.valor)
-      // Verificar se é ambíguo: top1 e top2 com score >= 60 e diferença <= 10
+      // Verificar se é ambíguo: top1 e top2 com score >= 70 e diferença <= 5
       const top1 = sugestoes[0]
       const top2 = sugestoes[1]
       const isAmbiguo =
-        top1 && top1.score >= 60 &&
-        top2 && top2.score >= 60 &&
-        Math.abs(top1.score - top2.score) <= 10
+        top1 && top1.score >= 70 &&
+        top2 && top2.score >= 70 &&
+        Math.abs(top1.score - top2.score) <= 5
 
       if (isAmbiguo) {
         itens.push({
