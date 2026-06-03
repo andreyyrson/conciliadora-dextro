@@ -9,6 +9,7 @@ export interface EntradaConciliacao {
   fornecedor?: string | null
   categoria?: string | null
   identificador?: string | null
+  banco?: string | null
 }
 
 export interface ScoreDetalhado {
@@ -17,6 +18,7 @@ export interface ScoreDetalhado {
   data: number
   descricao: number
   fornecedor: number
+  banco: number
 }
 
 export interface MatchSugestao {
@@ -170,6 +172,21 @@ function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtr
   return Math.round(sim * 15)
 }
 
+function scoreBanco(bancoErp: string | null | undefined, bancoExtrato: string | null | undefined): number {
+  const banco1 = bancoErp || ""
+  const banco2 = bancoExtrato || ""
+  if (!banco1 || !banco2) return 0
+  
+  // Se bancos são idênticos
+  if (banco1.toUpperCase() === banco2.toUpperCase()) {
+    return 10
+  }
+  
+  // Similaridade parcial
+  const sim = similaridadeHibrida(banco1, banco2)
+  return Math.round(sim * 10)
+}
+
 // ========== PRÉ-FILTRO ==========
 
 function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): boolean {
@@ -220,6 +237,10 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   else if (sd.fornecedor >= 9) exps.push(`Fornecedor similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
   else if (sd.fornecedor > 0) exps.push(`Fornecedor parcialmente similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
 
+  if (sd.banco >= 10) exps.push("Banco idêntico")
+  else if (sd.banco >= 7) exps.push(`Banco similar (${Math.round((sd.banco / 10) * 100)}%)`)
+  else if (sd.banco > 0) exps.push(`Banco parcialmente similar (${Math.round((sd.banco / 10) * 100)}%)`)
+
   return exps
 }
 
@@ -264,16 +285,18 @@ export function gerarSugestoes(
         const sd = scoreData(erp.data, extrato.data)
         const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
         const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
+        const sbanc = scoreBanco(erp.banco, extrato.banco)
 
         const scoreDetalhado: ScoreDetalhado = {
           valor: sv,
           tipo: 0, // tipo é pré-filtro, não soma no score
           data: sd,
           descricao: sdesc,
-          fornecedor: sforn
+          fornecedor: sforn,
+          banco: sbanc
         }
 
-        const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+        const score = sv + sd + sdesc + sforn + sbanc // valor + data + descrição + fornecedor + banco
         if (score < 20) continue // muito fraco, descarta
 
         const explicacoes = gerarExplicacoes(scoreDetalhado)
@@ -323,16 +346,18 @@ export function gerarSugestoes(
           const sd = scoreData(erp.data, extrato.data)
           const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
           const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
+          const sbanc = scoreBanco(erp.banco, extrato.banco)
 
           const scoreDetalhado: ScoreDetalhado = {
             valor: sv,
             tipo: 0,
             data: sd,
             descricao: sdesc,
-            fornecedor: sforn
+            fornecedor: sforn,
+            banco: sbanc
           }
 
-          const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+          const score = sv + sd + sdesc + sforn + sbanc // valor + data + descrição + fornecedor + banco
           if (score < 20) continue
 
           const explicacoes = gerarExplicacoes(scoreDetalhado)

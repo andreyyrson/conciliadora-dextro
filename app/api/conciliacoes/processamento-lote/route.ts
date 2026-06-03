@@ -123,7 +123,8 @@ export async function POST(req: Request) {
       documento: l.documento,
       fornecedor: l.fornecedor,
       categoria: l.categoria,
-      identificador: l.documento
+      identificador: l.documento,
+      banco: l.banco
     }))
 
     const extratoEntradas = extratoLancamentos.map(l => ({
@@ -134,7 +135,8 @@ export async function POST(req: Request) {
       tipo: l.tipo as "CREDITO" | "DEBITO",
       descricao: l.descricao,
       documento: l.identificador,
-      identificador: l.identificador
+      identificador: l.identificador,
+      banco: l.banco
     }))
 
     // Executar matching

@@ -109,6 +109,7 @@ export async function POST(req: Request) {
       valor: dado.valor,
       tipo: dado.tipo,
       identificador: dado.identificador || dado.documento || dado.numero || null,
+      banco: dado.banco || null,
       saldoApos: dado.saldoApos || null
     }))
 
