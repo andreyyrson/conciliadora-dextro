@@ -55,6 +55,9 @@ export async function POST(req: Request) {
       )
     }
 
+    console.log("Criando empresa para userId:", session.user.id)
+    console.log("Dados da empresa:", { nome, cnpj })
+
     const empresa = await prisma.empresa.create({
       data: {
         nome,
@@ -63,11 +66,13 @@ export async function POST(req: Request) {
       }
     })
 
+    console.log("Empresa criada com sucesso:", empresa.id)
     return NextResponse.json({ empresa }, { status: 201 })
   } catch (error) {
     console.error("Erro ao criar empresa:", error)
+    console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { error: "Erro ao criar empresa" },
+      { error: "Erro ao criar empresa", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
