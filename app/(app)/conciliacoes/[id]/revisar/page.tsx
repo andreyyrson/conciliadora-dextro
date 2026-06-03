@@ -304,7 +304,7 @@ export default function RevisarConciliacaoPage() {
 
   const confirmarTodosSugeridos = () => {
     itens.forEach(item => {
-      if (item.status === "SUGERIDO" && item.sugestoes[0]?.score >= 80 && !decisoes[item.extrato.id]) {
+      if (item.status === "SUGERIDO" && item.sugestoes[0]?.score >= 50 && !decisoes[item.extrato.id]) {
         confirmarSugerido(item)
       }
     })
@@ -498,7 +498,7 @@ export default function RevisarConciliacaoPage() {
                 disabled={sugeridosPendentes === 0}
                 className="bg-warning hover:bg-warning/90 text-background"
               >
-                Confirmar sugeridos (≥80%)
+                Confirmar sugeridos (≥50%)
               </Button>
             </div>
           </div>
