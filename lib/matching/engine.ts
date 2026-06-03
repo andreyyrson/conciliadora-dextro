@@ -279,10 +279,10 @@ export function gerarSugestoes(
         const explicacoes = gerarExplicacoes(scoreDetalhado)
         const confianca = calcularConfianca(score)
         
-        // Auto-confirmação: score >= 70 + valor + descrição + fornecedor (se existir) + data
+        // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
         const temFornecedor = !!erp.fornecedor
         const autoConfirmado =
-          score >= 70 &&
+          score >= 50 &&
           sv >= 40 && // valor muito próximo (≤ 1%)
           sdesc >= 15 && // descrição similar (≥ 75%)
           sd >= 5 && // data próxima (≤ 7 dias)
@@ -338,10 +338,10 @@ export function gerarSugestoes(
           const explicacoes = gerarExplicacoes(scoreDetalhado)
           const confianca = calcularConfianca(score)
           
-          // Auto-confirmação: score >= 70 + valor + descrição + fornecedor (se existir) + data
+          // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
           const temFornecedor = !!erp.fornecedor
           const autoConfirmado =
-            score >= 70 &&
+            score >= 50 &&
             sv >= 40 &&
             sdesc >= 15 &&
             sd >= 5 &&
