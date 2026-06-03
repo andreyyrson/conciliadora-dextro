@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ChevronRight,
   ChevronLeft,
+  Zap,
 } from "lucide-react"
 
 interface PainelSidebarProps {
@@ -126,6 +127,12 @@ export function PainelSidebar({
           label: "Importação Extrato",
           href: "/importacoes",
           icon: Upload,
+          visible: true,
+        },
+        {
+          label: "Processamento em Lote",
+          href: "/processamento-lote",
+          icon: Zap,
           visible: true,
         },
       ],
