@@ -16,6 +16,7 @@ export interface ScoreDetalhado {
   tipo: number
   data: number
   descricao: number
+  fornecedor: number
   documento: number
 }
 
@@ -151,6 +152,25 @@ function scoreDescricao(d1: string, d2: string): number {
   return Math.round(sim * 25)
 }
 
+function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtrato: string | null | undefined): number {
+  const fornecedor = fornecedorErp || ""
+  const descricao = descricaoExtrato || ""
+  if (!fornecedor || !descricao) return 0
+  
+  // Tentar encontrar fornecedor na descrição do extrato
+  const descricaoNorm = descricao.toUpperCase()
+  const fornecedorNorm = fornecedor.toUpperCase()
+  
+  // Se fornecedor está contido na descrição
+  if (descricaoNorm.includes(fornecedorNorm)) {
+    return 15
+  }
+  
+  // Similaridade parcial
+  const sim = similaridadeHibrida(fornecedor, descricao)
+  return Math.round(sim * 15)
+}
+
 function scoreDocumento(docErp: string | null | undefined, idExtrato: string | null | undefined): number {
   const a = normalizarDocumento(docErp || "")
   const b = normalizarDocumento(idExtrato || "")
@@ -209,6 +229,10 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   else if (sd.descricao >= 18) exps.push(`Descrição similar (${Math.round((sd.descricao / 25) * 100)}%)`)
   else if (sd.descricao > 0) exps.push(`Descrição parcialmente similar (${Math.round((sd.descricao / 25) * 100)}%)`)
 
+  if (sd.fornecedor >= 12) exps.push(`Fornecedor muito similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
+  else if (sd.fornecedor >= 9) exps.push(`Fornecedor similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
+  else if (sd.fornecedor > 0) exps.push(`Fornecedor parcialmente similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
+
   if (sd.documento >= 10) exps.push("Documento/Identificador idêntico")
   else if (sd.documento >= 7) exps.push("Documento/Identificador numérico igual")
   else if (sd.documento > 0) exps.push("Documento/Identificador parcialmente igual")
@@ -256,6 +280,7 @@ export function gerarSugestoes(
         const sv = scoreValor(erp.valor, extrato.valor)
         const sd = scoreData(erp.data, extrato.data)
         const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+        const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
         const sdoc = scoreDocumento(erp.documento, extrato.identificador)
 
         const scoreDetalhado: ScoreDetalhado = {
@@ -263,18 +288,23 @@ export function gerarSugestoes(
           tipo: 0, // tipo é pré-filtro, não soma no score
           data: sd,
           descricao: sdesc,
+          fornecedor: sforn,
           documento: sdoc
         }
 
-        const score = sv + sd + sdesc + sdoc
+        const score = sv + sdesc + sforn + sdoc // data removida do score total
         if (score < 20) continue // muito fraco, descarta
 
         const explicacoes = gerarExplicacoes(scoreDetalhado)
         const confianca = calcularConfianca(score)
+        
+        // Auto-confirmação: score >= 80 + valor + descrição + fornecedor (se existir)
+        const temFornecedor = !!erp.fornecedor
         const autoConfirmado =
-          score >= 75 &&
+          score >= 80 &&
           sv >= 40 && // valor muito próximo (≤ 1%)
-          sdesc >= 15 // descrição similar (≥ 75%)
+          sdesc >= 15 && // descrição similar (≥ 75%)
+          (!temFornecedor || sforn >= 10) // fornecedor similar se existir
 
         candidatos.push({
           extratoId: extrato.id,
@@ -310,6 +340,7 @@ export function gerarSugestoes(
           const sv = scoreValor(erp.valor, extrato.valor)
           const sd = scoreData(erp.data, extrato.data)
           const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+          const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
           const sdoc = scoreDocumento(erp.documento, extrato.identificador)
 
           const scoreDetalhado: ScoreDetalhado = {
@@ -317,18 +348,23 @@ export function gerarSugestoes(
             tipo: 0,
             data: sd,
             descricao: sdesc,
+            fornecedor: sforn,
             documento: sdoc
           }
 
-          const score = sv + sd + sdesc + sdoc
+          const score = sv + sdesc + sforn + sdoc // data removida do score total
           if (score < 20) continue
 
           const explicacoes = gerarExplicacoes(scoreDetalhado)
           const confianca = calcularConfianca(score)
+          
+          // Auto-confirmação: score >= 80 + valor + descrição + fornecedor (se existir)
+          const temFornecedor = !!erp.fornecedor
           const autoConfirmado =
-            score >= 75 &&
+            score >= 80 &&
             sv >= 40 &&
-            sdesc >= 15
+            sdesc >= 15 &&
+            (!temFornecedor || sforn >= 10)
 
           candidatos.push({
             extratoId: extrato.id,
