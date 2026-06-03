@@ -17,7 +17,6 @@ export interface ScoreDetalhado {
   data: number
   descricao: number
   fornecedor: number
-  documento: number
 }
 
 export interface MatchSugestao {
@@ -171,18 +170,6 @@ function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtr
   return Math.round(sim * 15)
 }
 
-function scoreDocumento(docErp: string | null | undefined, idExtrato: string | null | undefined): number {
-  const a = normalizarDocumento(docErp || "")
-  const b = normalizarDocumento(idExtrato || "")
-  if (!a || !b) return 0
-  if (a === b) return 10
-  const numA = a.replace(/\D/g, "")
-  const numB = b.replace(/\D/g, "")
-  if (numA && numB && numA === numB) return 7
-  if (a.includes(b) || b.includes(a)) return 3
-  return 0
-}
-
 // ========== PRÉ-FILTRO ==========
 
 function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): boolean {
@@ -233,10 +220,6 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   else if (sd.fornecedor >= 9) exps.push(`Fornecedor similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
   else if (sd.fornecedor > 0) exps.push(`Fornecedor parcialmente similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
 
-  if (sd.documento >= 10) exps.push("Documento/Identificador idêntico")
-  else if (sd.documento >= 7) exps.push("Documento/Identificador numérico igual")
-  else if (sd.documento > 0) exps.push("Documento/Identificador parcialmente igual")
-
   return exps
 }
 
@@ -281,18 +264,16 @@ export function gerarSugestoes(
         const sd = scoreData(erp.data, extrato.data)
         const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
         const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
-        const sdoc = scoreDocumento(erp.documento, extrato.identificador)
 
         const scoreDetalhado: ScoreDetalhado = {
           valor: sv,
           tipo: 0, // tipo é pré-filtro, não soma no score
           data: sd,
           descricao: sdesc,
-          fornecedor: sforn,
-          documento: sdoc
+          fornecedor: sforn
         }
 
-        const score = sv + sdesc + sforn + sdoc // data removida do score total
+        const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
         if (score < 20) continue // muito fraco, descarta
 
         const explicacoes = gerarExplicacoes(scoreDetalhado)
@@ -341,18 +322,16 @@ export function gerarSugestoes(
           const sd = scoreData(erp.data, extrato.data)
           const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
           const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
-          const sdoc = scoreDocumento(erp.documento, extrato.identificador)
 
           const scoreDetalhado: ScoreDetalhado = {
             valor: sv,
             tipo: 0,
             data: sd,
             descricao: sdesc,
-            fornecedor: sforn,
-            documento: sdoc
+            fornecedor: sforn
           }
 
-          const score = sv + sdesc + sforn + sdoc // data removida do score total
+          const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
           if (score < 20) continue
 
           const explicacoes = gerarExplicacoes(scoreDetalhado)
