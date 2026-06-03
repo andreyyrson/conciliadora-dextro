@@ -279,12 +279,13 @@ export function gerarSugestoes(
         const explicacoes = gerarExplicacoes(scoreDetalhado)
         const confianca = calcularConfianca(score)
         
-        // Auto-confirmação: score >= 80 + valor + descrição + fornecedor (se existir)
+        // Auto-confirmação: score >= 70 + valor + descrição + fornecedor (se existir) + data
         const temFornecedor = !!erp.fornecedor
         const autoConfirmado =
-          score >= 80 &&
+          score >= 70 &&
           sv >= 40 && // valor muito próximo (≤ 1%)
           sdesc >= 15 && // descrição similar (≥ 75%)
+          sd >= 5 && // data próxima (≤ 7 dias)
           (!temFornecedor || sforn >= 10) // fornecedor similar se existir
 
         candidatos.push({
@@ -337,12 +338,13 @@ export function gerarSugestoes(
           const explicacoes = gerarExplicacoes(scoreDetalhado)
           const confianca = calcularConfianca(score)
           
-          // Auto-confirmação: score >= 80 + valor + descrição + fornecedor (se existir)
+          // Auto-confirmação: score >= 70 + valor + descrição + fornecedor (se existir) + data
           const temFornecedor = !!erp.fornecedor
           const autoConfirmado =
-            score >= 80 &&
+            score >= 70 &&
             sv >= 40 &&
             sdesc >= 15 &&
+            sd >= 5 &&
             (!temFornecedor || sforn >= 10)
 
           candidatos.push({
