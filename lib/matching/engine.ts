@@ -24,7 +24,7 @@ export interface ScoreDetalhado {
 export interface MatchSugestao {
   entradaOrigemId: string     // ID do ERP
   entradaDestinoId: string    // ID do extrato
-  score: number               // 0–100
+  score: number               // 0–120
   scoreDetalhado: ScoreDetalhado
   explicacoes: string[]
   confianca: "HIGH" | "MEDIUM" | "LOW"
