@@ -47,36 +47,48 @@ export async function POST(
     })
 
     // Criar novos itens
-    const itensParaCriar = decisoes.map((d: any) => ({
-      conciliacaoId,
-      status: d.status,
-      erpId: d.erpId || null,
-      extratoId: isConta ? d.extratoId || null : null,
-      extratoImportadoId: !isConta ? d.extratoId || null : null,
-      scoreMatch: d.scoreMatch || null,
-      confiancaMatch: d.confiancaMatch || null,
-      scoreDetalhado: d.scoreDetalhado || null,
-      explicacoes: d.explicacoes || null,
-      candidatos: d.candidatos || null,
-      hashConciliacao: hashConciliacao || null,
-      diferencaValor: d.diferencaValor || null,
-      observacao: d.observacao || null,
-      resolvidoManualmente: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO",
-      resolvidoPor: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? session.user.id : null,
-      resolvidoEm: d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO" ? new Date() : null
-    }))
+    const itensParaCriar = decisoes.map((d: any) => {
+      // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
+      // EXCETO se for AMBIGUO (requer decisão manual)
+      let statusFinal = d.status
+      let resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
+
+      if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confiancaMatch === "HIGH" && d.scoreMatch >= 80) {
+        statusFinal = "AUTO_CONFIRMADO"
+        resolvidoManualmente = false
+      }
+
+      return {
+        conciliacaoId,
+        status: statusFinal,
+        erpId: d.erpId || null,
+        extratoId: isConta ? d.extratoId || null : null,
+        extratoImportadoId: !isConta ? d.extratoId || null : null,
+        scoreMatch: d.scoreMatch || null,
+        confiancaMatch: d.confiancaMatch || null,
+        scoreDetalhado: d.scoreDetalhado || null,
+        explicacoes: d.explicacoes || null,
+        candidatos: d.candidatos || null,
+        hashConciliacao: hashConciliacao || null,
+        diferencaValor: d.diferencaValor || null,
+        observacao: d.observacao || null,
+        resolvidoManualmente,
+        resolvidoPor: session.user.id, // Definir para todos os itens
+        resolvidoEm: new Date() // Definir para todos os itens
+      }
+    })
 
     await prisma.conciliacaoItem.createMany({
       data: itensParaCriar,
       skipDuplicates: true
     })
 
-    // Recalcular totais
-    const qtdConciliados = decisoes.filter((d: any) =>
+    // Recalcular totais (usar statusFinal que pode ter sido alterado pela auto-confirmação)
+    const qtdConciliados = itensParaCriar.filter((d: any) =>
       d.status === "AUTO_CONFIRMADO" || d.status === "CONFIRMADO_MANUAL"
     ).length
-    const qtdDivergentes = decisoes.filter((d: any) => d.status === "REJEITADO").length
-    const qtdFaltandoErp = decisoes.filter((d: any) => d.status === "SEM_MATCH").length
+    const qtdDivergentes = itensParaCriar.filter((d: any) => d.status === "REJEITADO").length
+    const qtdFaltandoErp = itensParaCriar.filter((d: any) => d.status === "SEM_MATCH").length
     const qtdFaltandoBanco = Array.isArray(erpsSobrando) ? erpsSobrando.length : 0
 
     // Atualizar conciliação

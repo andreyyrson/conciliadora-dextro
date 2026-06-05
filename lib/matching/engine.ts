@@ -248,7 +248,7 @@ export function gerarSugestoes(
       const explicacoes = gerarExplicacoes(scoreDetalhado)
       const confianca = calcularConfianca(score)
       const autoConfirmado =
-        score >= 95 &&
+        score >= 80 &&
         sv >= 50 && // valor exato
         sdoc >= 15 // documento exato
 

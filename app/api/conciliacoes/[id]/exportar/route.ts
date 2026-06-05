@@ -5,13 +5,15 @@ import { prisma } from "@/lib/db"
 import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
 import * as XLSX from "xlsx"
 
-export async function GET(
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
+    const body = await req.json()
+    const decisoesExtras = body.decisoes || null
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
@@ -72,53 +74,179 @@ export async function GET(
     // Gerar sugestões
     const resultado = gerarSugestoes(erpEntradas, extratoEntradas)
 
-    // Filtrar apenas inconsistências (não auto-confirmados)
-    const inconsistencias = resultado.itens.filter(
-      i => i.status !== "AUTO_CONFIRMADO"
-    )
+    // Buscar itens da conciliação para obter status final e quem aprovou
+    const conciliacaoItens = await prisma.conciliacaoItem.findMany({
+      where: { conciliacaoId: id },
+      include: {
+        erp: true,
+        extrato: true,
+        extratoImportado: true
+      }
+    })
 
-    // Criar planilha
-    const rows = inconsistencias.map((item, idx) => {
+    // Criar mapa de decisões por extratoId
+    const decisoesMap = new Map()
+    const usuarioMap = new Map()
+
+    // Buscar usuário atual para exportação
+    let usuarioAtual = null
+    if (session?.user?.id) {
+      usuarioAtual = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { id: true, name: true, email: true }
+      })
+      if (usuarioAtual) {
+        usuarioMap.set(usuarioAtual.id, usuarioAtual.name || usuarioAtual.email)
+      }
+    }
+
+    if (conciliacaoItens.length > 0) {
+      // Se já existem itens (conciliação foi confirmada), usar dados do banco
+      conciliacaoItens.forEach(item => {
+        const extratoId = item.extratoId || item.extratoImportadoId
+        if (extratoId) {
+          decisoesMap.set(extratoId, {
+            status: item.status,
+            resolvidoPor: item.resolvidoPor,
+            resolvidoEm: item.resolvidoEm
+          })
+        }
+      })
+
+      // Buscar nomes dos usuários que aprovaram
+      const userIds = [...new Set(conciliacaoItens.map(i => i.resolvidoPor).filter(Boolean))]
+      if (userIds.length > 0) {
+        const usuarios = await prisma.user.findMany({
+          where: { id: { in: userIds as string[] } },
+          select: { id: true, name: true, email: true }
+        })
+        usuarios.forEach(u => {
+          usuarioMap.set(u.id, u.name || u.email)
+        })
+      }
+    }
+
+    // Se foram fornecidas decisões extras (antes de confirmar), sobrescrever
+    if (decisoesExtras) {
+      Object.entries(decisoesExtras).forEach(([extratoId, d]: [string, any]) => {
+        // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
+        // EXCETO se for AMBIGUO (requer decisão manual)
+        let statusFinal = d.status
+        let resolvidoPor = null
+        let resolvidoEm = null
+
+        const resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
+
+        if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confianca === "HIGH" && d.score >= 80) {
+          statusFinal = "AUTO_CONFIRMADO"
+          resolvidoPor = session.user.id
+          resolvidoEm = new Date()
+        } else if (resolvidoManualmente) {
+          resolvidoPor = session.user.id
+          resolvidoEm = new Date()
+        }
+
+        decisoesMap.set(extratoId, {
+          status: statusFinal,
+          resolvidoPor,
+          resolvidoEm
+        })
+      })
+    } else {
+      // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
+      resultado.itens.forEach((item: any) => {
+        // Se já é AUTO_CONFIRMADO, apenas garantir que tem quem aprovou
+        if (item.status === "AUTO_CONFIRMADO") {
+          decisoesMap.set(item.extrato.id, {
+            status: "AUTO_CONFIRMADO",
+            resolvidoPor: session.user.id,
+            resolvidoEm: new Date()
+          })
+        }
+        // Se não é AMBIGUO e tem confiança HIGH com score >= 80, aprovar automaticamente
+        else if (item.status !== "AMBIGUO" && item.sugestoes[0]?.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
+          decisoesMap.set(item.extrato.id, {
+            status: "AUTO_CONFIRMADO",
+            resolvidoPor: session.user.id,
+            resolvidoEm: new Date()
+          })
+        }
+      })
+    }
+
+    // Exportar TODOS os itens
+    const rows = resultado.itens.map((item, idx) => {
       const extrato = item.extrato
       const topSugestao = item.sugestoes[0]
       const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
+      const decisao = decisoesMap.get(extrato.id)
+
+      // Determinar status de aprovação
+      const statusFinal = decisao?.status || item.status
+      const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" || statusFinal === "CONFIRMADO_MANUAL" ? "APROVADO" :
+                             statusFinal === "REJEITADO" ? "REPROVADO" : "PENDENTE"
+
+      // Preencher quem aprovou e data apenas se houver decisão manual
+      const aprovadoPor = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoPor
+        ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor
+        : (statusFinal === "AUTO_CONFIRMADO" ? "SISTEMA" : "")
+      const dataAprovacao = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoEm
+        ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR")
+        : (statusFinal === "AUTO_CONFIRMADO" ? "Auto-confirmado" : "")
 
       return {
         "#": idx + 1,
+        "Status Final": statusFinal,
+        "Aprovação": statusAprovacao,
+        "Aprovado Por": aprovadoPor,
+        "Data Aprovação": dataAprovacao,
+        // Dados do Extrato
         "Data Extrato": new Date(extrato.data).toLocaleDateString("pt-BR"),
         "Descrição Extrato": extrato.descricao,
         "Valor Extrato": extrato.valor,
         "Tipo Extrato": extrato.tipo,
-        "Status": item.status,
-        "Confiança": item.confianca,
+        "ID Extrato": extrato.identificador || "",
+        // Dados do ERP
+        "Data ERP": erpSugerido ? new Date(erpSugerido.data).toLocaleDateString("pt-BR") : "",
+        "Descrição ERP": erpSugerido?.descricao || "",
+        "Valor ERP": erpSugerido?.valor || 0,
+        "Tipo ERP": erpSugerido?.tipo || "",
+        "Documento ERP": erpSugerido?.documento || "",
+        "Fornecedor ERP": erpSugerido?.fornecedor || "",
+        "Categoria ERP": erpSugerido?.categoria || "",
+        // Matching
         "Score": topSugestao?.score || 0,
-        "Explicações": topSugestao?.explicacoes.join("; ") || "",
-        "ERP Sugerido ID": erpSugerido?.id || "",
-        "ERP Sugerido Descrição": erpSugerido?.descricao || "",
-        "ERP Sugerido Valor": erpSugerido?.valor || 0,
-        "ERP Sugerido Documento": erpSugerido?.documento || ""
+        "Confiança": item.confianca,
+        "Explicações": topSugestao?.explicacoes.join("; ") || ""
       }
     })
 
     const worksheet = XLSX.utils.json_to_sheet(rows)
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Inconsistências")
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Conciliação")
 
     // Ajustar largura das colunas
     const colWidths = [
       { wch: 5 },   // #
+      { wch: 20 },  // Status Final
+      { wch: 15 },  // Aprovação
+      { wch: 25 },  // Aprovado Por
+      { wch: 20 },  // Data Aprovação
       { wch: 12 },  // Data Extrato
       { wch: 40 },  // Descrição Extrato
       { wch: 12 },  // Valor Extrato
       { wch: 10 },  // Tipo Extrato
-      { wch: 15 },  // Status
-      { wch: 10 },  // Confiança
+      { wch: 15 },  // ID Extrato
+      { wch: 12 },  // Data ERP
+      { wch: 40 },  // Descrição ERP
+      { wch: 12 },  // Valor ERP
+      { wch: 10 },  // Tipo ERP
+      { wch: 20 },  // Documento ERP
+      { wch: 25 },  // Fornecedor ERP
+      { wch: 20 },  // Categoria ERP
       { wch: 8 },   // Score
-      { wch: 50 },  // Explicações
-      { wch: 30 },  // ERP Sugerido ID
-      { wch: 40 },  // ERP Sugerido Descrição
-      { wch: 12 },  // ERP Sugerido Valor
-      { wch: 20 }   // ERP Sugerido Documento
+      { wch: 10 },  // Confiança
+      { wch: 50 }   // Explicações
     ]
     worksheet["!cols"] = colWidths
 
@@ -127,7 +255,7 @@ export async function GET(
     return new NextResponse(buffer as ArrayBuffer, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="inconsistencias-${conciliacao.periodo}.xlsx"`
+        "Content-Disposition": `attachment; filename="conciliacao-${conciliacao.periodo}.xlsx"`
       }
     })
   } catch (error) {
