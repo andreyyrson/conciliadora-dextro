@@ -49,7 +49,6 @@ export async function POST(req: Request) {
       )
     }
 
-    console.log("Pluggy Item Response:", JSON.stringify(item, null, 2))
 
     if (!item || !item.id) {
       return NextResponse.json(

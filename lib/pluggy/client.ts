@@ -9,7 +9,6 @@ let apiKey: string | null = null
 async function getApiKey(): Promise<string> {
   if (apiKey) return apiKey
 
-  console.log("Requesting API Key from:", `${PLUGGY_BASE_URL}/auth`)
 
   const response = await fetch(`${PLUGGY_BASE_URL}/auth`, {
     method: "POST",
@@ -22,9 +21,7 @@ async function getApiKey(): Promise<string> {
     })
   })
 
-  console.log("Auth response status:", response.status)
   const responseText = await response.text()
-  console.log("Auth response body:", responseText)
 
   if (!response.ok) {
     const error = responseText ? JSON.parse(responseText) : {}
@@ -32,7 +29,6 @@ async function getApiKey(): Promise<string> {
   }
 
   const data = JSON.parse(responseText)
-  console.log("Parsed auth response:", JSON.stringify(data, null, 2))
 
   const key = data.apiKey || data.accessToken || data.token
   if (!key) {
@@ -50,9 +46,6 @@ async function getHeaders(): Promise<Record<string, string>> {
   }
 }
 
-console.log("Pluggy Client initialized")
-console.log("Client ID:", PLUGGY_CLIENT_ID ? `${PLUGGY_CLIENT_ID.substring(0, 8)}...` : "NOT SET")
-console.log("Base URL:", PLUGGY_BASE_URL)
 
 import type {
   PluggyAccount,
@@ -75,7 +68,6 @@ export const pluggy = {
 
     const headers = await getHeaders()
 
-    console.log("Pluggy Request:", {
       url: `${PLUGGY_BASE_URL}/items`,
       headers: {
         "X-API-KEY": headers["X-API-KEY"] ? `${headers["X-API-KEY"].substring(0, 20)}...` : "NOT SET",
@@ -90,9 +82,7 @@ export const pluggy = {
       body: JSON.stringify(body)
     })
 
-    console.log("Pluggy Response Status:", response.status)
     const responseText = await response.text()
-    console.log("Pluggy Response Body:", responseText)
 
     if (!response.ok) {
       const error = responseText ? JSON.parse(responseText) : {}

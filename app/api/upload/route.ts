@@ -19,7 +19,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
-    console.log("GET /api/upload - empresaId:", empresaId)
 
     if (!empresaId) {
       return NextResponse.json(
@@ -45,7 +44,6 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" }
     })
 
-    console.log("Uploads encontrados:", uploads.length)
 
     return NextResponse.json({ uploads })
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { empresaSchema } from "@/lib/schemas"
 
 export async function GET(req: Request) {
   try {
@@ -14,14 +15,12 @@ export async function GET(req: Request) {
       )
     }
 
-    console.log("Buscando empresas para userId:", session.user.id)
 
     const empresas = await prisma.empresa.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "desc" }
     })
 
-    console.log("Empresas encontradas:", empresas.length)
 
     return NextResponse.json({ empresas })
   } catch (error) {
@@ -46,14 +45,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { nome, cnpj } = body
-
-    if (!nome) {
+    
+    const validated = empresaSchema.safeParse(body)
+    if (!validated.success) {
       return NextResponse.json(
-        { error: "Nome da empresa é obrigatório" },
+        { error: "Dados inválidos", details: validated.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+
+    const { nome, cnpj } = validated.data
 
     const empresa = await prisma.empresa.create({
       data: {
