@@ -2,6 +2,19 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+<<<<<<< HEAD
+=======
+import { LayoutDashboard, FileText, Building2, Download, Upload, Building } from 'lucide-react'
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/empresas', label: 'Empresas', icon: Building },
+  { href: '/contas', label: 'Contas Bancárias', icon: Building2 },
+  { href: '/upload', label: 'Upload ERP', icon: Upload },
+  { href: '/importacoes', label: 'Importações', icon: Download },
+  { href: '/conciliacoes', label: 'Conciliações', icon: FileText },
+]
+>>>>>>> 8c7e481 (Fix: reordenar sidebar para seguir fluxo lógico do usuário)
 
 export function Sidebar() {
   return (
