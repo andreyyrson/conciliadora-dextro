@@ -1,9 +1,8 @@
 "use client"
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-<<<<<<< HEAD
-=======
 import { LayoutDashboard, FileText, Building2, Download, Upload, Building } from 'lucide-react'
 
 const navItems = [
@@ -14,63 +13,51 @@ const navItems = [
   { href: '/importacoes', label: 'Importações', icon: Download },
   { href: '/conciliacoes', label: 'Conciliações', icon: FileText },
 ]
->>>>>>> 8c7e481 (Fix: reordenar sidebar para seguir fluxo lógico do usuário)
 
 export function Sidebar() {
+  const pathname = usePathname()
+
   return (
     <aside className="w-64 border-r border-white/20 bg-black h-full">
       <div className="p-6">
-        <h1 className="text-xl font-bold text-white">Conciliação</h1>
+        <h1 className="text-xl font-bold text-white flex items-center gap-2">
+          <Building2 className="w-6 h-6" />
+          Conciliação
+        </h1>
       </div>
-      <nav className="px-4 space-y-2">
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/dashboard"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Dashboard
-          </Link>
-        </motion.div>
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/conciliacoes"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Conciliações
-          </Link>
-        </motion.div>
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/contas"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Contas Bancárias
-          </Link>
-        </motion.div>
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/importacoes"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Importações
-          </Link>
-        </motion.div>
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/upload"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Upload ERP
-          </Link>
-        </motion.div>
-        <motion.div whileHover={{ x: 5 }} transition={{ duration: 0.2 }}>
-          <Link
-            href="/empresas"
-            className="block px-4 py-2 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
-          >
-            Empresas
-          </Link>
-        </motion.div>
+      <nav className="px-4 space-y-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href
+          const Icon = item.icon
+          return (
+            <motion.div
+              key={item.href}
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <Link
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-white/10 text-white border border-white/20"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-500"}`} />
+                <span className="font-medium">{item.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeIndicator"
+                    className="absolute left-0 w-1 h-8 bg-white rounded-r-full"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </Link>
+            </motion.div>
+          )
+        })}
       </nav>
     </aside>
   )
