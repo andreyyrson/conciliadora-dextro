@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +12,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Não autenticado" },
         { status: 401 }
+      )
+    }
+
+    const { success, remaining, resetAt } = rateLimit(`conciliacao:${session.user.id}`, 5, 60 * 1000)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitas conciliações. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
       )
     }
 
@@ -165,15 +174,30 @@ export async function GET(req: Request) {
       )
     }
 
-    const conciliacoes = await prisma.conciliacao.findMany({
-      where: { empresaId },
-      include: {
-        upload: true
-      },
-      orderBy: { criadoEm: "desc" }
-    })
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
 
-    return NextResponse.json({ conciliacoes })
+    const [conciliacoes, total] = await Promise.all([
+      prisma.conciliacao.findMany({
+        where: { empresaId },
+        include: { upload: true },
+        orderBy: { criadoEm: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.conciliacao.count({ where: { empresaId } }),
+    ])
+
+    return NextResponse.json({
+      conciliacoes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
   } catch (error) {
     console.error("Erro ao buscar conciliações:", error)
     return NextResponse.json(

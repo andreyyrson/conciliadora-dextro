@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { useEmpresa } from "@/lib/use-empresa"
 
 export async function GET(req: Request) {
   try {
@@ -38,10 +37,7 @@ export async function GET(req: Request) {
     }
 
     const contas = await prisma.contaBancaria.findMany({
-      where: { 
-        empresaId,
-        pluggyItemId: { not: null } // Apenas contas Open Finance
-      },
+      where: { empresaId },
       orderBy: { createdAt: "desc" }
     })
 

@@ -17,7 +17,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
-    console.log("GET /api/importacoes - empresaId:", empresaId)
 
     if (!empresaId) {
       return NextResponse.json(
@@ -38,20 +37,35 @@ export async function GET(req: Request) {
       )
     }
 
-    const importacoes = await prisma.importacaoExtrato.findMany({
-      where: { empresaId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        extratos: {
-          take: 5,
-          orderBy: { data: "desc" }
-        }
-      }
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
+
+    const [importacoes, total] = await Promise.all([
+      prisma.importacaoExtrato.findMany({
+        where: { empresaId },
+        orderBy: { createdAt: "desc" },
+        include: {
+          extratos: {
+            take: 5,
+            orderBy: { data: "desc" }
+          }
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.importacaoExtrato.count({ where: { empresaId } }),
+    ])
+
+    return NextResponse.json({
+      importacoes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
-
-    console.log("Importações encontradas:", importacoes.length)
-
-    return NextResponse.json({ importacoes })
   } catch (error) {
     console.error("Erro ao buscar importações:", error)
     console.error("Error details:", error instanceof Error ? error.message : String(error))
