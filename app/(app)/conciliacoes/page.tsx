@@ -52,7 +52,7 @@ interface Empresa {
 
 export default function ConciliacoesPage() {
   const { data: session } = useSession()
-  const { empresaId } = useEmpresa()
+  const { empresaId, setEmpresa } = useEmpresa()
   const router = useRouter()
   const [conciliacoes, setConciliacoes] = useState<Conciliacao[]>([])
   const [empresas, setEmpresas] = useState<Empresa[]>([])
@@ -137,6 +137,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Importações recebidas:", data)
       setImportacoes(data.importacoes || [])
     } catch (error) {
       console.error("Erro ao buscar importações:", error)
@@ -246,10 +247,13 @@ export default function ConciliacoesPage() {
               id="empresa"
               value={selectedEmpresa}
               onChange={(e) => {
-                setSelectedEmpresa(e.target.value)
-                fetchConciliacoes(e.target.value)
-                fetchUploads(e.target.value)
-                fetchContas(e.target.value)
+                const newEmpresaId = e.target.value
+                setSelectedEmpresa(newEmpresaId)
+                setEmpresa(newEmpresaId) // Atualizar hook também
+                fetchConciliacoes(newEmpresaId)
+                fetchUploads(newEmpresaId)
+                fetchContas(newEmpresaId)
+                fetchImportacoes(newEmpresaId)
               }}
               className="w-full p-2 border rounded bg-black border-white/20 text-white"
             >

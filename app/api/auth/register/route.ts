@@ -47,8 +47,9 @@ export async function POST(req: Request) {
     )
   } catch (error) {
     console.error("Erro ao registrar usuário:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
     return NextResponse.json(
-      { error: "Erro ao criar usuário" },
+      { error: "Erro ao criar usuário", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

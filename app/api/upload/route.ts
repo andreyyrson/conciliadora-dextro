@@ -10,6 +10,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
+    console.log("GET /api/upload - empresaId:", empresaId)
+
     if (!empresaId) {
       return NextResponse.json(
         { error: "empresaId é obrigatório" },
@@ -21,6 +23,8 @@ export async function GET(req: Request) {
       where: { empresaId },
       orderBy: { createdAt: "desc" }
     })
+
+    console.log("Uploads encontrados:", uploads.length)
 
     return NextResponse.json({ uploads })
   } catch (error) {
@@ -192,8 +196,10 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error("Erro ao processar upload:", error)
+    console.error("Error details:", error instanceof Error ? error.message : String(error))
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack")
     return NextResponse.json(
-      { error: "Erro ao processar upload" },
+      { error: "Erro ao processar upload", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

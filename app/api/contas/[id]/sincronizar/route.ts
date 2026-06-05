@@ -2,12 +2,10 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { polp } from "@/lib/polp/client"
-import { normalizarTransacao } from "@/lib/polp/normalizer"
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -19,7 +17,7 @@ export async function POST(
       )
     }
 
-    const contaId = params.id
+    const { id: contaId } = await params
 
     // Buscar conta bancária
     const conta = await prisma.contaBancaria.findUnique({
@@ -42,17 +40,7 @@ export async function POST(
       )
     }
 
-    // Buscar transações da POLP (últimos 30 dias)
-    const hoje = new Date()
-    const trintaDiasAtras = new Date()
-    trintaDiasAtras.setDate(hoje.getDate() - 30)
-
-    // Nota: Como a POLP requer accountId específico e não temos ainda
-    // a integração completa, vamos simular o processo
-    // Em produção, isso seria:
-    // const transactions = await polp.getTransactions(conta.polpAccountId, trintaDiasAtras, hoje)
-
-    // Por enquanto, vamos apenas atualizar a data de sincronização
+    // Apenas atualizar a data de sincronização (integração desativada)
     await prisma.contaBancaria.update({
       where: { id: contaId },
       data: {
@@ -62,7 +50,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Sincronização iniciada (integração POLP pendente de configuração completa)",
+      message: "Sincronização desativada",
       ultimaSincAt: new Date()
     })
   } catch (error) {

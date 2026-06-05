@@ -35,10 +35,17 @@ export interface ResultadoExtrato {
   confianca: "HIGH" | "MEDIUM" | "LOW"
   sugestoes: MatchSugestao[]      // top 3 candidatos
   erpPareado?: EntradaConciliacao  // se auto-confirmado
+  diferencaValor?: number         // diferença absoluta entre ERP e extrato
+}
+
+export interface ResultadoErpSobrando {
+  erp: EntradaConciliacao
+  status: "FALTANDO_BANCO"
 }
 
 export interface ResultadoMatching {
   itens: ResultadoExtrato[]
+  erpsSobrando: ResultadoErpSobrando[]
   totalErp: number
   totalExtrato: number
   hashConciliacao: string
@@ -241,7 +248,7 @@ export function gerarSugestoes(
       const explicacoes = gerarExplicacoes(scoreDetalhado)
       const confianca = calcularConfianca(score)
       const autoConfirmado =
-        score >= 95 &&
+        score >= 80 &&
         sv >= 50 && // valor exato
         sdoc >= 15 // documento exato
 
@@ -299,14 +306,18 @@ export function gerarSugestoes(
 
     if (match && match.autoConfirmado) {
       const erp = erpEntradas.find(e => e.id === match.erpId)!
+      const diffValor = Math.abs(erp.valor - extrato.valor)
       itens.push({
         extrato,
         status: "AUTO_CONFIRMADO",
         confianca: "HIGH",
         sugestoes: sugestoes.slice(0, 3),
-        erpPareado: erp
+        erpPareado: erp,
+        diferencaValor: diffValor
       })
     } else if (match) {
+      const erp = erpEntradas.find(e => e.id === match.erpId)!
+      const diffValor = Math.abs(erp.valor - extrato.valor)
       // Verificar se é ambíguo: top1 e top2 com score >= 60 e diferença <= 10
       const top1 = sugestoes[0]
       const top2 = sugestoes[1]
@@ -320,14 +331,16 @@ export function gerarSugestoes(
           extrato,
           status: "AMBIGUO",
           confianca: calcularConfianca(match.score),
-          sugestoes: sugestoes.slice(0, 3)
+          sugestoes: sugestoes.slice(0, 3),
+          diferencaValor: diffValor
         })
       } else {
         itens.push({
           extrato,
           status: "SUGERIDO",
           confianca: calcularConfianca(match.score),
-          sugestoes: sugestoes.slice(0, 3)
+          sugestoes: sugestoes.slice(0, 3),
+          diferencaValor: diffValor
         })
       }
     } else {
@@ -344,6 +357,17 @@ export function gerarSugestoes(
   const totalErp = erpEntradas.reduce((s, e) => s + (e.tipo === "CREDITO" ? e.valor : -e.valor), 0)
   const totalExtrato = extratoEntradas.reduce((s, e) => s + (e.tipo === "CREDITO" ? e.valor : -e.valor), 0)
 
+  // Identificar ERPs não consumidos (sobrando)
+  const erpsSobrando: ResultadoErpSobrando[] = []
+  for (const erp of erpEntradas) {
+    if (!erpConsumidos.has(erp.id)) {
+      erpsSobrando.push({
+        erp,
+        status: "FALTANDO_BANCO"
+      })
+    }
+  }
+
   // Hash da sessão (determinístico baseado nos dados)
   const hashBase = erpEntradas.map(e => e.id).sort().join("") +
     extratoEntradas.map(e => e.id).sort().join("") +
@@ -353,6 +377,7 @@ export function gerarSugestoes(
 
   return {
     itens,
+    erpsSobrando,
     totalErp,
     totalExtrato,
     hashConciliacao

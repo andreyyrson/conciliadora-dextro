@@ -130,6 +130,24 @@ model ErpLancamento {
   @@index([categoria])
 }
 
+enum ConciliacaoStatus {
+  PENDENTE_REVISAO
+  CONCLUIDA
+}
+
+enum ConciliacaoItemStatus {
+  AUTO_CONFIRMADO
+  CONFIRMADO_MANUAL
+  REJEITADO
+  SEM_MATCH
+}
+
+enum ConfiancaMatch {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 model Conciliacao {
   id               String            @id @default(cuid())
   empresaId        String
@@ -138,7 +156,7 @@ model Conciliacao {
   contaId          String?
   importacaoId     String?
   periodo          String
-  status           String            @default("PENDENTE_REVISAO")
+  status           ConciliacaoStatus @default(PENDENTE_REVISAO)
   totalExtrato     Decimal           @default(0) @db.Decimal(15, 2)
   totalErp         Decimal           @default(0) @db.Decimal(15, 2)
   qtdConciliados   Int               @default(0)
@@ -154,28 +172,28 @@ model Conciliacao {
 }
 
 model ConciliacaoItem {
-  id                   String              @id @default(cuid())
+  id                   String                  @id @default(cuid())
   conciliacaoId        String
-  status               String              // AUTO_CONFIRMADO | CONFIRMADO_MANUAL | REJEITADO | SEM_MATCH
+  status               ConciliacaoItemStatus
   extratoId            String?
   erpId                String?
   extratoImportadoId   String?
-  diferencaValor       Decimal?           @db.Decimal(15, 2)
+  diferencaValor       Decimal?                @db.Decimal(15, 2)
   scoreMatch           Float?
-  confiancaMatch       String?             // HIGH | MEDIUM | LOW
-  scoreDetalhado       Json?               // { valor, tipo, data, descricao, documento }
-  explicacoes          Json?               // string[]
-  candidatos           Json?               // MatchSugestao[]
-  hashConciliacao      String?             // fingerprint da sessão
+  confiancaMatch       ConfiancaMatch?
+  scoreDetalhado       Json?                    // { valor, tipo, data, descricao, documento }
+  explicacoes          Json?                    // string[]
+  candidatos           Json?                    // MatchSugestao[]
+  hashConciliacao      String?                  // fingerprint da sessão
   observacao           String?
-  resolvidoManualmente Boolean             @default(false)
+  resolvidoManualmente Boolean                 @default(false)
   resolvidoPor         String?
   resolvidoEm          DateTime?
-  createdAt            DateTime           @default(now())
-  conciliacao          Conciliacao        @relation(fields: [conciliacaoId], references: [id])
-  erp                  ErpLancamento?     @relation(fields: [erpId], references: [id])
-  extrato              ExtratoLancamento? @relation(fields: [extratoId], references: [id])
-  extratoImportado     ExtratoImportado?  @relation(fields: [extratoImportadoId], references: [id])
+  createdAt            DateTime                @default(now())
+  conciliacao          Conciliacao             @relation(fields: [conciliacaoId], references: [id])
+  erp                  ErpLancamento?          @relation(fields: [erpId], references: [id])
+  extrato              ExtratoLancamento?      @relation(fields: [extratoId], references: [id])
+  extratoImportado     ExtratoImportado?       @relation(fields: [extratoImportadoId], references: [id])
 
   @@index([conciliacaoId, status])
 }
