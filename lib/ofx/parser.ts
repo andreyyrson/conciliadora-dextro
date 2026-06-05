@@ -45,10 +45,12 @@ export function parseOFX(content: string): OFXData {
     if (!line || line.startsWith('<!')) continue
     
     // Remove tags and parse
-    const tagMatch = line.match(/^<([^>]+)>(.*)$/)
+    // Handle both: <TAG>value</TAG>  and  <TAG>value  formats
+    const tagMatch = line.match(/^<([^>\/]+)>([^<]*)<\/[^>]+>$/) || line.match(/^<([^>]+)>(.*)$/)
     if (!tagMatch) continue
     
-    const [, tag, value] = tagMatch
+    const tag = tagMatch[1]
+    const value = tagMatch[2] || ''
     
     // Account information
     if (tag === 'BANKID' && currentAccount) {
@@ -105,8 +107,14 @@ export function parseOFX(content: string): OFXData {
       inTransaction = false
     }
     
-    // Account end
+    // Account end (only clear current account, don't save yet)
     if (tag === '/BANKACCTFROM' || tag === '/CCACCTFROM') {
+      // Account info complete, but wait for transactions
+      // Account will be saved at </STMTRS>
+    }
+    
+    // Statement end - save account with all transactions
+    if (tag === '/STMTRS') {
       if (currentAccount && currentAccount.accountId) {
         data.accounts.push({
           bankId: currentAccount.bankId || '',

@@ -49,23 +49,23 @@ describe("normalizarValor", () => {
 describe("normalizarData", () => {
   it("deve converter DD/MM/YYYY", () => {
     const result = normalizarData("15/01/2024")
-    expect(result.getFullYear()).toBe(2024)
-    expect(result.getMonth()).toBe(0)
-    expect(result.getDate()).toBe(15)
+    expect(result.getUTCFullYear()).toBe(2024)
+    expect(result.getUTCMonth()).toBe(0)
+    expect(result.getUTCDate()).toBe(15)
   })
 
   it("deve converter DD-MM-YYYY", () => {
     const result = normalizarData("15-01-2024")
-    expect(result.getFullYear()).toBe(2024)
-    expect(result.getMonth()).toBe(0)
-    expect(result.getDate()).toBe(15)
+    expect(result.getUTCFullYear()).toBe(2024)
+    expect(result.getUTCMonth()).toBe(0)
+    expect(result.getUTCDate()).toBe(15)
   })
 
   it("deve converter YYYY-MM-DD (ISO)", () => {
     const result = normalizarData("2024-01-15")
-    expect(result.getFullYear()).toBe(2024)
-    expect(result.getMonth()).toBe(0)
-    expect(result.getDate()).toBe(15)
+    expect(result.getUTCFullYear()).toBe(2024)
+    expect(result.getUTCMonth()).toBe(0)
+    expect(result.getUTCDate()).toBe(15)
   })
 
   it("deve converter DD/MM/YY", () => {
@@ -75,7 +75,7 @@ describe("normalizarData", () => {
 
   it("deve remover dia da semana", () => {
     const result = normalizarData("15/01/2024 - SEX")
-    expect(result.getDate()).toBe(15)
+    expect(result.getUTCDate()).toBe(15)
   })
 
   it("deve retornar data atual para input vazio", () => {
@@ -158,7 +158,7 @@ describe("normalizarLinha", () => {
     }
 
     const result = normalizarLinha(linha, mockMapeamento)
-    expect(result.data.getDate()).toBe(15)
+    expect(result.data.getUTCDate()).toBe(15)
     expect(result.valor).toBe(1050.23)
     expect(result.tipo).toBe("DEBITO")
     expect(result.descricao).toBe("PAGAMENTO FORNECEDOR")
