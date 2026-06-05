@@ -88,6 +88,7 @@ export async function POST(req: Request) {
           valor: transaction.amount,
           tipo: transaction.type === 'CREDIT' ? 'CREDITO' : 'DEBITO',
           identificador: transaction.id,
+          banco: account.bankId || null,
           saldoApos: null
         })
       }

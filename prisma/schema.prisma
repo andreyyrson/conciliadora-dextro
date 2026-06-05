@@ -54,6 +54,7 @@ model ExtratoLancamento {
   valor         Decimal           @db.Decimal(15, 2)
   tipo          String
   identificador String?
+  banco         String?
   saldoApos     Decimal?          @db.Decimal(15, 2)
   createdAt     DateTime          @default(now())
   itens         ConciliacaoItem[]
@@ -85,6 +86,7 @@ model ExtratoImportado {
   valor         Decimal           @db.Decimal(15, 2)
   tipo          String
   identificador String?
+  banco         String?
   saldoApos     Decimal?          @db.Decimal(15, 2)
   createdAt     DateTime          @default(now())
   itens         ConciliacaoItem[]

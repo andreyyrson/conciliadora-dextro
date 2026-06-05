@@ -9,6 +9,7 @@ export interface EntradaConciliacao {
   fornecedor?: string | null
   categoria?: string | null
   identificador?: string | null
+  banco?: string | null
 }
 
 export interface ScoreDetalhado {
@@ -17,12 +18,13 @@ export interface ScoreDetalhado {
   data: number
   descricao: number
   fornecedor: number
+  banco: number
 }
 
 export interface MatchSugestao {
   entradaOrigemId: string     // ID do ERP
   entradaDestinoId: string    // ID do extrato
-  score: number               // 0–100
+  score: number               // 0–120
   scoreDetalhado: ScoreDetalhado
   explicacoes: string[]
   confianca: "HIGH" | "MEDIUM" | "LOW"
@@ -170,6 +172,72 @@ function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtr
   return Math.round(sim * 15)
 }
 
+// Mapeamento de abreviações de banco
+const MAPEAMENTO_BANCO: Record<string, string> = {
+  "BB": "BANCO DO BRASIL",
+  "ITAU": "ITAÚ",
+  "NUBANK": "NUBANK",
+  "INTER": "BANCO INTER",
+  "SANTANDER": "SANTANDER",
+  "BRADESCO": "BRADESCO",
+  "CAIXA": "CAIXA ECONOMICA FEDERAL",
+  "HSBC": "HSBC",
+  "CITIBANK": "CITIBANK",
+  "BANCO DO BRASIL": "BANCO DO BRASIL",
+  "ITAÚ": "ITAÚ",
+  "BANCO INTER": "BANCO INTER",
+  "CAIXA ECONÔMICA FEDERAL": "CAIXA ECONOMICA FEDERAL",
+  "CAIXA ECONOMICA": "CAIXA ECONOMICA FEDERAL",
+}
+
+function normalizarBanco(banco: string): string {
+  // Aplicar mapeamento de abreviações
+  const bancoMapeado = MAPEAMENTO_BANCO[banco.toUpperCase()] || banco
+  
+  // Remover acentos
+  const semAcentos = bancoMapeado.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  
+  // Converter para maiúsculas
+  const maiusculas = semAcentos.toUpperCase()
+  
+  // Remover espaços extras
+  const semEspacosExtras = maiusculas.trim().replace(/\s+/g, ' ')
+  
+  // Remover caracteres especiais (manter apenas letras, números e espaços)
+  const semEspeciais = semEspacosExtras.replace(/[^A-Z0-9\s]/g, '')
+  
+  // Remover palavras comuns
+  const palavrasComuns = ["BANCO", "S.A.", "S A", "LTDA", "ECONOMICA", "FEDERAL", "ECONÔMICA"]
+  let resultado = semEspeciais
+  palavrasComuns.forEach(palavra => {
+    resultado = resultado.replace(new RegExp(`\\b${palavra}\\b`, 'g'), '')
+  })
+  
+  // Remover espaços extras novamente após remoção de palavras
+  return resultado.trim().replace(/\s+/g, ' ')
+}
+
+function scoreBanco(bancoErp: string | null | undefined, bancoExtrato: string | null | undefined): number {
+  const banco1 = bancoErp || ""
+  const banco2 = bancoExtrato || ""
+  if (!banco1 || !banco2) return 0
+  
+  // Normalizar ambos os bancos
+  const banco1Norm = normalizarBanco(banco1)
+  const banco2Norm = normalizarBanco(banco2)
+  
+  if (!banco1Norm || !banco2Norm) return 0
+  
+  // Se bancos normalizados são idênticos
+  if (banco1Norm === banco2Norm) {
+    return 20
+  }
+  
+  // Similaridade parcial
+  const sim = similaridadeHibrida(banco1Norm, banco2Norm)
+  return Math.round(sim * 20)
+}
+
 // ========== PRÉ-FILTRO ==========
 
 function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): boolean {
@@ -220,6 +288,11 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   else if (sd.fornecedor >= 9) exps.push(`Fornecedor similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
   else if (sd.fornecedor > 0) exps.push(`Fornecedor parcialmente similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
 
+  if (sd.banco >= 20) exps.push("Banco idêntico")
+  else if (sd.banco >= 15) exps.push(`Banco muito similar (${Math.round((sd.banco / 20) * 100)}%)`)
+  else if (sd.banco >= 10) exps.push(`Banco similar (${Math.round((sd.banco / 20) * 100)}%)`)
+  else if (sd.banco > 0) exps.push(`Banco parcialmente similar (${Math.round((sd.banco / 20) * 100)}%)`)
+
   return exps
 }
 
@@ -264,29 +337,33 @@ export function gerarSugestoes(
         const sd = scoreData(erp.data, extrato.data)
         const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
         const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
+        const sbanc = scoreBanco(erp.banco, extrato.banco)
 
         const scoreDetalhado: ScoreDetalhado = {
           valor: sv,
           tipo: 0, // tipo é pré-filtro, não soma no score
           data: sd,
           descricao: sdesc,
-          fornecedor: sforn
+          fornecedor: sforn,
+          banco: sbanc
         }
 
-        const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+        const score = sv + sd + sdesc + sforn + sbanc // valor + data + descrição + fornecedor + banco (total 120)
         if (score < 20) continue // muito fraco, descarta
 
         const explicacoes = gerarExplicacoes(scoreDetalhado)
         const confianca = calcularConfianca(score)
         
-        // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
+        // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data + banco (se existir)
         const temFornecedor = !!erp.fornecedor
+        const temBanco = !!erp.banco
         const autoConfirmado =
           score >= 50 &&
           sv >= 40 && // valor muito próximo (≤ 1%)
           sdesc >= 15 && // descrição similar (≥ 75%)
           sd >= 5 && // data próxima (≤ 7 dias)
-          (!temFornecedor || sforn >= 10) // fornecedor similar se existir
+          (!temFornecedor || sforn >= 10) && // fornecedor similar se existir
+          (!temBanco || sbanc >= 15) // banco similar se existir
 
         candidatos.push({
           extratoId: extrato.id,
@@ -323,29 +400,33 @@ export function gerarSugestoes(
           const sd = scoreData(erp.data, extrato.data)
           const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
           const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
+          const sbanc = scoreBanco(erp.banco, extrato.banco)
 
           const scoreDetalhado: ScoreDetalhado = {
             valor: sv,
             tipo: 0,
             data: sd,
             descricao: sdesc,
-            fornecedor: sforn
+            fornecedor: sforn,
+            banco: sbanc
           }
 
-          const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+          const score = sv + sd + sdesc + sforn + sbanc // valor + data + descrição + fornecedor + banco (total 120)
           if (score < 20) continue
 
           const explicacoes = gerarExplicacoes(scoreDetalhado)
           const confianca = calcularConfianca(score)
           
-          // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
+          // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data + banco (se existir)
           const temFornecedor = !!erp.fornecedor
+          const temBanco = !!erp.banco
           const autoConfirmado =
             score >= 50 &&
             sv >= 40 &&
             sdesc >= 15 &&
             sd >= 5 &&
-            (!temFornecedor || sforn >= 10)
+            (!temFornecedor || sforn >= 10) &&
+            (!temBanco || sbanc >= 15)
 
           candidatos.push({
             extratoId: extrato.id,

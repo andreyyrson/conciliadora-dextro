@@ -55,7 +55,8 @@ export async function POST(
       documento: l.documento || null,
       fornecedor: l.fornecedor || null,
       categoria: l.categoria || null,
-      identificador: null
+      identificador: null,
+      banco: l.banco || null
     }))
 
     const extratoEntradas: EntradaConciliacao[] = extratoRows.map((l: any) => ({
@@ -68,7 +69,8 @@ export async function POST(
       documento: null,
       fornecedor: null,
       categoria: null,
-      identificador: l.identificador || null
+      identificador: l.identificador || null,
+      banco: l.banco || null
     }))
 
     // Gerar sugestões
