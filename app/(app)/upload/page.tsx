@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ExtracaoPreview } from "@/components/extracao-preview"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion, AnimatePresence } from "framer-motion"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -53,6 +54,8 @@ export default function UploadPage() {
   const [analise, setAnalise] = useState<AnaliseResult | null>(null)
   const [mostrarMapeamento, setMostrarMapeamento] = useState(false)
   const [extracaoPreview, setExtracaoPreview] = useState<any>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchEmpresas = async () => {
     try {
@@ -80,9 +83,7 @@ export default function UploadPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar este upload?")) {
-      return
-    }
+    setDeleting(true)
 
     try {
       const response = await fetch(`/api/upload/${id}`, {
@@ -90,14 +91,17 @@ export default function UploadPage() {
       })
 
       if (response.ok) {
+        setDeleteConfirm(null)
         fetchUploads()
       } else {
         const data = await response.json()
-        alert(data.error || "Erro ao deletar upload")
+        setError(data.error || "Erro ao deletar upload")
+        setDeleting(false)
       }
     } catch (error) {
       console.error("Erro ao deletar upload:", error)
-      alert("Erro ao deletar upload")
+      setError("Erro ao deletar upload")
+      setDeleting(false)
     }
   }
 
@@ -481,7 +485,7 @@ export default function UploadPage() {
                       <td className="p-2">
                         <Button
                           size="sm"
-                          onClick={() => handleDelete(upload.id)}
+                          onClick={() => setDeleteConfirm(upload.id)}
                           variant="outline"
                           className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
                         >
@@ -517,6 +521,17 @@ export default function UploadPage() {
         </ul>
         </Card>
       </motion.div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja deletar este upload? Esta ação não pode ser desfeita."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }

@@ -7,8 +7,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
-import { motion } from "framer-motion"
-import { Eye, Trash2 } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { motion, AnimatePresence } from "framer-motion"
+import { Eye, Trash2, CheckCircle } from "lucide-react"
 
 interface Conciliacao {
   id: string
@@ -66,6 +67,18 @@ export default function ConciliacoesPage() {
   const [modoExtrato, setModoExtrato] = useState<"conta" | "importacao">("conta")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    if (showSuccessAnimation) {
+      const timer = setTimeout(() => {
+        setShowSuccessAnimation(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showSuccessAnimation])
 
   const fetchConciliacoes = async (empresaId: string) => {
     try {
@@ -78,9 +91,7 @@ export default function ConciliacoesPage() {
   }
 
   const handleDeletar = async (id: string) => {
-    if (!confirm("Tem certeza que deseja deletar esta conciliação?")) {
-      return
-    }
+    setDeleting(true)
 
     try {
       const response = await fetch(`/api/conciliacoes/${id}`, {
@@ -88,14 +99,17 @@ export default function ConciliacoesPage() {
       })
 
       if (response.ok) {
+        setDeleteConfirm(null)
         fetchConciliacoes(selectedEmpresa)
       } else {
         const data = await response.json()
-        alert(data.error || "Erro ao deletar conciliação")
+        setError(data.error || "Erro ao deletar conciliação")
+        setDeleting(false)
       }
     } catch (error) {
       console.error("Erro ao deletar conciliação:", error)
-      alert("Erro ao deletar conciliação")
+      setError("Erro ao deletar conciliação")
+      setDeleting(false)
     }
   }
 
@@ -211,7 +225,7 @@ export default function ConciliacoesPage() {
         return
       }
 
-      alert("Conciliação iniciada com sucesso!")
+      setShowSuccessAnimation(true)
       fetchConciliacoes(selectedEmpresa)
     } catch (error) {
       setError("Erro ao iniciar conciliação")
@@ -438,7 +452,7 @@ export default function ConciliacoesPage() {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => handleDeletar(conciliacao.id)}
+                        onClick={() => setDeleteConfirm(conciliacao.id)}
                         variant="outline"
                         className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
                       >
@@ -453,6 +467,63 @@ export default function ConciliacoesPage() {
         )}
         </Card>
       </motion.div>
+
+      {/* Animação de Sucesso */}
+      <AnimatePresence>
+        {showSuccessAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-green-900/95 flex items-center justify-center z-50"
+            onClick={() => setShowSuccessAnimation(false)}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0, rotate: 180 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="text-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", damping: 15, stiffness: 200 }}
+                className="mb-6"
+              >
+                <CheckCircle className="w-48 h-48 text-green-400 mx-auto" />
+              </motion.div>
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-4xl font-bold text-white mb-4"
+              >
+                Conciliação Realizada!
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="text-xl text-green-200"
+              >
+                Com Sucesso
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDeletar(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja deletar esta conciliação? Esta ação não pode ser desfeita."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }

@@ -6,6 +6,8 @@ import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
 import { Trash2, FileText, Calendar } from "lucide-react"
 
@@ -26,6 +28,8 @@ export default function ImportacoesPage() {
   const [selectedEmpresa, setSelectedEmpresa] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchEmpresas = async () => {
     try {
@@ -52,12 +56,8 @@ export default function ImportacoesPage() {
   }
 
   const handleDeleteImportacao = async (importacaoId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta importação e todos os seus lançamentos?")) {
-      return
-    }
-
+    setDeleting(true)
     setError("")
-    setLoading(true)
 
     try {
       const response = await fetch(`/api/importacoes/${importacaoId}`, {
@@ -67,15 +67,16 @@ export default function ImportacoesPage() {
       if (!response.ok) {
         const data = await response.json()
         setError(data.error || "Erro ao excluir importação")
-        setLoading(false)
+        setDeleting(false)
         return
       }
 
-      setLoading(false)
+      setDeleteConfirm(null)
       fetchImportacoes(selectedEmpresa)
     } catch (error) {
       setError("Erro ao excluir importação")
-      setLoading(false)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -119,19 +120,12 @@ export default function ImportacoesPage() {
             <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
               Empresa *
             </label>
-            <select
-              id="empresa"
+            <Select
+              options={empresas.map(e => ({ value: e.id, label: e.nome }))}
               value={selectedEmpresa}
-              onChange={(e) => setSelectedEmpresa(e.target.value)}
-              className="w-full p-2 border rounded bg-black border-white/20 text-white"
-            >
-              <option value="">Selecione uma empresa</option>
-              {empresas.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.nome}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedEmpresa}
+              placeholder="Selecione uma empresa"
+            />
           </div>
 
           {error && (
@@ -184,7 +178,7 @@ export default function ImportacoesPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDeleteImportacao(importacao.id)}
+                      onClick={() => setDeleteConfirm(importacao.id)}
                       disabled={loading}
                       className="border-red-500/50 text-red-400 hover:bg-red-900/20"
                     >
@@ -197,6 +191,17 @@ export default function ImportacoesPage() {
           )}
         </Card>
       </motion.div>
+
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDeleteImportacao(deleteConfirm)}
+        title="Confirmar Exclusão"
+        message="Tem certeza que deseja deletar esta importação? Esta ação irá deletar permanentemente todos os lançamentos associados a esta importação."
+        confirmText="Confirmar Exclusão"
+        loading={deleting}
+        danger
+      />
     </div>
   )
 }

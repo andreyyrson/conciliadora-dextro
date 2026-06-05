@@ -139,8 +139,9 @@ export async function POST(
 
         if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confianca === "HIGH" && d.score >= 80) {
           statusFinal = "AUTO_CONFIRMADO"
-          resolvidoPor = session.user.id
-          resolvidoEm = new Date()
+          // Não associar a usuário - aprovação automática do sistema
+          resolvidoPor = null
+          resolvidoEm = null
         } else if (resolvidoManualmente) {
           resolvidoPor = session.user.id
           resolvidoEm = new Date()
@@ -155,20 +156,20 @@ export async function POST(
     } else {
       // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
       resultado.itens.forEach((item: any) => {
-        // Se já é AUTO_CONFIRMADO, apenas garantir que tem quem aprovou
+        // Se já é AUTO_CONFIRMADO, não associar a usuário - aprovação automática do sistema
         if (item.status === "AUTO_CONFIRMADO") {
           decisoesMap.set(item.extrato.id, {
             status: "AUTO_CONFIRMADO",
-            resolvidoPor: session.user.id,
-            resolvidoEm: new Date()
+            resolvidoPor: null,
+            resolvidoEm: null
           })
         }
         // Se não é AMBIGUO e tem confiança HIGH com score >= 80, aprovar automaticamente
         else if (item.status !== "AMBIGUO" && item.sugestoes[0]?.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
           decisoesMap.set(item.extrato.id, {
             status: "AUTO_CONFIRMADO",
-            resolvidoPor: session.user.id,
-            resolvidoEm: new Date()
+            resolvidoPor: null,
+            resolvidoEm: null
           })
         }
       })
@@ -181,18 +182,27 @@ export async function POST(
       const erpSugerido = topSugestao ? erpEntradas.find(e => e.id === topSugestao.entradaOrigemId) : null
       const decisao = decisoesMap.get(extrato.id)
 
+      // Aplicar valor editado se existir
+      const valorExtratoFinal = decisao?.valorEditado !== undefined ? decisao.valorEditado : extrato.valor
+
       // Determinar status de aprovação
       const statusFinal = decisao?.status || item.status
-      const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" || statusFinal === "CONFIRMADO_MANUAL" ? "APROVADO" :
-                             statusFinal === "REJEITADO" ? "REPROVADO" : "PENDENTE"
+      const statusAprovacao = statusFinal === "AUTO_CONFIRMADO" ? "APROVADO AUTOMATICAMENTE" :
+                             statusFinal === "CONFIRMADO_MANUAL" ? "APROVADO MANUALMENTE" :
+                             statusFinal === "REJEITADO" ? "REPROVADO" :
+                             statusFinal === "AMBIGUO" ? "EM REVISÃO" : "PENDENTE"
 
-      // Preencher quem aprovou e data apenas se houver decisão manual
-      const aprovadoPor = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoPor
-        ? usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor
-        : (statusFinal === "AUTO_CONFIRMADO" ? "SISTEMA" : "")
-      const dataAprovacao = (statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoEm
-        ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR")
-        : (statusFinal === "AUTO_CONFIRMADO" ? "Auto-confirmado" : "")
+      // Preencher quem aprovou e data
+      let aprovadoPor = ""
+      let dataAprovacao = ""
+
+      if (statusFinal === "AUTO_CONFIRMADO") {
+        aprovadoPor = "SISTEMA"
+        dataAprovacao = "Auto-confirmado"
+      } else if ((statusFinal === "CONFIRMADO_MANUAL" || statusFinal === "REJEITADO") && decisao?.resolvidoPor) {
+        aprovadoPor = usuarioMap.get(decisao.resolvidoPor) || decisao.resolvidoPor
+        dataAprovacao = decisao?.resolvidoEm ? new Date(decisao.resolvidoEm).toLocaleString("pt-BR") : ""
+      }
 
       return {
         "#": idx + 1,
@@ -203,7 +213,8 @@ export async function POST(
         // Dados do Extrato
         "Data Extrato": new Date(extrato.data).toLocaleDateString("pt-BR"),
         "Descrição Extrato": extrato.descricao,
-        "Valor Extrato": extrato.valor,
+        "Valor Extrato": valorExtratoFinal,
+        "Valor Original": decisao?.valorEditado !== undefined ? extrato.valor : "",
         "Tipo Extrato": extrato.tipo,
         "ID Extrato": extrato.identificador || "",
         // Dados do ERP
@@ -235,6 +246,7 @@ export async function POST(
       { wch: 12 },  // Data Extrato
       { wch: 40 },  // Descrição Extrato
       { wch: 12 },  // Valor Extrato
+      { wch: 12 },  // Valor Original
       { wch: 10 },  // Tipo Extrato
       { wch: 15 },  // ID Extrato
       { wch: 12 },  // Data ERP
