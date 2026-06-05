@@ -16,13 +16,30 @@ export async function GET(req: Request) {
     }
 
 
-    const empresas = await prisma.empresa.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" }
+    const { searchParams } = new URL(req.url)
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
+
+    const [empresas, total] = await Promise.all([
+      prisma.empresa.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.empresa.count({ where: { userId: session.user.id } }),
+    ])
+
+    return NextResponse.json({
+      empresas,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
-
-
-    return NextResponse.json({ empresas })
   } catch (error) {
     console.error("Erro ao buscar empresas:", error)
     console.error("Detalhes do erro:", JSON.stringify(error, null, 2))

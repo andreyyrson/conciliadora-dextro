@@ -2,9 +2,19 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { registerSchema } from "@/lib/schemas"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown"
+    const { success, remaining, resetAt } = rateLimit(`register:${ip}`, 5, 60 * 1000)
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+      )
+    }
     const body = await req.json()
 
     const validated = registerSchema.safeParse(body)

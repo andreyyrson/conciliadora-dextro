@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function GET(req: Request) {
   try {
@@ -39,13 +40,29 @@ export async function GET(req: Request) {
       )
     }
 
-    const uploads = await prisma.uploadErp.findMany({
-      where: { empresaId },
-      orderBy: { createdAt: "desc" }
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
+
+    const [uploads, total] = await Promise.all([
+      prisma.uploadErp.findMany({
+        where: { empresaId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.uploadErp.count({ where: { empresaId } }),
+    ])
+
+    return NextResponse.json({
+      uploads,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
-
-
-    return NextResponse.json({ uploads })
   } catch (error) {
     console.error("Erro ao buscar uploads:", error)
     return NextResponse.json(
@@ -63,6 +80,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Não autenticado" },
         { status: 401 }
+      )
+    }
+
+    const { success, remaining, resetAt } = rateLimit(`upload:${session.user.id}`, 10, 60 * 1000)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitos uploads. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(10, remaining, resetAt) }
       )
     }
 
