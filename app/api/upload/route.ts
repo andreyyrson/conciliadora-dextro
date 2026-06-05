@@ -7,6 +7,15 @@ import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 
 export async function GET(req: Request) {
   try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Não autenticado" },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
@@ -16,6 +25,18 @@ export async function GET(req: Request) {
       return NextResponse.json(
         { error: "empresaId é obrigatório" },
         { status: 400 }
+      )
+    }
+
+    // Verificar se a empresa pertence ao usuário
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId }
+    })
+
+    if (!empresa || empresa.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Empresa não encontrada ou não pertence ao usuário" },
+        { status: 403 }
       )
     }
 

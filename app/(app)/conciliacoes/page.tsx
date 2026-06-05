@@ -103,9 +103,11 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
+      console.log("Empresas recebidas:", data)
       setEmpresas(data.empresas || [])
       if (data.empresas?.length > 0 && !selectedEmpresa) {
         setSelectedEmpresa(data.empresas[0].id)
+        setEmpresa(data.empresas[0].id) // Atualizar hook também
         fetchConciliacoes(data.empresas[0].id)
       }
     } catch (error) {
@@ -117,6 +119,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/upload?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Uploads recebidos:", data)
       setUploads(data.uploads || [])
     } catch (error) {
       console.error("Erro ao buscar uploads:", error)
@@ -127,6 +130,7 @@ export default function ConciliacoesPage() {
     try {
       const response = await fetch(`/api/contas?empresaId=${empresaId}`)
       const data = await response.json()
+      console.log("Contas recebidas:", data)
       setContas(data.contas || [])
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
@@ -151,6 +155,7 @@ export default function ConciliacoesPage() {
   }, [session])
 
   useEffect(() => {
+    console.log("useEffect disparado - empresaId:", empresaId)
     if (empresaId) {
       setSelectedEmpresa(empresaId)
       fetchConciliacoes(empresaId)
@@ -248,6 +253,7 @@ export default function ConciliacoesPage() {
               value={selectedEmpresa}
               onChange={(e) => {
                 const newEmpresaId = e.target.value
+                console.log("Empresa selecionada no dropdown:", newEmpresaId)
                 setSelectedEmpresa(newEmpresaId)
                 setEmpresa(newEmpresaId) // Atualizar hook também
                 fetchConciliacoes(newEmpresaId)
@@ -289,8 +295,9 @@ export default function ConciliacoesPage() {
               Fonte do Extrato *
             </label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="modo-conta" className="flex items-center gap-2 cursor-pointer">
                 <input
+                  id="modo-conta"
                   type="radio"
                   name="modoExtrato"
                   value="conta"
@@ -300,8 +307,9 @@ export default function ConciliacoesPage() {
                 />
                 <span className="text-gray-300">Conta Bancária (Open Finance)</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="modo-importacao" className="flex items-center gap-2 cursor-pointer">
                 <input
+                  id="modo-importacao"
                   type="radio"
                   name="modoExtrato"
                   value="importacao"

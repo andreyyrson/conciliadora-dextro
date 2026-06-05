@@ -26,6 +26,18 @@ export async function GET(req: Request) {
       )
     }
 
+    // Verificar se a empresa pertence ao usuário
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaId }
+    })
+
+    if (!empresa || empresa.userId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Empresa não encontrada ou não pertence ao usuário" },
+        { status: 403 }
+      )
+    }
+
     const importacoes = await prisma.importacaoExtrato.findMany({
       where: { empresaId },
       orderBy: { createdAt: "desc" },
