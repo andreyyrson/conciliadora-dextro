@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PageHeader } from "@/components/page-header"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface ContaBancaria {
@@ -400,29 +401,25 @@ export default function ContasPage() {
   }
 
   return (
-    <div>
-      <motion.h1 
-        className="text-2xl font-bold text-white mb-6"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Contas Bancárias
-      </motion.h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Contas Bancárias"
+        description="Gerencie as contas bancárias conectadas"
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="p-6 mb-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Adicionar Conta Bancária</h2>
-          <p className="text-gray-400 mb-4 text-sm">
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Adicionar Conta Bancária</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
             Escolha o método de conexão: Open Finance, OFX ou manual.
           </p>
 
         <div className="mb-4">
-          <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="empresa" className="block text-sm font-medium text-muted-foreground mb-1">
             Empresa *
           </label>
           <select
@@ -432,7 +429,7 @@ export default function ContasPage() {
               setSelectedEmpresa(e.target.value)
               fetchContas(e.target.value)
             }}
-            className="w-full p-2 border rounded bg-black border-white/20 text-white"
+            className="w-full p-2 border rounded bg-background border-border text-foreground"
             required
           >
             {empresas.map((empresa) => (
@@ -444,7 +441,7 @@ export default function ContasPage() {
         </div>
 
         {error && (
-          <div className="text-sm text-red-400 bg-red-900/20 p-3 rounded animate-pulse mb-4">
+          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded mb-4">
             {error}
           </div>
         )}
@@ -454,7 +451,6 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoPluggy(true)}
-                className="bg-white text-black hover:bg-gray-200"
               >
                 Open Finance
               </Button>
@@ -462,7 +458,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoOFX(true)}
-                className="bg-black text-white border border-white/40 hover:bg-white/10"
+                variant="outline"
               >
                 Importar OFX
               </Button>
@@ -470,7 +466,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoCSV(true)}
-                className="bg-black text-white border border-white/40 hover:bg-white/10"
+                variant="outline"
               >
                 Importar CSV
               </Button>
@@ -478,7 +474,7 @@ export default function ContasPage() {
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoManual(true)}
-                className="bg-black text-white border border-white/40 hover:bg-white/10"
+                variant="outline"
               >
                 Adicionar Manualmente
               </Button>
@@ -493,7 +489,7 @@ export default function ContasPage() {
             className="space-y-4"
           >
             <div>
-              <label htmlFor="ofxFile" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="ofxFile" className="block text-sm font-medium text-muted-foreground mb-1">
                 Arquivo OFX *
               </label>
               <Input
@@ -502,9 +498,8 @@ export default function ContasPage() {
                 accept=".ofx,.qfx"
                 onChange={(e) => setOfxFile(e.target.files?.[0] || null)}
                 required
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Formatos aceitos: .ofx, .qfx
               </p>
             </div>
@@ -514,7 +509,6 @@ export default function ContasPage() {
                 <Button
                   onClick={handleUploadOFX}
                   disabled={loading}
-                  className="bg-white text-black hover:bg-gray-200 disabled:opacity-50"
                 >
                   {loading ? "Processando..." : "Importar"}
                 </Button>
@@ -523,7 +517,6 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoOFX(false)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -539,7 +532,7 @@ export default function ContasPage() {
             className="space-y-4"
           >
             <div>
-              <label htmlFor="csvFile" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="csvFile" className="block text-sm font-medium text-muted-foreground mb-1">
                 Arquivo CSV *
               </label>
               <Input
@@ -548,9 +541,8 @@ export default function ContasPage() {
                 accept=".csv"
                 onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
                 required
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Formato esperado: data,descricao,valor,tipo,saldo
               </p>
             </div>
@@ -560,7 +552,6 @@ export default function ContasPage() {
                 <Button
                   onClick={handleAnalisarCSV}
                   disabled={loading || !csvFile}
-                  className="bg-white text-black hover:bg-gray-200 disabled:opacity-50"
                 >
                   {loading ? "Analisando..." : "Analisar e Mapear Colunas"}
                 </Button>
@@ -569,7 +560,6 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoCSV(false)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -610,14 +600,14 @@ export default function ContasPage() {
             className="space-y-4"
           >
             <div>
-              <label htmlFor="connectorId" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="connectorId" className="block text-sm font-medium text-muted-foreground mb-1">
                 Conector *
               </label>
               <select
                 id="connectorId"
                 value={connectorId}
                 onChange={(e) => setConnectorId(e.target.value)}
-                className="w-full p-2 border rounded bg-black border-white/20 text-white"
+                className="w-full p-2 border rounded bg-background border-border text-foreground"
                 required
               >
                 <option value="">Selecione um conector</option>
@@ -630,7 +620,7 @@ export default function ContasPage() {
             </div>
 
             <div>
-              <label htmlFor="cpf" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="cpf" className="block text-sm font-medium text-muted-foreground mb-1">
                 CPF
               </label>
               <Input
@@ -640,12 +630,11 @@ export default function ContasPage() {
                 onChange={(e) => setCpf(formatCPF(e.target.value))}
                 placeholder="000.000.000-00"
                 maxLength={14}
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             <div>
-              <label htmlFor="cnpj" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="cnpj" className="block text-sm font-medium text-muted-foreground mb-1">
                 CNPJ
               </label>
               <Input
@@ -655,12 +644,11 @@ export default function ContasPage() {
                 onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
                 placeholder="00.000.000/0000-00"
                 maxLength={18}
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             <div>
-              <label htmlFor="user" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="user" className="block text-sm font-medium text-muted-foreground mb-1">
                 Usuário (para Sandbox)
               </label>
               <Input
@@ -669,12 +657,11 @@ export default function ContasPage() {
                 value={user}
                 onChange={(e) => setUser(e.target.value)}
                 placeholder="Usuário do banco"
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-1">
                 Senha (para Sandbox)
               </label>
               <Input
@@ -683,12 +670,11 @@ export default function ContasPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Senha do banco"
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             {polling && (
-              <div className="text-sm text-blue-400 bg-blue-900/20 p-3 rounded animate-pulse">
+              <div className="text-sm text-brand bg-brand/10 p-3 rounded">
                 Sincronizando com Open Finance... Aguarde.
               </div>
             )}
@@ -698,7 +684,6 @@ export default function ContasPage() {
                 <Button
                   onClick={handleConectarPluggy}
                   disabled={loading || polling}
-                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {loading ? "Conectando..." : polling ? "Sincronizando..." : "Conectar"}
                 </Button>
@@ -707,7 +692,6 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoPluggy(false)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -723,7 +707,7 @@ export default function ContasPage() {
             className="space-y-4"
           >
             <div>
-              <label htmlFor="banco" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="banco" className="block text-sm font-medium text-muted-foreground mb-1">
                 Banco *
               </label>
               <Input
@@ -732,12 +716,11 @@ export default function ContasPage() {
                 onChange={(e) => setBanco(e.target.value)}
                 required
                 placeholder="Ex: Itaú, Bradesco, Nubank"
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             <div>
-              <label htmlFor="agencia" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="agencia" className="block text-sm font-medium text-muted-foreground mb-1">
                 Agência (opcional)
               </label>
               <Input
@@ -745,12 +728,11 @@ export default function ContasPage() {
                 value={agencia}
                 onChange={(e) => setAgencia(e.target.value)}
                 placeholder="0000"
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
             <div>
-              <label htmlFor="conta" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="conta" className="block text-sm font-medium text-muted-foreground mb-1">
                 Conta *
               </label>
               <Input
@@ -759,7 +741,6 @@ export default function ContasPage() {
                 onChange={(e) => setConta(e.target.value)}
                 required
                 placeholder="00000-0"
-                className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
               />
             </div>
 
@@ -768,7 +749,6 @@ export default function ContasPage() {
                 <Button
                   onClick={handleAdicionarManual}
                   disabled={loading}
-                  className="bg-white text-black hover:bg-gray-200"
                 >
                   {loading ? "Adicionando..." : "Adicionar Conta"}
                 </Button>
@@ -777,7 +757,6 @@ export default function ContasPage() {
                 <Button
                   onClick={() => setModoManual(false)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
                 >
                   Voltar
                 </Button>
@@ -793,36 +772,36 @@ export default function ContasPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="p-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Contas Cadastradas</h2>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Contas Cadastradas</h2>
         {contas.length === 0 ? (
-          <p className="text-gray-500">Nenhuma conta conectada</p>
+          <p className="text-muted-foreground">Nenhuma conta conectada</p>
         ) : (
           <Table>
             <thead>
-              <tr className="border-b border-white/20">
-                <th className="text-left p-2 text-white font-medium">Banco</th>
-                <th className="text-left p-2 text-white font-medium">Agência</th>
-                <th className="text-left p-2 text-white font-medium">Conta</th>
-                <th className="text-left p-2 text-white font-medium">Status</th>
-                <th className="text-left p-2 text-white font-medium">Última Sincronização</th>
-                <th className="text-left p-2 text-white font-medium">Ações</th>
+              <tr className="border-b border-border">
+                <th className="text-left p-2 text-foreground font-medium">Banco</th>
+                <th className="text-left p-2 text-foreground font-medium">Agência</th>
+                <th className="text-left p-2 text-foreground font-medium">Conta</th>
+                <th className="text-left p-2 text-foreground font-medium">Status</th>
+                <th className="text-left p-2 text-foreground font-medium">Última Sincronização</th>
+                <th className="text-left p-2 text-foreground font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {contas.map((conta) => (
-                <tr key={conta.id} className="border-t border-white/10 hover:bg-white/5">
-                  <td className="p-2 text-gray-300">{conta.banco}</td>
-                  <td className="p-2 text-gray-300">{conta.agencia || "-"}</td>
-                  <td className="p-2 text-gray-300">{conta.conta}</td>
+                <tr key={conta.id} className="border-t border-border hover:bg-accent">
+                  <td className="p-2 text-foreground">{conta.banco}</td>
+                  <td className="p-2 text-foreground">{conta.agencia || "-"}</td>
+                  <td className="p-2 text-foreground">{conta.conta}</td>
                   <td className="p-2">
                     <span className={`px-2 py-1 rounded text-xs ${
-                      conta.ativa ? "bg-green-900/30 text-green-400" : "bg-gray-800 text-gray-400"
+                      conta.ativa ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
                     }`}>
                       {conta.ativa ? "Ativa" : "Inativa"}
                     </span>
                   </td>
-                  <td className="p-2 text-gray-300">
+                  <td className="p-2 text-foreground">
                     {conta.ultimaSincAt 
                       ? new Date(conta.ultimaSincAt).toLocaleString("pt-BR")
                       : "Nunca sincronizada"
@@ -834,16 +813,14 @@ export default function ContasPage() {
                         size="sm"
                         onClick={() => handleSincronizar(conta.id)}
                         disabled={loading}
-                        className="bg-white text-black hover:bg-gray-200"
                       >
                         Sincronizar
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="destructive"
                         onClick={() => setDeleteConfirm(conta.id)}
                         disabled={loading}
-                        className="border-red-500/50 text-red-400 hover:bg-red-900/20"
                       >
                         Excluir
                       </Button>

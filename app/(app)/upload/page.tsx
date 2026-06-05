@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PageHeader } from "@/components/page-header"
 import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ExtracaoPreview } from "@/components/extracao-preview"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -287,32 +288,28 @@ export default function UploadPage() {
   }
 
   return (
-    <div>
-      <motion.h1 
-        className="text-2xl font-bold text-white mb-6"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Upload ERP
-      </motion.h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Upload ERP"
+        description="Faça upload de arquivos do ERP (CSV ou XLSX)"
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="p-6 bg-black border border-white/20">
+        <Card className="p-6">
           <form onSubmit={handleAnalisar} className="space-y-6">
           <div>
-            <label htmlFor="empresa" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="empresa" className="block text-sm font-medium text-muted-foreground mb-1">
               Empresa *
             </label>
             <select
               id="empresa"
               value={selectedEmpresa}
               onChange={(e) => setSelectedEmpresa(e.target.value)}
-              className="w-full p-2 border rounded bg-black border-white/20 text-white"
+              className="w-full p-2 border rounded bg-background border-border text-foreground"
               required
             >
               {empresas.map((empresa) => (
@@ -324,42 +321,41 @@ export default function UploadPage() {
           </div>
 
           <div>
-            <label htmlFor="periodo" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="periodo" className="block text-sm font-medium text-muted-foreground mb-1">
               Data de Referência *
             </label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal bg-black border-white/20 text-white hover:bg-white/10"
+                  className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-black border-white/20">
+              <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
                   selected={date}
                   onSelect={setDate}
-                  className="bg-black text-white"
                 />
               </PopoverContent>
             </Popover>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Selecione a data de referência para os lançamentos
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               Arquivo (CSV ou XLSX) *
             </label>
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                 dragActive
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400"
+                  ? "border-brand bg-brand/5"
+                  : "border-border hover:border-border"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -368,8 +364,8 @@ export default function UploadPage() {
             >
               {file ? (
                 <div>
-                  <p className="font-medium">{file.name}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-foreground">{file.name}</p>
+                  <p className="text-sm text-muted-foreground">
                     {(file.size / 1024).toFixed(2)} KB
                   </p>
                   <Button
@@ -384,7 +380,7 @@ export default function UploadPage() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                     Arraste e solte o arquivo aqui ou
                   </p>
                   <Input
@@ -399,13 +395,13 @@ export default function UploadPage() {
           </div>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-900/20 p-3 rounded animate-pulse">
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="text-sm text-green-400 bg-green-900/20 p-3 rounded animate-pulse">
+            <div className="text-sm text-success bg-success/10 p-3 rounded">
               {success}
             </div>
           )}
@@ -418,7 +414,7 @@ export default function UploadPage() {
           )}
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button type="submit" disabled={loading || !file} className="bg-white text-black hover:bg-gray-200 disabled:opacity-50">
+            <Button type="submit" disabled={loading || !file}>
               {loading ? "Analisando..." : "Analisar Arquivo"}
             </Button>
           </motion.div>
@@ -435,7 +431,7 @@ export default function UploadPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="p-6 mt-6 bg-black border border-white/20">
+            <Card className="p-6 mt-6">
               <MapeamentoColunas
                 colunas={analise.colunas}
                 mapeamento={analise.mapeamento}
@@ -457,37 +453,36 @@ export default function UploadPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="p-6 mt-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Uploads Recentes</h2>
+        <Card className="p-6 mt-6">
+          <h2 className="text-lg font-semibold mb-4">Uploads Recentes</h2>
           {uploads.length === 0 ? (
-            <p className="text-gray-400">Nenhum upload encontrado.</p>
+            <p className="text-muted-foreground">Nenhum upload encontrado.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left p-2 text-white font-medium">Arquivo</th>
-                    <th className="text-left p-2 text-white font-medium">Período</th>
-                    <th className="text-left p-2 text-white font-medium">Linhas</th>
-                    <th className="text-left p-2 text-white font-medium">Data Upload</th>
-                    <th className="text-left p-2 text-white font-medium">Ações</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-2 text-foreground font-medium">Arquivo</th>
+                    <th className="text-left p-2 text-foreground font-medium">Período</th>
+                    <th className="text-left p-2 text-foreground font-medium">Linhas</th>
+                    <th className="text-left p-2 text-foreground font-medium">Data Upload</th>
+                    <th className="text-left p-2 text-foreground font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {uploads.map((upload) => (
-                    <tr key={upload.id} className="border-b border-white/10 hover:bg-white/5">
-                      <td className="p-2 text-gray-300">{upload.nomeArquivo}</td>
-                      <td className="p-2 text-gray-300">{upload.periodo}</td>
-                      <td className="p-2 text-gray-300">{upload.totalLinhas}</td>
-                      <td className="p-2 text-gray-300">
+                    <tr key={upload.id} className="border-b border-border hover:bg-accent">
+                      <td className="p-2 text-foreground">{upload.nomeArquivo}</td>
+                      <td className="p-2 text-foreground">{upload.periodo}</td>
+                      <td className="p-2 text-foreground">{upload.totalLinhas}</td>
+                      <td className="p-2 text-foreground">
                         {new Date(upload.createdAt).toLocaleString("pt-BR")}
                       </td>
                       <td className="p-2">
                         <Button
                           size="sm"
                           onClick={() => setDeleteConfirm(upload.id)}
-                          variant="outline"
-                          className="border-red-500/40 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                          variant="destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -506,12 +501,12 @@ export default function UploadPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <Card className="p-6 mt-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Formato do Arquivo</h2>
-          <p className="text-sm text-gray-300 mb-2">
+        <Card className="p-6 mt-6">
+          <h2 className="text-lg font-semibold mb-4">Formato do Arquivo</h2>
+          <p className="text-sm text-muted-foreground mb-2">
             O arquivo deve conter as seguintes colunas:
           </p>
-          <ul className="text-sm text-gray-300 list-disc list-inside space-y-1">
+          <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
           <li><strong>data:</strong> Data do lançamento (YYYY-MM-DD)</li>
           <li><strong>descricao:</strong> Descrição do lançamento</li>
           <li><strong>valor:</strong> Valor numérico</li>

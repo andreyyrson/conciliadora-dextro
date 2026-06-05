@@ -16,7 +16,7 @@ export interface ScoreDetalhado {
   tipo: number
   data: number
   descricao: number
-  documento: number
+  fornecedor: number
 }
 
 export interface MatchSugestao {
@@ -130,16 +130,17 @@ function scoreValor(v1: number, v2: number): number {
   if (diff < 0.01) return 50
   const max = Math.max(v1, v2)
   const pct = max === 0 ? 1 : diff / max
-  if (pct <= 0.01) return 40
-  if (pct <= 0.05) return 20
+  if (pct <= 0.005) return 45 // 0,5% de diferença
+  if (pct <= 0.01) return 40  // 1% de diferença
+  if (pct <= 0.02) return 30  // 2% de diferença
+  if (pct <= 0.05) return 15  // 5% de diferença
   return 0
 }
 
 function scoreData(d1: Date, d2: Date): number {
   const diffMs = Math.abs(d1.getTime() - d2.getTime())
   const diffDays = diffMs / (1000 * 60 * 60 * 24)
-  if (diffDays <= 0) return 30
-  if (diffDays <= 1) return 20
+  if (diffDays <= 0) return 10
   if (diffDays <= 3) return 10
   if (diffDays <= 7) return 5
   return 0
@@ -147,19 +148,26 @@ function scoreData(d1: Date, d2: Date): number {
 
 function scoreDescricao(d1: string, d2: string): number {
   const sim = similaridadeHibrida(d1, d2)
-  return Math.round(sim * 20)
+  return Math.round(sim * 25)
 }
 
-function scoreDocumento(docErp: string | null | undefined, idExtrato: string | null | undefined): number {
-  const a = normalizarDocumento(docErp || "")
-  const b = normalizarDocumento(idExtrato || "")
-  if (!a || !b) return 0
-  if (a === b) return 15
-  const numA = a.replace(/\D/g, "")
-  const numB = b.replace(/\D/g, "")
-  if (numA && numB && numA === numB) return 10
-  if (a.includes(b) || b.includes(a)) return 5
-  return 0
+function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtrato: string | null | undefined): number {
+  const fornecedor = fornecedorErp || ""
+  const descricao = descricaoExtrato || ""
+  if (!fornecedor || !descricao) return 0
+  
+  // Tentar encontrar fornecedor na descrição do extrato
+  const descricaoNorm = descricao.toUpperCase()
+  const fornecedorNorm = fornecedor.toUpperCase()
+  
+  // Se fornecedor está contido na descrição
+  if (descricaoNorm.includes(fornecedorNorm)) {
+    return 15
+  }
+  
+  // Similaridade parcial
+  const sim = similaridadeHibrida(fornecedor, descricao)
+  return Math.round(sim * 15)
 }
 
 // ========== PRÉ-FILTRO ==========
@@ -170,10 +178,24 @@ function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): b
   // Valor aproximado (<= 5%)
   const maxVal = Math.max(erp.valor, extrato.valor)
   if (maxVal > 0 && Math.abs(erp.valor - extrato.valor) / maxVal > 0.05) return false
-  // Data próxima (<= 7 dias)
+  // Data próxima (<= 7 dias) - filtro organizacional
   const diffDays = Math.abs(erp.data.getTime() - extrato.data.getTime()) / (1000 * 60 * 60 * 24)
   if (diffDays > 7) return false
   return true
+}
+
+// ========== AGRUPAMENTO POR DIA ==========
+
+function agruparPorDia(entradas: EntradaConciliacao[]): Map<string, EntradaConciliacao[]> {
+  const grupos = new Map<string, EntradaConciliacao[]>()
+  for (const entrada of entradas) {
+    const dataKey = entrada.data.toISOString().split('T')[0] // YYYY-MM-DD
+    if (!grupos.has(dataKey)) {
+      grupos.set(dataKey, [])
+    }
+    grupos.get(dataKey)!.push(entrada)
+  }
+  return grupos
 }
 
 // ========== GERAÇÃO DE EXPLICAÇÕES ==========
@@ -181,21 +203,22 @@ function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): b
 function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   const exps: string[] = []
   if (sd.valor >= 50) exps.push("Valor idêntico")
-  else if (sd.valor >= 40) exps.push("Valor muito próximo")
-  else if (sd.valor >= 20) exps.push("Valor aproximado")
+  else if (sd.valor >= 45) exps.push("Valor muito próximo (≤ 0,5%)")
+  else if (sd.valor >= 40) exps.push("Valor muito próximo (≤ 1%)")
+  else if (sd.valor >= 30) exps.push("Valor aproximado (≤ 2%)")
+  else if (sd.valor >= 15) exps.push("Valor aproximado (≤ 5%)")
 
-  if (sd.data >= 30) exps.push("Data idêntica")
-  else if (sd.data >= 20) exps.push("Data com diferença de 1 dia")
-  else if (sd.data >= 10) exps.push("Data com diferença de até 3 dias")
+  if (sd.data >= 10) exps.push("Data próxima (≤ 3 dias)")
+  else if (sd.data >= 5) exps.push("Data próxima (≤ 7 dias)")
   else if (sd.data > 0) exps.push("Data próxima")
 
-  if (sd.descricao >= 18) exps.push(`Descrição muito similar (${Math.round((sd.descricao / 20) * 100)}%)`)
-  else if (sd.descricao >= 12) exps.push(`Descrição similar (${Math.round((sd.descricao / 20) * 100)}%)`)
-  else if (sd.descricao > 0) exps.push(`Descrição parcialmente similar (${Math.round((sd.descricao / 20) * 100)}%)`)
+  if (sd.descricao >= 22) exps.push(`Descrição muito similar (${Math.round((sd.descricao / 25) * 100)}%)`)
+  else if (sd.descricao >= 18) exps.push(`Descrição similar (${Math.round((sd.descricao / 25) * 100)}%)`)
+  else if (sd.descricao > 0) exps.push(`Descrição parcialmente similar (${Math.round((sd.descricao / 25) * 100)}%)`)
 
-  if (sd.documento >= 15) exps.push("Documento/Identificador idêntico")
-  else if (sd.documento >= 10) exps.push("Documento/Identificador numérico igual")
-  else if (sd.documento > 0) exps.push("Documento/Identificador parcialmente igual")
+  if (sd.fornecedor >= 12) exps.push(`Fornecedor muito similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
+  else if (sd.fornecedor >= 9) exps.push(`Fornecedor similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
+  else if (sd.fornecedor > 0) exps.push(`Fornecedor parcialmente similar (${Math.round((sd.fornecedor / 15) * 100)}%)`)
 
   return exps
 }
@@ -212,6 +235,10 @@ export function gerarSugestoes(
   erpEntradas: EntradaConciliacao[],
   extratoEntradas: EntradaConciliacao[]
 ): ResultadoMatching {
+  // Fase 0: Agrupar por dia para otimizar matching
+  const erpPorDia = agruparPorDia(erpEntradas)
+  const extratoPorDia = agruparPorDia(extratoEntradas)
+
   // Fase 1: Gerar TODOS os candidatos (com pré-filtro)
   interface Candidato {
     extratoId: string
@@ -225,42 +252,112 @@ export function gerarSugestoes(
 
   const candidatos: Candidato[] = []
 
-  for (const extrato of extratoEntradas) {
-    for (const erp of erpEntradas) {
-      if (!passaPreFiltro(erp, extrato)) continue
+  // Comparar primeiro dentro do mesmo dia, depois expandir para dias próximos
+  for (const [dataExtrato, extratosDoDia] of extratoPorDia) {
+    // Primeiro: tentar match no mesmo dia
+    const erpsMesmoDia = erpPorDia.get(dataExtrato) || []
+    for (const extrato of extratosDoDia) {
+      for (const erp of erpsMesmoDia) {
+        if (!passaPreFiltro(erp, extrato)) continue
 
-      const sv = scoreValor(erp.valor, extrato.valor)
-      const sd = scoreData(erp.data, extrato.data)
-      const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
-      const sdoc = scoreDocumento(erp.documento, extrato.identificador)
+        const sv = scoreValor(erp.valor, extrato.valor)
+        const sd = scoreData(erp.data, extrato.data)
+        const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+        const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
 
-      const scoreDetalhado: ScoreDetalhado = {
-        valor: sv,
-        tipo: 0, // tipo é pré-filtro, não soma no score
-        data: sd,
-        descricao: sdesc,
-        documento: sdoc
+        const scoreDetalhado: ScoreDetalhado = {
+          valor: sv,
+          tipo: 0, // tipo é pré-filtro, não soma no score
+          data: sd,
+          descricao: sdesc,
+          fornecedor: sforn
+        }
+
+        const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+        if (score < 20) continue // muito fraco, descarta
+
+        const explicacoes = gerarExplicacoes(scoreDetalhado)
+        const confianca = calcularConfianca(score)
+        
+        // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
+        const temFornecedor = !!erp.fornecedor
+        const autoConfirmado =
+          score >= 50 &&
+          sv >= 40 && // valor muito próximo (≤ 1%)
+          sdesc >= 15 && // descrição similar (≥ 75%)
+          sd >= 5 && // data próxima (≤ 7 dias)
+          (!temFornecedor || sforn >= 10) // fornecedor similar se existir
+
+        candidatos.push({
+          extratoId: extrato.id,
+          erpId: erp.id,
+          score,
+          scoreDetalhado,
+          explicacoes,
+          confianca,
+          autoConfirmado
+        })
       }
+    }
 
-      const score = sv + sd + sdesc + sdoc
-      if (score < 20) continue // muito fraco, descarta
+    // Segundo: se não encontrou match no mesmo dia, tentar dias próximos (±3 dias)
+    const dataExtratoDate = new Date(dataExtrato)
+    for (let offset = -3; offset <= 3; offset++) {
+      if (offset === 0) continue // já verificado
+      const dataOffset = new Date(dataExtratoDate)
+      dataOffset.setDate(dataOffset.getDate() + offset)
+      const dataOffsetKey = dataOffset.toISOString().split('T')[0]
+      const erpsDiaOffset = erpPorDia.get(dataOffsetKey) || []
 
-      const explicacoes = gerarExplicacoes(scoreDetalhado)
-      const confianca = calcularConfianca(score)
-      const autoConfirmado =
-        score >= 80 &&
-        sv >= 50 && // valor exato
-        sdoc >= 15 // documento exato
+      for (const extrato of extratosDoDia) {
+        // Verificar se já tem candidato bom para este extrato
+        const jaTemCandidatoBom = candidatos.some(c => 
+          c.extratoId === extrato.id && c.score >= 70
+        )
+        if (jaTemCandidatoBom) continue
 
-      candidatos.push({
-        extratoId: extrato.id,
-        erpId: erp.id,
-        score,
-        scoreDetalhado,
-        explicacoes,
-        confianca,
-        autoConfirmado
-      })
+        for (const erp of erpsDiaOffset) {
+          if (!passaPreFiltro(erp, extrato)) continue
+
+          const sv = scoreValor(erp.valor, extrato.valor)
+          const sd = scoreData(erp.data, extrato.data)
+          const sdesc = scoreDescricao(erp.descricao, extrato.descricao)
+          const sforn = scoreFornecedor(erp.fornecedor, extrato.descricao)
+
+          const scoreDetalhado: ScoreDetalhado = {
+            valor: sv,
+            tipo: 0,
+            data: sd,
+            descricao: sdesc,
+            fornecedor: sforn
+          }
+
+          const score = sv + sd + sdesc + sforn // valor + data + descrição + fornecedor
+          if (score < 20) continue
+
+          const explicacoes = gerarExplicacoes(scoreDetalhado)
+          const confianca = calcularConfianca(score)
+          
+          // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data
+          const temFornecedor = !!erp.fornecedor
+          const autoConfirmado =
+            score >= 50 &&
+            sv >= 40 &&
+            sdesc >= 15 &&
+            sd >= 5 &&
+            (!temFornecedor || sforn >= 10)
+
+          candidatos.push({
+            extratoId: extrato.id,
+            erpId: erp.id,
+            score,
+            scoreDetalhado,
+            explicacoes,
+            confianca,
+            autoConfirmado
+          })
+        }
+      }
     }
   }
 
@@ -318,13 +415,13 @@ export function gerarSugestoes(
     } else if (match) {
       const erp = erpEntradas.find(e => e.id === match.erpId)!
       const diffValor = Math.abs(erp.valor - extrato.valor)
-      // Verificar se é ambíguo: top1 e top2 com score >= 60 e diferença <= 10
+      // Verificar se é ambíguo: top1 e top2 com score >= 70 e diferença <= 5
       const top1 = sugestoes[0]
       const top2 = sugestoes[1]
       const isAmbiguo =
-        top1 && top1.score >= 60 &&
-        top2 && top2.score >= 60 &&
-        Math.abs(top1.score - top2.score) <= 10
+        top1 && top1.score >= 70 &&
+        top2 && top2.score >= 70 &&
+        Math.abs(top1.score - top2.score) <= 5
 
       if (isAmbiguo) {
         itens.push({

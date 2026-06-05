@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
 import { Eye, Trash2 } from "lucide-react"
 
@@ -126,26 +127,22 @@ export default function EmpresasPage() {
   }
 
   return (
-    <div>
-      <motion.h1 
-        className="text-2xl font-bold text-white mb-6"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        Empresas
-      </motion.h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Empresas"
+        description="Gerencie as empresas cadastradas"
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Card className="p-6 mb-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Nova Empresa</h2>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Nova Empresa</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="nome" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="nome" className="block text-sm font-medium text-muted-foreground mb-1">
               Nome *
             </label>
             <Input
@@ -154,12 +151,11 @@ export default function EmpresasPage() {
               onChange={(e) => setNome(e.target.value)}
               required
               placeholder="Nome da empresa"
-              className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
             />
           </div>
 
           <div>
-            <label htmlFor="cnpj" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="cnpj" className="block text-sm font-medium text-muted-foreground mb-1">
               CNPJ (opcional)
             </label>
             <Input
@@ -168,18 +164,17 @@ export default function EmpresasPage() {
               onChange={handleCNPJChange}
               placeholder="00.000.000/0000-00"
               maxLength={18}
-              className="bg-black border-white/20 text-white placeholder:text-gray-600 focus:border-white"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-400 bg-red-900/20 p-3 rounded animate-pulse">
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
               {error}
             </div>
           )}
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <Button type="submit" disabled={loading} className="bg-white text-black hover:bg-gray-200">
+            <Button type="submit" disabled={loading}>
               {loading ? "Criando..." : "Criar Empresa"}
             </Button>
           </motion.div>
@@ -192,26 +187,26 @@ export default function EmpresasPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <Card className="p-6 bg-black border border-white/20">
-          <h2 className="text-lg font-semibold mb-4 text-white">Empresas Cadastradas</h2>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Empresas Cadastradas</h2>
         {empresas.length === 0 ? (
-          <p className="text-gray-500">Nenhuma empresa cadastrada</p>
+          <p className="text-muted-foreground">Nenhuma empresa cadastrada</p>
         ) : (
           <Table>
             <thead>
-              <tr className="border-b border-white/20">
-                <th className="text-left p-2 text-white font-medium">Nome</th>
-                <th className="text-left p-2 text-white font-medium">CNPJ</th>
-                <th className="text-left p-2 text-white font-medium">Data de Criação</th>
-                <th className="text-left p-2 text-white font-medium">Ações</th>
+              <tr className="border-b border-border">
+                <th className="text-left p-2 text-foreground font-medium">Nome</th>
+                <th className="text-left p-2 text-foreground font-medium">CNPJ</th>
+                <th className="text-left p-2 text-foreground font-medium">Data de Criação</th>
+                <th className="text-left p-2 text-foreground font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {empresas.map((empresa) => (
-                <tr key={empresa.id} className="border-t border-white/10 hover:bg-white/5">
-                  <td className="p-2 text-gray-300">{empresa.nome}</td>
-                  <td className="p-2 text-gray-300">{empresa.cnpj || "-"}</td>
-                  <td className="p-2 text-gray-300">
+                <tr key={empresa.id} className="border-t border-border hover:bg-accent">
+                  <td className="p-2 text-foreground">{empresa.nome}</td>
+                  <td className="p-2 text-foreground">{empresa.cnpj || "-"}</td>
+                  <td className="p-2 text-foreground">
                     {new Date(empresa.createdAt).toLocaleDateString("pt-BR")}
                   </td>
                   <td className="p-2">
@@ -221,7 +216,6 @@ export default function EmpresasPage() {
                           size="sm"
                           onClick={() => router.push(`/conciliacoes?empresaId=${empresa.id}`)}
                           variant="outline"
-                          className="border-white/40 text-white hover:bg-white/20 hover:border-white/60"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -230,8 +224,7 @@ export default function EmpresasPage() {
                         <Button
                           size="sm"
                           onClick={() => setDeleteConfirm(empresa.id)}
-                          variant="outline"
-                          className="border-red-500/40 text-red-400 hover:bg-red-900/20 hover:border-red-500/60"
+                          variant="destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

@@ -42,27 +42,27 @@ const TODOS_CAMPOS = [
 ]
 
 const CAMPO_CORES: Record<string, string> = {
-  data: "bg-white/10 text-white border-white/20",
-  valor: "bg-white/10 text-white border-white/20",
-  descricao: "bg-white/10 text-white border-white/20",
-  fornecedor: "bg-white/10 text-white border-white/20",
-  categoria: "bg-white/10 text-white border-white/20",
-  tipo: "bg-white/10 text-white border-white/20",
-  documento: "bg-white/10 text-white border-white/20",
-  cnpj: "bg-white/10 text-white border-white/20",
-  centroCusto: "bg-white/10 text-white border-white/20",
-  banco: "bg-white/10 text-white border-white/20",
-  agencia: "bg-white/10 text-white border-white/20",
-  conta: "bg-white/10 text-white border-white/20",
-  observacao: "bg-white/10 text-white border-white/20",
-  lancamento: "bg-white/10 text-white border-white/20",
-  identificador: "bg-white/10 text-white border-white/20",
-  saldoApos: "bg-white/10 text-white border-white/20",
-  numero: "bg-white/10 text-white border-white/20",
-  referencia: "bg-white/10 text-white border-white/20",
-  status: "bg-white/10 text-white border-white/20",
-  projeto: "bg-white/10 text-white border-white/20",
-  natureza: "bg-white/10 text-white border-white/20"
+  data: "bg-accent text-foreground border-border",
+  valor: "bg-accent text-foreground border-border",
+  descricao: "bg-accent text-foreground border-border",
+  fornecedor: "bg-accent text-foreground border-border",
+  categoria: "bg-accent text-foreground border-border",
+  tipo: "bg-accent text-foreground border-border",
+  documento: "bg-accent text-foreground border-border",
+  cnpj: "bg-accent text-foreground border-border",
+  centroCusto: "bg-accent text-foreground border-border",
+  banco: "bg-accent text-foreground border-border",
+  agencia: "bg-accent text-foreground border-border",
+  conta: "bg-accent text-foreground border-border",
+  observacao: "bg-accent text-foreground border-border",
+  lancamento: "bg-accent text-foreground border-border",
+  identificador: "bg-accent text-foreground border-border",
+  saldoApos: "bg-accent text-foreground border-border",
+  numero: "bg-accent text-foreground border-border",
+  referencia: "bg-accent text-foreground border-border",
+  status: "bg-accent text-foreground border-border",
+  projeto: "bg-accent text-foreground border-border",
+  natureza: "bg-accent text-foreground border-border"
 }
 
 const LABEL_CURTO: Record<string, string> = {
@@ -165,17 +165,17 @@ export function MapeamentoColunas({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-white flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-lg">
+          <h3 className="text-xl font-bold text-foreground flex items-center gap-3">
+            <div className="p-2 bg-accent rounded-lg">
               {mostrarTratado ? (
-                <Sparkles className="w-5 h-5 text-white" />
+                <Sparkles className="w-5 h-5 text-foreground" />
               ) : (
-                <MousePointerClick className="w-5 h-5 text-white" />
+                <MousePointerClick className="w-5 h-5 text-foreground" />
               )}
             </div>
             {mostrarTratado ? "Preview da Tabela Tratada" : "Mapeamento de Colunas"}
           </h3>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             {mostrarTratado
               ? "Esta é a tabela após o mapeamento. Verifique se está correta."
               : `Selecione o campo do sistema para cada coluna do arquivo. ${preview.length} registros no arquivo.`}
@@ -183,7 +183,7 @@ export function MapeamentoColunas({
         </div>
         <div className="flex items-center gap-3">
           {mapeamentoSalvo && (
-            <span className="text-xs text-white bg-white/10 border border-white/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+            <span className="text-xs text-foreground bg-accent border border-border px-3 py-1.5 rounded-full flex items-center gap-1.5">
               <Check className="w-3 h-3" />
               Mapeamento recuperado
             </span>
@@ -192,7 +192,6 @@ export function MapeamentoColunas({
             onClick={() => setMostrarTratado(!mostrarTratado)}
             variant="outline"
             size="sm"
-            className="border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all"
           >
             {mostrarTratado ? (
               <><ArrowLeft className="w-4 h-4 mr-2" /> Voltar</>
@@ -205,14 +204,14 @@ export function MapeamentoColunas({
 
       {/* Alerta campos obrigatórios */}
       {!mostrarTratado && camposObrigatoriosPendentes.length > 0 && (
-        <div className="flex items-start gap-3 p-4 bg-white/5 border border-white/10 rounded-xl">
-          <AlertCircle className="w-5 h-5 text-white mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 p-4 bg-accent border border-border rounded-xl">
+          <AlertCircle className="w-5 h-5 text-foreground mt-0.5 shrink-0" />
           <div className="text-sm">
-            <strong className="text-white">Campos obrigatórios pendentes:</strong>{" "}
-            <span className="text-gray-300">
+            <strong className="text-foreground">Campos obrigatórios pendentes:</strong>{" "}
+            <span className="text-muted-foreground">
               {camposObrigatoriosPendentes.map(c => c === "data" ? "📅 Data" : "💰 Valor").join(", ")}
             </span>
-            <p className="text-xs text-gray-400 mt-1.5">
+            <p className="text-xs text-muted-foreground mt-1.5">
               Selecione o campo correspondente no dropdown de cada coluna.
             </p>
           </div>
@@ -235,10 +234,10 @@ export function MapeamentoColunas({
 
       {/* TABELA ORIGINAL — para mapeamento */}
       {!mostrarTratado && (
-        <div className="border border-white/10 rounded-xl overflow-hidden shadow-lg shadow-black/20">
+        <div className="border border-border rounded-xl overflow-hidden shadow-lg">
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-black/80 backdrop-blur-sm">
+              <thead className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm">
                 <tr>
                   {colunas.map(coluna => {
                     const campoAtribuido = colunaParaCampo[coluna]
@@ -246,27 +245,27 @@ export function MapeamentoColunas({
                     return (
                       <th
                         key={coluna}
-                        className={`p-3 text-left min-w-[160px] border-b border-white/10 ${
+                        className={`p-3 text-left min-w-[160px] border-b border-border ${
                           campoAtribuido
                             ? `${cor} border-l-2 border-r-2`
-                            : "bg-white/5 text-gray-300"
+                            : "bg-accent text-muted-foreground"
                         }`}
                       >
                         <div className="space-y-2">
-                          <div className="font-mono text-xs text-gray-400 truncate" title={coluna}>
+                          <div className="font-mono text-xs text-muted-foreground truncate" title={coluna}>
                             {coluna}
                           </div>
                           <select
                             value={campoAtribuido || "__null__"}
                             onChange={(e) => handleAtribuirCampo(coluna, e.target.value)}
-                            className={`w-full text-xs rounded-lg px-2 py-2 border transition-all bg-black text-white ${
+                            className={`w-full text-xs rounded-lg px-2 py-2 border transition-all bg-background text-foreground ${
                               campoAtribuido
                                 ? `${cor} font-medium shadow-sm`
-                                : "border-white/20 hover:border-white/30"
-                            } focus:outline-none focus:ring-2 focus:ring-white/20 cursor-pointer`}
+                                : "border-border hover:border-border"
+                            } focus:outline-none focus:ring-2 focus:ring-border cursor-pointer`}
                           >
                             {TODOS_CAMPOS.map(c => (
-                              <option key={c.key} value={c.key} className="bg-black text-white">{c.label}</option>
+                              <option key={c.key} value={c.key} className="bg-background text-foreground">{c.label}</option>
                             ))}
                           </select>
                         </div>
@@ -277,14 +276,14 @@ export function MapeamentoColunas({
               </thead>
               <tbody>
                 {preview.map((linha, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr key={i} className="border-b border-border hover:bg-accent transition-colors">
                     {colunas.map(coluna => {
                       const campo = colunaParaCampo[coluna]
                       return (
                         <td
                           key={coluna}
-                          className={`p-3 text-gray-300 text-xs whitespace-nowrap ${
-                            campo ? "bg-white/[0.03]" : ""
+                          className={`p-3 text-muted-foreground text-xs whitespace-nowrap ${
+                            campo ? "bg-accent/50" : ""
                           }`}
                         >
                           {String(linha[coluna] ?? "")}
@@ -301,19 +300,19 @@ export function MapeamentoColunas({
 
       {/* TABELA TRATADA — preview do resultado */}
       {mostrarTratado && (
-        <div className="border border-white/10 rounded-xl overflow-hidden shadow-lg shadow-black/20">
-          <div className="bg-white/5 px-4 py-3 border-b border-white/10">
-            <span className="text-sm font-medium text-white flex items-center gap-2">
+        <div className="border border-border rounded-xl overflow-hidden shadow-lg">
+          <div className="bg-accent px-4 py-3 border-b border-border">
+            <span className="text-sm font-medium text-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4" />
               Preview do resultado após mapeamento — {preview.length} registros
             </span>
           </div>
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-black/80 backdrop-blur-sm">
-                <tr className="border-b border-white/10 bg-white/5">
+              <thead className="sticky top-0 bg-background/80 backdrop-blur-sm">
+                <tr className="border-b border-border bg-accent">
                   {colunasTratadas.map((header) => (
-                    <th key={header} className="text-left p-3 text-gray-200 font-medium whitespace-nowrap">
+                    <th key={header} className="text-left p-3 text-foreground font-medium whitespace-nowrap">
                       {header}
                     </th>
                   ))}
@@ -321,10 +320,10 @@ export function MapeamentoColunas({
               </thead>
               <tbody>
                 {previewTratado.map((linha, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <tr key={i} className="border-b border-border hover:bg-accent transition-colors">
                     {colunasTratadas.map((header) => (
-                      <td key={header} className="p-3 text-gray-300 text-xs whitespace-nowrap">
-                        {linha[header] || <span className="text-gray-600 italic">—</span>}
+                      <td key={header} className="p-3 text-muted-foreground text-xs whitespace-nowrap">
+                        {linha[header] || <span className="text-muted-foreground italic">—</span>}
                       </td>
                     ))}
                   </tr>
@@ -341,7 +340,6 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => setMostrarTratado(true)}
-              className="!bg-white !text-black hover:!bg-white/90 disabled:!opacity-50 disabled:!cursor-not-allowed"
               disabled={!podeConfirmar}
             >
               <ArrowRight className="w-4 h-4 mr-2" />
@@ -350,7 +348,6 @@ export function MapeamentoColunas({
             <Button
               onClick={onCancelar}
               variant="outline"
-              className="!border-white/20 !text-white hover:!bg-white/10 hover:!border-white/30 transition-all"
             >
               Cancelar
             </Button>
@@ -359,7 +356,6 @@ export function MapeamentoColunas({
           <>
             <Button
               onClick={() => onConfirmar(mapeamentoLocal)}
-              className="!bg-white !text-black hover:!bg-white/90"
             >
               <Check className="w-4 h-4 mr-2" />
               Confirmar e Salvar
@@ -367,7 +363,6 @@ export function MapeamentoColunas({
             <Button
               onClick={() => setMostrarTratado(false)}
               variant="outline"
-              className="!border-white/20 !text-white hover:!bg-white/10 hover:!border-white/30 transition-all"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar ao Mapeamento

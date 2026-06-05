@@ -69,14 +69,14 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
     >
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-green-500/10 rounded-lg">
-          <FileCheck className="w-5 h-5 text-green-400" />
+        <div className="p-2 bg-success/10 rounded-lg">
+          <FileCheck className="w-5 h-5 text-success" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-lg font-semibold text-foreground">
             Dados Extraídos do ERP
           </h3>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-muted-foreground">
             {totalLinhas} lançamentos processados e normalizados
           </p>
         </div>
@@ -114,19 +114,19 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
       {/* Barra de busca + controle */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Buscar em qualquer campo..."
             value={busca}
             onChange={(e) => { setBusca(e.target.value); setPagina(1) }}
-            className="w-full pl-9 pr-3 py-2 bg-black border border-white/20 rounded text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-white/40"
+            className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-border"
           />
         </div>
         <Button
           onClick={() => setVerTodos(!verTodos)}
           variant="outline"
-          className="border-white/20 text-white hover:bg-white/10 text-sm shrink-0"
+          className="text-sm shrink-0"
         >
           {verTodos ? (
             <><X className="w-4 h-4 mr-1" /> Resumir</>
@@ -137,11 +137,11 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
       </div>
 
       {/* Tabela */}
-      <div className="border border-white/10 rounded-lg overflow-hidden">
-        <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/10">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="bg-accent px-4 py-2 flex items-center justify-between border-b border-border">
           <div className="flex items-center gap-2">
-            <Table2 className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-300">
+            <Table2 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
               {verTodos
                 ? `Mostrando ${displayData.length} de ${filtrados.length} registros`
                 : `Página ${paginaAtual} de ${totalPaginas} — ${filtrados.length} registros filtrados`
@@ -149,7 +149,7 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
             </span>
           </div>
           {busca && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               Filtro: "{busca}"
             </span>
           )}
@@ -158,62 +158,62 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
         <div className={`overflow-x-auto ${verTodos ? "max-h-[600px] overflow-y-auto" : ""}`}>
           <table className="w-full text-sm">
             <thead className="sticky top-0">
-              <tr className="border-b border-white/10 bg-white/10">
-                <th className="text-left p-2 text-gray-200 font-medium">#</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Data</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Banco</th>
-                <th className="text-right p-2 text-gray-200 font-medium">Valor</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Tipo</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Fornecedor</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Plano de Contas</th>
-                <th className="text-left p-2 text-gray-200 font-medium">Descrição</th>
+              <tr className="border-b border-border bg-accent">
+                <th className="text-left p-2 text-foreground font-medium">#</th>
+                <th className="text-left p-2 text-foreground font-medium">Data</th>
+                <th className="text-left p-2 text-foreground font-medium">Banco</th>
+                <th className="text-right p-2 text-foreground font-medium">Valor</th>
+                <th className="text-left p-2 text-foreground font-medium">Tipo</th>
+                <th className="text-left p-2 text-foreground font-medium">Fornecedor</th>
+                <th className="text-left p-2 text-foreground font-medium">Plano de Contas</th>
+                <th className="text-left p-2 text-foreground font-medium">Descrição</th>
               </tr>
             </thead>
             <tbody>
               {displayData.map((linha, i) => {
                 const idxGlobal = verTodos ? i : inicio + i
                 return (
-                  <tr key={idxGlobal} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-2 text-gray-500 font-mono text-xs">{idxGlobal + 1}</td>
-                    <td className="p-2 text-gray-300 font-mono text-xs whitespace-nowrap">
+                  <tr key={idxGlobal} className="border-b border-border hover:bg-accent">
+                    <td className="p-2 text-muted-foreground font-mono text-xs">{idxGlobal + 1}</td>
+                    <td className="p-2 text-foreground font-mono text-xs whitespace-nowrap">
                       {formatarData(linha.data)}
                     </td>
-                    <td className="p-2 text-gray-300">
+                    <td className="p-2 text-foreground">
                       {linha.banco ? (
-                        <span className="text-purple-300">{linha.banco}</span>
+                        <span className="text-brand">{linha.banco}</span>
                       ) : (
-                        <span className="text-gray-600 italic">—</span>
+                        <span className="text-muted-foreground italic">—</span>
                       )}
                     </td>
                     <td className={`p-2 text-right font-mono font-medium whitespace-nowrap ${
-                      linha.tipo === "DEBITO" ? "text-red-400" : "text-green-400"
+                      linha.tipo === "DEBITO" ? "text-destructive" : "text-success"
                     }`}>
                       {formatarValor(linha.valor)}
                     </td>
                     <td className="p-2">
                       <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                         linha.tipo === "DEBITO"
-                          ? "bg-red-500/10 text-red-400"
-                          : "bg-green-500/10 text-green-400"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-success/10 text-success"
                       }`}>
                         {linha.tipo}
                       </span>
                     </td>
-                    <td className="p-2 text-gray-300 max-w-[180px] truncate">
+                    <td className="p-2 text-foreground max-w-[180px] truncate">
                       {linha.fornecedor ? (
-                        <span className="text-orange-300">{linha.fornecedor}</span>
+                        <span className="text-warning">{linha.fornecedor}</span>
                       ) : (
-                        <span className="text-gray-600 italic">—</span>
+                        <span className="text-muted-foreground italic">—</span>
                       )}
                     </td>
-                    <td className="p-2 text-gray-300 max-w-[180px] truncate">
+                    <td className="p-2 text-foreground max-w-[180px] truncate">
                       {linha.categoria ? (
-                        <span className="text-pink-300">{linha.categoria}</span>
+                        <span className="text-brand">{linha.categoria}</span>
                       ) : (
-                        <span className="text-gray-600 italic">—</span>
+                        <span className="text-muted-foreground italic">—</span>
                       )}
                     </td>
-                    <td className="p-2 text-gray-300 max-w-[250px] truncate" title={linha.descricao}>
+                    <td className="p-2 text-foreground max-w-[250px] truncate" title={linha.descricao}>
                       {linha.descricao}
                     </td>
                   </tr>
@@ -225,17 +225,16 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
 
         {/* Paginação */}
         {!verTodos && totalPaginas > 1 && (
-          <div className="flex items-center justify-between px-4 py-2 border-t border-white/10 bg-white/5">
+          <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-accent">
             <Button
               onClick={() => setPagina(p => Math.max(1, p - 1))}
               disabled={paginaAtual === 1}
               variant="outline"
               size="sm"
-              className="border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
             </Button>
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-muted-foreground">
               {inicio + 1}–{Math.min(inicio + ITENS_POR_PAGINA, filtrados.length)} de {filtrados.length}
             </span>
             <Button
@@ -243,7 +242,6 @@ export function ExtracaoPreview({ totalLinhas, preview }: ExtracaoPreviewProps) 
               disabled={paginaAtual === totalPaginas}
               variant="outline"
               size="sm"
-              className="border-white/20 text-white hover:bg-white/10 disabled:opacity-30"
             >
               Próxima <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
@@ -264,13 +262,13 @@ function CampoCard({
   cor: "blue" | "purple" | "green" | "orange" | "pink" | "cyan" | "red"
 }) {
   const cores: Record<string, string> = {
-    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    green: "bg-green-500/10 text-green-400 border-green-500/20",
-    orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-    pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-    cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-    red: "bg-red-500/10 text-red-400 border-red-500/20"
+    blue: "bg-brand/10 text-brand border-brand/20",
+    purple: "bg-brand/10 text-brand border-brand/20",
+    green: "bg-success/10 text-success border-success/20",
+    orange: "bg-warning/10 text-warning border-warning/20",
+    pink: "bg-brand/10 text-brand border-brand/20",
+    cyan: "bg-brand/10 text-brand border-brand/20",
+    red: "bg-destructive/10 text-destructive border-destructive/20"
   }
 
   return (
