@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
-import { motion } from "framer-motion"
 import { Zap, Check, AlertCircle, Loader2 } from "lucide-react"
 
 interface UploadErp {
@@ -44,7 +43,7 @@ interface ProcessamentoStatus {
 export default function ProcessamentoLotePage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [empresaId, setEmpresaId] = useState<string>("")
+  const [, setEmpresaId] = useState<string>("")
   const [uploadsErp, setUploadsErp] = useState<UploadErp[]>([])
   const [contasBancarias, setContasBancarias] = useState<ContaBancaria[]>([])
   const [importacoesExtrato, setImportacoesExtrato] = useState<ImportacaoExtrato[]>([])
@@ -180,7 +179,7 @@ export default function ProcessamentoLotePage() {
           message: data.error || "Erro ao processar lote"
         })
       }
-    } catch (error) {
+    } catch {
       setProcessamentoStatus({
         status: "error",
         progress: 0,

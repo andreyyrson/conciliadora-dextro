@@ -94,7 +94,7 @@ export default function EmpresasPage() {
       setNome("")
       setCnpj("")
       fetchEmpresas()
-    } catch (error) {
+    } catch {
       setError("Erro ao criar empresa")
     } finally {
       setLoading(false)
@@ -119,7 +119,7 @@ export default function EmpresasPage() {
 
       setDeleteConfirm(null)
       fetchEmpresas()
-    } catch (error) {
+    } catch {
       setError("Erro ao deletar empresa")
     } finally {
       setDeleting(false)

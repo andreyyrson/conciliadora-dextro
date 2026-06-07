@@ -34,7 +34,6 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const { empresaId, setEmpresa } = useEmpresa()
   const router = useRouter()
-  const [empresas, setEmpresas] = useState<Empresa[]>([])
   const [empresasStatus, setEmpresasStatus] = useState<EmpresaStatus[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -43,7 +42,6 @@ export default function DashboardPage() {
       const response = await fetch("/api/empresas")
       const data = await response.json()
       const empresasData = data.empresas || []
-      setEmpresas(empresasData)
 
       // Buscar status de cada empresa
       const statusPromises = empresasData.map(async (empresa: Empresa) => {

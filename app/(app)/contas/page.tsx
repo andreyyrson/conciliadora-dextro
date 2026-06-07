@@ -45,25 +45,6 @@ export default function ContasPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [analiseCsv, setAnaliseCsv] = useState<any>(null)
   const [mostrarMapeamentoCsv, setMostrarMapeamentoCsv] = useState(false)
-  const [cpf, setCpf] = useState("")
-  const [cnpj, setCnpj] = useState("")
-
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, "")
-    if (numbers.length <= 3) return numbers
-    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`
-    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`
-  }
-
-  const formatCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, "")
-    if (numbers.length <= 2) return numbers
-    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`
-    if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`
-    if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`
-    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`
-  }
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -135,7 +116,7 @@ export default function ContasPage() {
       setModoOFX(false)
       setOfxFile(null)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao processar arquivo OFX")
       setLoading(false)
     }
@@ -173,7 +154,7 @@ export default function ContasPage() {
       setAnaliseCsv(data)
       setMostrarMapeamentoCsv(true)
       setLoading(false)
-    } catch (error) {
+    } catch {
       setError("Erro ao analisar arquivo CSV")
       setLoading(false)
     }
@@ -208,7 +189,7 @@ export default function ContasPage() {
       setAnaliseCsv(null)
       setMostrarMapeamentoCsv(false)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao processar arquivo CSV")
       setLoading(false)
     }
@@ -237,7 +218,7 @@ export default function ContasPage() {
 
       setDeleteConfirm(null)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao excluir conta")
     } finally {
       setDeleting(false)
@@ -280,7 +261,7 @@ export default function ContasPage() {
       setConta("")
       setModoManual(false)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao criar conta")
     } finally {
       setLoading(false)

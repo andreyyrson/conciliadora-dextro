@@ -221,7 +221,7 @@ export default function UploadPage() {
 
         setAnalise(data)
         setMostrarMapeamento(true)
-      } catch (error) {
+      } catch {
         setError("Erro ao analisar arquivo")
       } finally {
         setLoading(false)
@@ -269,7 +269,7 @@ export default function UploadPage() {
       setMostrarMapeamento(false)
       setExtracaoPreview(data.preview ? { totalLinhas: data.totalLinhas, preview: data.preview } : null)
       fetchUploads()
-    } catch (error) {
+    } catch {
       setError("Erro ao fazer upload")
     } finally {
       setLoading(false)

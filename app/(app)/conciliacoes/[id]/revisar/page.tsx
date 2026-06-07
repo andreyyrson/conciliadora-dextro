@@ -6,9 +6,8 @@ import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
-import { ChevronLeft, Check, X, AlertTriangle, ChevronDown, Download } from "lucide-react"
+import { Check, X, AlertTriangle, Download } from "lucide-react"
 
 interface Sugestao {
   entradaOrigemId: string

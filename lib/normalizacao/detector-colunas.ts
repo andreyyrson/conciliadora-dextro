@@ -290,7 +290,6 @@ function detectarPorConteudo(
 
   // === VALOR / SALDO ===
   // Detecta valores monetários: "1.050,23", "R$ 500,00", "-1.234,56", "1,234.56"
-  const valorRegex = /^[\-+]?(?:R\$\s*)?[\d.]*,?\d+$/
   const valoresMonetarios = amostra.filter(v => {
     const limpo = v.replace(/[R$\s]/g, "")
     return /^[\-+]?(?:\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}|\d+,\d{2}|\d+)$/.test(limpo)

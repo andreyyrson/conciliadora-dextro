@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
 import { PageHeader } from "@/components/page-header"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
@@ -23,7 +20,6 @@ interface Importacao {
 
 export default function ImportacoesPage() {
   const { data: session } = useSession()
-  const { empresaId } = useEmpresa()
   const [importacoes, setImportacoes] = useState<Importacao[]>([])
   const [empresas, setEmpresas] = useState<any[]>([])
   const [selectedEmpresa, setSelectedEmpresa] = useState("")
@@ -46,16 +42,20 @@ export default function ImportacoesPage() {
   }
 
   const fetchImportacoes = async (empresaId: string) => {
+    setLoading(true)
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empresaId}`)
       const data = await response.json()
       setImportacoes(data.importacoes || [])
     } catch (error) {
       console.error("Erro ao buscar importações:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleDeleteImportacao = async (importacaoId: string) => {
+    setLoading(true)
     setDeleting(true)
     setError("")
 
@@ -73,7 +73,7 @@ export default function ImportacoesPage() {
 
       setDeleteConfirm(null)
       fetchImportacoes(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao excluir importação")
     } finally {
       setDeleting(false)

@@ -223,7 +223,7 @@ export default function ConciliacoesPage() {
 
       setShowSuccessAnimation(true)
       fetchConciliacoes(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao iniciar conciliação")
     } finally {
       setLoading(false)

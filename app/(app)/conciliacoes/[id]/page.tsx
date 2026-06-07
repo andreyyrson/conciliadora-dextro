@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight, Eye, AlertTriangle, Check, X, Pencil, Save } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertTriangle, Check, X, Pencil, Save } from "lucide-react"
 
 interface ConciliacaoItem {
   id: string

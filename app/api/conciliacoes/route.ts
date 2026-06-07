@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { uploadId, contaId, importacaoId, empresaId } = body
+    const { uploadId, contaId, importacaoId } = body
 
     if (!uploadId) {
       return NextResponse.json(
