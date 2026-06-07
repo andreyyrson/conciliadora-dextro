@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Zap,
+  CalendarDays,
 } from "lucide-react"
 
 interface PainelSidebarProps {
@@ -115,6 +116,12 @@ export function PainelSidebar({
           label: "Conciliações",
           href: "/conciliacoes",
           icon: FileText,
+          visible: true,
+        },
+        {
+          label: "Análise por Dia",
+          href: "/conciliacoes/analise-dia",
+          icon: CalendarDays,
           visible: true,
         },
         {
