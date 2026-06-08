@@ -26,6 +26,27 @@ interface TransacaoExtrato {
   banco?: string | null
 }
 
+interface MatchDetalhe {
+  extratoId: string
+  extratoDescricao: string
+  extratoValor: number
+  status: "AUTO_CONFIRMADO" | "SUGERIDO" | "AMBIGUO" | "SEM_MATCH"
+  confianca: "HIGH" | "MEDIUM" | "LOW"
+  score: number
+  erpPareado: { id: string; descricao: string; valor: number } | null
+  diferencaValor?: number
+  explicacoes: string[]
+}
+
+interface MatchDia {
+  autoConfirmados: number
+  sugeridos: number
+  ambiguos: number
+  semMatch: number
+  erpsSobrando: number
+  detalhes: MatchDetalhe[]
+}
+
 interface DiaAnalise {
   data: string
   totalDebitoErp: number
@@ -37,9 +58,10 @@ interface DiaAnalise {
   saldoAposBanco: number | null
   transacoesErp: TransacaoErp[]
   transacoesExtrato: TransacaoExtrato[]
-  statusDia: "CONCILIADO" | "DIVERGENTE" | "PARCIAL" | "SEM_DADOS"
+  statusDia: "CONCILIADO" | "DIVERGENTE" | "PARCIAL" | "SEM_DADOS" | "SUGERIDO"
   qtdErp: number
   qtdExtrato: number
+  matches: MatchDia
 }
 
 const statusConfig = {
@@ -47,6 +69,7 @@ const statusConfig = {
   DIVERGENTE: { label: "Divergente", icon: AlertCircle, color: "text-red-500", bg: "bg-red-500/10" },
   PARCIAL: { label: "Parcial", icon: AlertCircle, color: "text-yellow-500", bg: "bg-yellow-500/10" },
   SEM_DADOS: { label: "Sem Dados", icon: MinusCircle, color: "text-gray-400", bg: "bg-gray-500/10" },
+  SUGERIDO: { label: "Sugerido", icon: AlertCircle, color: "text-blue-500", bg: "bg-blue-500/10" },
 }
 
 export function AnaliseDiaScreen() {
@@ -219,6 +242,8 @@ export function AnaliseDiaScreen() {
                       ? "border-l-red-500"
                       : dia.statusDia === "PARCIAL"
                       ? "border-l-yellow-500"
+                      : dia.statusDia === "SUGERIDO"
+                      ? "border-l-blue-500"
                       : "border-l-gray-400"
                   }`}
                 >
@@ -374,6 +399,62 @@ export function AnaliseDiaScreen() {
                                   </tbody>
                                 </table>
                               </div>
+                            </div>
+                          )}
+
+                          {/* Matches do Dia */}
+                          {dia.matches && dia.matches.detalhes.length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4" />
+                                Matching ({dia.matches.autoConfirmados} auto, {dia.matches.sugeridos} sugeridos, {dia.matches.ambiguos} ambíguos, {dia.matches.semMatch} sem match)
+                              </h4>
+                              <div className="space-y-2">
+                                {dia.matches.detalhes.map((m) => {
+                                  const confColor = m.confianca === "HIGH" ? "text-green-500" : m.confianca === "MEDIUM" ? "text-yellow-500" : "text-red-500"
+                                  const statusLabel = m.status === "AUTO_CONFIRMADO" ? "Auto-confirmado" : m.status === "SUGERIDO" ? "Sugerido" : m.status === "AMBIGUO" ? "Ambíguo" : "Sem match"
+                                  const statusBg = m.status === "AUTO_CONFIRMADO" ? "bg-green-500/10" : m.status === "SUGERIDO" ? "bg-blue-500/10" : m.status === "AMBIGUO" ? "bg-yellow-500/10" : "bg-gray-500/10"
+
+                                  return (
+                                    <div key={m.extratoId} className={`p-3 rounded text-sm ${statusBg}`}>
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                          <div className="font-medium">
+                                            Extrato: {m.extratoDescricao} — R$ {formatarValor(m.extratoValor)}
+                                          </div>
+                                          {m.erpPareado && (
+                                            <div className="text-muted-foreground mt-1">
+                                              ERP: {m.erpPareado.descricao} — R$ {formatarValor(m.erpPareado.valor)}
+                                            </div>
+                                          )}
+                                          {m.diferencaValor !== undefined && m.diferencaValor > 0.01 && (
+                                            <div className="text-xs text-red-500 mt-1">
+                                              Diferença: R$ {formatarValor(m.diferencaValor)}
+                                            </div>
+                                          )}
+                                          {m.explicacoes.length > 0 && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              {m.explicacoes.join(" • ")}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="text-right ml-4">
+                                          <div className={`font-semibold ${confColor}`}>{statusLabel}</div>
+                                          {m.score > 0 && (
+                                            <div className="text-xs text-muted-foreground">Score: {m.score}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+
+                              {dia.matches.erpsSobrando > 0 && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                          {dia.matches.erpsSobrando} lançamento(s) ERP sem correspondência no extrato
+                                        </div>
+                              )}
                             </div>
                           )}
                         </div>
