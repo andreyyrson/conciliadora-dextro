@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 
 export async function PATCH(
   req: Request,
@@ -33,7 +34,7 @@ export async function PATCH(
     }
 
     // Atualizar item
-    const updateData: any = {
+    const updateData: Prisma.ConciliacaoItemUncheckedUpdateInput = {
       resolvidoManualmente: true,
       resolvidoPor: session.user.id,
       resolvidoEm: new Date()

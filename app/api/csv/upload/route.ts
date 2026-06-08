@@ -2,8 +2,10 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import Papa from "papaparse"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
+import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 
 export async function POST(req: Request) {
   try {
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
       skipEmptyLines: true
     })
 
-    const rows = parseResult.data as any[]
+    const rows = parseResult.data as Record<string, unknown>[]
 
     if (rows.length === 0) {
       return NextResponse.json(
@@ -65,7 +67,7 @@ export async function POST(req: Request) {
 
     // Parse mapeamento (usuário confirmou/editou)
     const mapeamentoJson = formData.get("mapeamento") as string
-    let mapeamento: any = {}
+    let mapeamento: MapeamentoColunas = {}
     if (mapeamentoJson) {
       try {
         mapeamento = JSON.parse(mapeamentoJson)
@@ -92,15 +94,15 @@ export async function POST(req: Request) {
         tipo: "CSV",
         nomeArquivo: file.name,
         totalLinhas: rows.length,
-        mapeamentoColunas: mapeamento
-      } as any
+        mapeamentoColunas: mapeamento as Prisma.InputJsonValue
+      }
     })
 
     // Aplicar pipeline de normalização
     const dadosNormalizados = executarPipeline(rows, mapeamento)
 
     // Preparar lançamentos para inserção
-    const transactions = dadosNormalizados.map((dado: any) => ({
+    const transactions = dadosNormalizados.map((dado) => ({
       importacaoId: importacao.id,
       data: dado.data,
       descricao: dado.descricao,

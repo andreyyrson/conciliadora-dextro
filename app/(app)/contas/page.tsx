@@ -43,7 +43,14 @@ export default function ContasPage() {
   const [conta, setConta] = useState("")
   const [ofxFile, setOfxFile] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [analiseCsv, setAnaliseCsv] = useState<any>(null)
+  const [analiseCsv, setAnaliseCsv] = useState<{
+    colunas: string[]
+    mapeamento: { [campo: string]: string | null }
+    preview: { [coluna: string]: string }[]
+    colunasNaoMapeadas: string[]
+    confianca: { [campo: string]: number }
+    mapeamentoSalvo: boolean
+  } | null>(null)
   const [mostrarMapeamentoCsv, setMostrarMapeamentoCsv] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)

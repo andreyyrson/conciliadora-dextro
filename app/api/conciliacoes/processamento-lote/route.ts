@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { gerarSugestoes } from "@/lib/matching/engine"
 
 export async function POST(req: Request) {
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     // Buscar contas bancárias (se fornecidas)
-    let contasBancarias: any[] = []
+    let contasBancarias: Prisma.ContaBancariaGetPayload<{ include: { empresa: true } }>[] = []
     if (contaIds && contaIds.length > 0) {
       contasBancarias = await prisma.contaBancaria.findMany({
         where: { id: { in: contaIds } },
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     // Buscar importações de extrato (se fornecidas)
-    let importacoes: any[] = []
+    let importacoes: Prisma.ImportacaoExtratoGetPayload<{ include: { empresa: true } }>[] = []
     if (importacaoIds && importacaoIds.length > 0) {
       importacoes = await prisma.importacaoExtrato.findMany({
         where: { id: { in: importacaoIds } },
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
     })
 
     // Buscar todos os lançamentos do extrato das contas e importações
-    let extratoLancamentos: any[] = []
+    const extratoLancamentos: (Prisma.ExtratoLancamentoGetPayload<object> | Prisma.ExtratoImportadoGetPayload<object>)[] = []
 
     // Extratos de contas bancárias
     if (contaIds && contaIds.length > 0) {
@@ -189,9 +190,9 @@ export async function POST(req: Request) {
         diferencaValor: item.diferencaValor,
         scoreMatch: match?.score,
         confiancaMatch: match?.confianca,
-        scoreDetalhado: match?.scoreDetalhado as any,
-        explicacoes: match?.explicacoes as any,
-        candidatos: item.sugestoes as any,
+        scoreDetalhado: match?.scoreDetalhado as unknown as Prisma.InputJsonValue,
+        explicacoes: match?.explicacoes as unknown as Prisma.InputJsonValue,
+        candidatos: item.sugestoes as unknown as Prisma.InputJsonValue,
         hashConciliacao: resultadoMatching.hashConciliacao
       }
     })

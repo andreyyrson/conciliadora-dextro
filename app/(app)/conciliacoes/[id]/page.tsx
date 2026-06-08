@@ -61,7 +61,7 @@ export default function ConciliacaoDetalhesPage() {
   const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
-  const [conciliacao, setConciliacao] = useState<any>(null)
+  const [conciliacao, setConciliacao] = useState<{ id: string; periodo: string; status: string } | null>(null)
   const [resumo, setResumo] = useState<Resumo | null>(null)
   const [itens, setItens] = useState<ConciliacaoItem[]>([])
   const [paginacao, setPaginacao] = useState<Paginacao | null>(null)
@@ -120,7 +120,7 @@ export default function ConciliacaoDetalhesPage() {
     }
   }
 
-  const atualizarItem = async (itemId: string, dados: any) => {
+  const atualizarItem = async (itemId: string, dados: Record<string, string | boolean>) => {
     setAtualizando(true)
     try {
       const response = await fetch(`/api/conciliacoes/${params.id}/itens/${itemId}`, {

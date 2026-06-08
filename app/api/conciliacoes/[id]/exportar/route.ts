@@ -2,8 +2,15 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
+import { Prisma } from "@prisma/client"
+import { gerarSugestoes, EntradaConciliacao, ResultadoExtrato } from "@/lib/matching/engine"
 import * as XLSX from "xlsx"
+
+interface DecisaoExtra {
+  status: string
+  confianca?: string
+  score?: number
+}
 
 export async function POST(
   req: Request,
@@ -33,7 +40,7 @@ export async function POST(
       where: { uploadId: conciliacao.uploadId }
     })
 
-    let extratoRows: any[] = []
+    let extratoRows: (Prisma.ExtratoLancamentoGetPayload<object> | Prisma.ExtratoImportadoGetPayload<object>)[] = []
     if (conciliacao.contaId) {
       extratoRows = await prisma.extratoLancamento.findMany({
         where: { contaId: conciliacao.contaId }
@@ -45,7 +52,7 @@ export async function POST(
     }
 
     // Converter para EntradaConciliacao
-    const erpEntradas: EntradaConciliacao[] = erpRows.map((l: any) => ({
+    const erpEntradas: EntradaConciliacao[] = erpRows.map((l) => ({
       id: l.id,
       origem: "ERP",
       data: new Date(l.data),
@@ -59,7 +66,7 @@ export async function POST(
       banco: l.banco || null
     }))
 
-    const extratoEntradas: EntradaConciliacao[] = extratoRows.map((l: any) => ({
+    const extratoEntradas: EntradaConciliacao[] = extratoRows.map((l) => ({
       id: l.id,
       origem: "EXTRATO",
       data: new Date(l.data),
@@ -130,7 +137,7 @@ export async function POST(
 
     // Se foram fornecidas decisões extras (antes de confirmar), sobrescrever
     if (decisoesExtras) {
-      Object.entries(decisoesExtras).forEach(([extratoId, d]: [string, any]) => {
+      Object.entries(decisoesExtras as Record<string, DecisaoExtra>).forEach(([extratoId, d]) => {
         // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
         // EXCETO se for AMBIGUO (requer decisão manual)
         let statusFinal = d.status
@@ -139,7 +146,7 @@ export async function POST(
 
         const resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
 
-        if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confianca === "HIGH" && d.score >= 80) {
+        if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confianca === "HIGH" && (d.score ?? 0) >= 80) {
           statusFinal = "AUTO_CONFIRMADO"
           // Não associar a usuário - aprovação automática do sistema
           resolvidoPor = null
@@ -157,7 +164,7 @@ export async function POST(
       })
     } else {
       // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
-      resultado.itens.forEach((item: any) => {
+      resultado.itens.forEach((item: ResultadoExtrato) => {
         // Se já é AUTO_CONFIRMADO, não associar a usuário - aprovação automática do sistema
         if (item.status === "AUTO_CONFIRMADO") {
           decisoesMap.set(item.extrato.id, {
@@ -179,7 +186,7 @@ export async function POST(
 
     // Calcular saldo por dia
     const saldoPorDia = new Map<string, { receitasExtrato: number, despesasExtrato: number, receitasErp: number, despesasErp: number, saldoAcumuladoExtrato: number, saldoAcumuladoErp: number }>()
-    const datasOrdenadas = [...new Set(resultado.itens.map((item: any) => new Date(item.extrato.data).toLocaleDateString("pt-BR")))].sort((a, b) => {
+    const datasOrdenadas = [...new Set(resultado.itens.map((item: ResultadoExtrato) => new Date(item.extrato.data).toLocaleDateString("pt-BR")))].sort((a, b) => {
       const dateA = new Date(a.split('/').reverse().join('-'))
       const dateB = new Date(b.split('/').reverse().join('-'))
       return dateA.getTime() - dateB.getTime()
@@ -189,14 +196,14 @@ export async function POST(
     let saldoAcumuladoErp = 0
 
     datasOrdenadas.forEach(data => {
-      const itensDoDia = resultado.itens.filter((item: any) => new Date(item.extrato.data).toLocaleDateString("pt-BR") === data)
+      const itensDoDia = resultado.itens.filter((item: ResultadoExtrato) => new Date(item.extrato.data).toLocaleDateString("pt-BR") === data)
 
       let receitasExtrato = 0
       let despesasExtrato = 0
       let receitasErp = 0
       let despesasErp = 0
 
-      itensDoDia.forEach((item: any) => {
+      itensDoDia.forEach((item: ResultadoExtrato) => {
         const decisao = decisoesMap.get(item.extrato.id)
         const valorExtratoFinal = decisao?.valorEditado !== undefined ? decisao.valorEditado : item.extrato.valor
 

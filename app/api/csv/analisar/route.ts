@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       skipEmptyLines: true
     })
 
-    const rows = parseResult.data as any[]
+    const rows = parseResult.data as Record<string, unknown>[]
 
     if (rows.length === 0) {
       return NextResponse.json(
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     const importacaoRecente = await prisma.importacaoExtrato.findFirst({
       where: { empresaId },
       orderBy: { createdAt: "desc" }
-    }) as any
+    })
 
     let mapeamentoFinal = resultado.mapeamento
     if (importacaoRecente?.mapeamentoColunas) {

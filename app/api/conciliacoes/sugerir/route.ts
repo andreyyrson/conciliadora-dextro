@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     // Buscar lançamentos do extrato
-    let extratoRows: any[] = []
+    let extratoRows: (Prisma.ExtratoLancamentoGetPayload<{}> | Prisma.ExtratoImportadoGetPayload<{}>)[] = []
     if (contaId) {
       const conta = await prisma.contaBancaria.findUnique({
         where: { id: contaId },
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     const erpRows = await prisma.erpLancamento.findMany({ where: { uploadId } })
 
     // Converter para EntradaConciliacao
-    const erpEntradas: EntradaConciliacao[] = erpRows.map((l: any) => ({
+    const erpEntradas: EntradaConciliacao[] = erpRows.map((l) => ({
       id: l.id,
       origem: "ERP",
       data: new Date(l.data),
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
       banco: l.banco || null
     }))
 
-    const extratoEntradas: EntradaConciliacao[] = extratoRows.map((l: any) => ({
+    const extratoEntradas: EntradaConciliacao[] = extratoRows.map((l) => ({
       id: l.id,
       origem: "EXTRATO",
       data: new Date(l.data),

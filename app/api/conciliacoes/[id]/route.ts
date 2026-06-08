@@ -120,9 +120,9 @@ export async function PATCH(
       where: { conciliacaoId: id }
     })
 
-    const qtdConciliados = itens.filter((i: any) => i.status === "AUTO_CONFIRMADO" || i.status === "CONFIRMADO_MANUAL").length
-    const qtdDivergentes = itens.filter((i: any) => i.status === "REJEITADO").length
-    const qtdFaltandoErp = itens.filter((i: any) => i.status === "SEM_MATCH").length
+    const qtdConciliados = itens.filter((i) => i.status === "AUTO_CONFIRMADO" || i.status === "CONFIRMADO_MANUAL").length
+    const qtdDivergentes = itens.filter((i) => i.status === "REJEITADO").length
+    const qtdFaltandoErp = itens.filter((i) => i.status === "SEM_MATCH").length
     const qtdFaltandoBanco = 0 // Calculado separadamente via ERPs sobrando
 
     await prisma.conciliacao.update({
