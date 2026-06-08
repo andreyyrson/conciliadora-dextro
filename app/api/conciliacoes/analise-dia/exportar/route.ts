@@ -49,8 +49,9 @@ export async function GET(req: Request) {
     // Buscar contas bancárias
     const contas = await prisma.contaBancaria.findMany({
       where: { empresaId },
-      select: { id: true }
+      select: { id: true, banco: true }
     })
+    const contaMap = new Map(contas.map(c => [c.id, c.banco || ""]))
     const contaIds = contas.map(c => c.id)
 
     // Buscar importações
@@ -69,7 +70,7 @@ export async function GET(req: Request) {
       orderBy: { data: "asc" }
     })
 
-    // Buscar extratos bancários
+    // Buscar extratos bancários (Open Finance)
     const extratoLancamentos = await prisma.extratoLancamento.findMany({
       where: {
         contaId: { in: contaIds },
@@ -78,7 +79,7 @@ export async function GET(req: Request) {
       orderBy: { data: "asc" }
     })
 
-    // Buscar extratos importados
+    // Buscar extratos importados (CSV/OFX)
     const extratosImportados = await prisma.extratoImportado.findMany({
       where: {
         importacaoId: { in: importacaoIds },
@@ -87,70 +88,98 @@ export async function GET(req: Request) {
       orderBy: { data: "asc" }
     })
 
-    // Combinar todos em um único array para exportação
-    const rows = [
-      // ERP
-      ...erpLancamentos.map(l => ({
-        Data: new Date(l.data).toLocaleDateString("pt-BR"),
-        Descricao: l.descricao,
-        Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
-        Valor: Number(l.valor),
-        Documento: l.documento || "",
-        Fornecedor: l.fornecedor || "",
-        Origem: "ERP",
-        Identificador: "",
-        Banco: l.banco || ""
-      })),
-      // Extrato Bancário (Open Finance)
+    // === ABA 1: Extrato Bancário ===
+    const extratoRows = [
       ...extratoLancamentos.map(l => ({
         Data: new Date(l.data).toLocaleDateString("pt-BR"),
         Descricao: l.descricao,
         Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
         Valor: Number(l.valor),
-        Documento: "",
-        Fornecedor: "",
-        Origem: "Extrato Bancário",
         Identificador: l.identificador || "",
-        Banco: l.banco || ""
+        Banco: l.banco || contaMap.get(l.contaId) || ""
       })),
-      // Extrato Importado (CSV/OFX)
       ...extratosImportados.map(l => ({
         Data: new Date(l.data).toLocaleDateString("pt-BR"),
         Descricao: l.descricao,
         Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
         Valor: Number(l.valor),
-        Documento: "",
-        Fornecedor: "",
-        Origem: "Extrato Importado",
         Identificador: l.identificador || "",
         Banco: l.banco || ""
       }))
     ]
+    extratoRows.sort((a, b) => parseData(a.Data) - parseData(b.Data))
 
-    // Ordenar por data
-    rows.sort((a, b) => {
-      const parse = (d: string) => {
-        const [dd, mm, yyyy] = d.split("/")
-        return new Date(`${yyyy}-${mm}-${dd}`).getTime()
+    // === ABA 2: ERP ===
+    const erpRows = erpLancamentos.map(l => ({
+      Data: new Date(l.data).toLocaleDateString("pt-BR"),
+      Descricao: l.descricao,
+      Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
+      Valor: Number(l.valor),
+      Documento: l.documento || "",
+      Fornecedor: l.fornecedor || "",
+      Banco: l.banco || "",
+      Categoria: l.categoria || ""
+    }))
+    erpRows.sort((a, b) => parseData(a.Data) - parseData(b.Data))
+
+    // === ABA 3: Resumo Diário ===
+    const dias = new Set<string>()
+    erpLancamentos.forEach(l => dias.add(new Date(l.data).toISOString().split("T")[0]))
+    extratoLancamentos.forEach(l => dias.add(new Date(l.data).toISOString().split("T")[0]))
+    extratosImportados.forEach(l => dias.add(new Date(l.data).toISOString().split("T")[0]))
+
+    const diasOrdenados = Array.from(dias).sort()
+
+    const resumoRows = diasOrdenados.map(dataKey => {
+      const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+
+      const entradasErp = erpDia.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
+      const saidasErp = erpDia.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
+      const entradasExtrato = [...extBancarioDia, ...extImportadoDia].filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
+      const saidasExtrato = [...extBancarioDia, ...extImportadoDia].filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
+
+      return {
+        Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+        "Entradas Extrato": entradasExtrato,
+        "Saídas Extrato": saidasExtrato,
+        "Saldo Extrato": entradasExtrato - saidasExtrato,
+        "Entradas ERP": entradasErp,
+        "Saídas ERP": saidasErp,
+        "Saldo ERP": entradasErp - saidasErp,
+        "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp)
       }
-      return parse(a.Data) - parse(b.Data)
     })
 
-    const worksheet = XLSX.utils.json_to_sheet(rows)
     const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Lançamentos")
 
-    worksheet["!cols"] = [
-      { wch: 12 },   // Data
-      { wch: 45 },   // Descricao
-      { wch: 10 },   // Tipo
-      { wch: 12 },   // Valor
-      { wch: 20 },   // Documento
-      { wch: 25 },   // Fornecedor
-      { wch: 18 },   // Origem
-      { wch: 20 },   // Identificador
-      { wch: 20 }    // Banco
-    ]
+    // Aba Extrato
+    if (extratoRows.length > 0) {
+      const wsExtrato = XLSX.utils.json_to_sheet(extratoRows)
+      wsExtrato["!cols"] = [
+        { wch: 12 }, { wch: 45 }, { wch: 10 }, { wch: 12 }, { wch: 25 }, { wch: 25 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsExtrato, "Extrato Bancário")
+    }
+
+    // Aba ERP
+    if (erpRows.length > 0) {
+      const wsErp = XLSX.utils.json_to_sheet(erpRows)
+      wsErp["!cols"] = [
+        { wch: 12 }, { wch: 45 }, { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsErp, "ERP (Relatório)")
+    }
+
+    // Aba Resumo Diário
+    if (resumoRows.length > 0) {
+      const wsResumo = XLSX.utils.json_to_sheet(resumoRows)
+      wsResumo["!cols"] = [
+        { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsResumo, "Resumo Diário")
+    }
 
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
 
@@ -167,4 +196,9 @@ export async function GET(req: Request) {
       { status: 500 }
     )
   }
+}
+
+function parseData(d: string): number {
+  const [dd, mm, yyyy] = d.split("/")
+  return new Date(`${yyyy}-${mm}-${dd}`).getTime()
 }
