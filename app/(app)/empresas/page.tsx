@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +28,7 @@ export default function EmpresasPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -36,11 +36,11 @@ export default function EmpresasPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchEmpresas()
-  }, [])
+  }, [fetchEmpresas])
 
   const formatCNPJ = (value: string) => {
     const numbers = value.replace(/\D/g, "")
@@ -94,7 +94,7 @@ export default function EmpresasPage() {
       setNome("")
       setCnpj("")
       fetchEmpresas()
-    } catch (error) {
+    } catch {
       setError("Erro ao criar empresa")
     } finally {
       setLoading(false)
@@ -119,7 +119,7 @@ export default function EmpresasPage() {
 
       setDeleteConfirm(null)
       fetchEmpresas()
-    } catch (error) {
+    } catch {
       setError("Erro ao deletar empresa")
     } finally {
       setDeleting(false)

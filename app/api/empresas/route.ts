@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { empresaSchema } from "@/lib/schemas"
 
 export async function GET(req: Request) {
   try {
@@ -14,16 +15,31 @@ export async function GET(req: Request) {
       )
     }
 
-    console.log("Buscando empresas para userId:", session.user.id)
 
-    const empresas = await prisma.empresa.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" }
+    const { searchParams } = new URL(req.url)
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
+
+    const [empresas, total] = await Promise.all([
+      prisma.empresa.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.empresa.count({ where: { userId: session.user.id } }),
+    ])
+
+    return NextResponse.json({
+      empresas,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
-
-    console.log("Empresas encontradas:", empresas.length)
-
-    return NextResponse.json({ empresas })
   } catch (error) {
     console.error("Erro ao buscar empresas:", error)
     console.error("Detalhes do erro:", JSON.stringify(error, null, 2))
@@ -46,14 +62,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { nome, cnpj } = body
-
-    if (!nome) {
+    
+    const validated = empresaSchema.safeParse(body)
+    if (!validated.success) {
       return NextResponse.json(
-        { error: "Nome da empresa é obrigatório" },
+        { error: "Dados inválidos", details: validated.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+
+    const { nome, cnpj } = validated.data
 
     const empresa = await prisma.empresa.create({
       data: {

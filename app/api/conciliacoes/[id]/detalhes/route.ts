@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma, ConciliacaoItemStatus } from "@prisma/client"
 
 export async function GET(
   req: Request,
@@ -40,9 +41,9 @@ export async function GET(
     }
 
     // Construir filtro
-    const where: any = { conciliacaoId: id }
+    const where: Prisma.ConciliacaoItemWhereInput = { conciliacaoId: id }
     if (status) {
-      where.status = status
+      where.status = status as ConciliacaoItemStatus
     }
 
     // Contar total de itens

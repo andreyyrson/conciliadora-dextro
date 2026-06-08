@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import React from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
-import { ChevronLeft, Check, X, AlertTriangle, ChevronDown, Download } from "lucide-react"
+import { Check, X, AlertTriangle, Download } from "lucide-react"
+import { EntradaConciliacao } from "@/lib/matching/engine"
 
 interface Sugestao {
   entradaOrigemId: string
@@ -51,6 +51,17 @@ interface ItemRevisao {
   diferencaValor?: number
 }
 
+interface DecisaoRevisao {
+  status: string
+  erpId?: string
+  score?: number
+  confianca?: string
+  explicacoes?: string[]
+  scoreDetalhado?: Sugestao["scoreDetalhado"]
+  candidatos?: Sugestao[]
+  valorEditado?: number
+}
+
 interface ErpSobrando {
   erp: {
     id: string
@@ -81,7 +92,7 @@ export default function RevisarConciliacaoPage() {
   const [conciliacao, setConciliacao] = useState<Conciliacao | null>(null)
   const [itens, setItens] = useState<ItemRevisao[]>([])
   const [erpsSobrando, setErpsSobrando] = useState<ErpSobrando[]>([])
-  const [erpEntradas, setErpEntradas] = useState<any[]>([])
+  const [erpEntradas, setErpEntradas] = useState<EntradaConciliacao[]>([])
   const [hashConciliacao, setHashConciliacao] = useState("")
   const [loading, setLoading] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
@@ -89,16 +100,7 @@ export default function RevisarConciliacaoPage() {
   const [abaAtiva, setAbaAtiva] = useState<"lancamentos" | "visao-dia">("lancamentos")
 
   // Estado de decisões do usuário (muta os itens)
-  const [decisoes, setDecisoes] = useState<Record<string, {
-    status: string
-    erpId?: string
-    score?: number
-    confianca?: string
-    explicacoes?: string[]
-    scoreDetalhado?: any
-    candidatos?: any[]
-    valorEditado?: number
-  }>>({})
+  const [decisoes, setDecisoes] = useState<Record<string, DecisaoRevisao>>({})
 
   // Estado de edições locais para tabela por dia
   const [edicoesLocais, setEdicoesLocais] = useState<Record<string, {
@@ -107,7 +109,7 @@ export default function RevisarConciliacaoPage() {
   }>>({})
   const [diaExpandido, setDiaExpandido] = useState<string | null>(null)
 
-  const atualizarEdicao = (extratoId: string, campo: "valor" | "status", valor: any) => {
+  const atualizarEdicao = (extratoId: string, campo: "valor" | "status", valor: string | number) => {
     setEdicoesLocais(prev => ({
       ...prev,
       [extratoId]: {
@@ -202,7 +204,7 @@ export default function RevisarConciliacaoPage() {
 
   const dadosAgrupados = agruparPorDia()
 
-  const fetchSugestoes = async () => {
+  const fetchSugestoes = useCallback(async () => {
     try {
       setLoading(true)
       setErro("")
@@ -233,7 +235,7 @@ export default function RevisarConciliacaoPage() {
       setErpEntradas(dataSug.erps || [])
 
       // Inicializar decisões: auto-confirmados já vêm decididos
-      const decs: Record<string, any> = {}
+      const decs: Record<string, DecisaoRevisao> = {}
       dataSug.itens.forEach((item: ItemRevisao) => {
         if (item.status === "AUTO_CONFIRMADO" && item.erpPareado) {
           decs[item.extrato.id] = {
@@ -248,18 +250,18 @@ export default function RevisarConciliacaoPage() {
         }
       })
       setDecisoes(decs)
-    } catch (e: any) {
-      setErro(e.message)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
   useEffect(() => {
     if (session && params.id) fetchSugestoes()
-  }, [session, params.id])
+  }, [session, params.id, fetchSugestoes])
 
-  const setDecisao = (extratoId: string, dados: any) => {
+  const setDecisao = (extratoId: string, dados: DecisaoRevisao) => {
     setDecisoes(prev => ({ ...prev, [extratoId]: dados }))
   }
 
@@ -313,7 +315,7 @@ export default function RevisarConciliacaoPage() {
   const downloadExcel = async () => {
     try {
       // Aplicar edições locais às decisões antes de exportar
-      const decisoesComEdicoes: Record<string, any> = { ...decisoes }
+      const decisoesComEdicoes: Record<string, DecisaoRevisao> = { ...decisoes }
       Object.entries(edicoesLocais).forEach(([extratoId, edicao]) => {
         if (!decisoesComEdicoes[extratoId]) {
           decisoesComEdicoes[extratoId] = { status: "SUGERIDO" }
@@ -343,8 +345,8 @@ export default function RevisarConciliacaoPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (e: any) {
-      setErro(e.message)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -377,8 +379,8 @@ export default function RevisarConciliacaoPage() {
         const err = await resp.json()
         setErro(err.error || "Erro ao salvar")
       }
-    } catch (e: any) {
-      setErro(e.message)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e))
     } finally {
       setConfirmando(false)
     }

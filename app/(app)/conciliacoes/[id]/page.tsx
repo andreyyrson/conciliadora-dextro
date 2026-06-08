@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { PageHeader } from "@/components/page-header"
 import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight, Eye, AlertTriangle, Check, X, Pencil, Save } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertTriangle, Check, X, Pencil, Save } from "lucide-react"
 
 interface ConciliacaoItem {
   id: string
@@ -62,7 +61,7 @@ export default function ConciliacaoDetalhesPage() {
   const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
-  const [conciliacao, setConciliacao] = useState<any>(null)
+  const [conciliacao, setConciliacao] = useState<{ id: string; periodo: string; status: string } | null>(null)
   const [resumo, setResumo] = useState<Resumo | null>(null)
   const [itens, setItens] = useState<ConciliacaoItem[]>([])
   const [paginacao, setPaginacao] = useState<Paginacao | null>(null)
@@ -73,7 +72,7 @@ export default function ConciliacaoDetalhesPage() {
   const [observacaoEdit, setObservacaoEdit] = useState("")
   const [atualizando, setAtualizando] = useState(false)
 
-  const fetchDetalhes = async () => {
+  const fetchDetalhes = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/conciliacoes/${params.id}/detalhes?page=${currentPage}&limit=50&status=${statusFilter}`
@@ -88,13 +87,13 @@ export default function ConciliacaoDetalhesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, currentPage, statusFilter])
 
   useEffect(() => {
     if (session && params.id) {
       fetchDetalhes()
     }
-  }, [session, params.id, currentPage, statusFilter])
+  }, [session, params.id, fetchDetalhes])
 
   // Redirecionar para revisão se status for PENDENTE_REVISAO
   useEffect(() => {
@@ -121,7 +120,7 @@ export default function ConciliacaoDetalhesPage() {
     }
   }
 
-  const atualizarItem = async (itemId: string, dados: any) => {
+  const atualizarItem = async (itemId: string, dados: Record<string, string | boolean>) => {
     setAtualizando(true)
     try {
       const response = await fetch(`/api/conciliacoes/${params.id}/itens/${itemId}`, {

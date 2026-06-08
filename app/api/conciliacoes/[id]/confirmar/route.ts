@@ -2,6 +2,20 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma, ConciliacaoItemStatus, ConfiancaMatch } from "@prisma/client"
+
+interface DecisaoConciliacao {
+  status: string
+  erpId?: string
+  extratoId?: string
+  scoreMatch?: number
+  confiancaMatch?: string
+  scoreDetalhado?: Record<string, number>
+  explicacoes?: string[]
+  candidatos?: unknown[]
+  diferencaValor?: number
+  observacao?: string
+}
 
 export async function POST(
   req: Request,
@@ -15,7 +29,7 @@ export async function POST(
 
     const { id: conciliacaoId } = await params
     const body = await req.json()
-    const { decisoes, hashConciliacao, erpsSobrando } = body
+    const { decisoes, hashConciliacao, erpsSobrando } = body as { decisoes: DecisaoConciliacao[]; hashConciliacao?: string; erpsSobrando?: unknown[] }
 
     if (!Array.isArray(decisoes)) {
       return NextResponse.json({ error: "decisoes deve ser um array" }, { status: 400 })
@@ -47,28 +61,28 @@ export async function POST(
     })
 
     // Criar novos itens
-    const itensParaCriar = decisoes.map((d: any) => {
+    const itensParaCriar: Prisma.ConciliacaoItemCreateManyInput[] = decisoes.map((d) => {
       // Se não foi decidido manualmente e tem confiança >= 80%, aprovar automaticamente
       // EXCETO se for AMBIGUO (requer decisão manual)
       let statusFinal = d.status
       let resolvidoManualmente = d.status === "CONFIRMADO_MANUAL" || d.status === "REJEITADO"
 
-      if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confiancaMatch === "HIGH" && d.scoreMatch >= 80) {
+      if (!resolvidoManualmente && d.status !== "AMBIGUO" && d.confiancaMatch === "HIGH" && (d.scoreMatch ?? 0) >= 80) {
         statusFinal = "AUTO_CONFIRMADO"
         resolvidoManualmente = false
       }
 
       return {
         conciliacaoId,
-        status: statusFinal,
+        status: statusFinal as ConciliacaoItemStatus,
         erpId: d.erpId || null,
         extratoId: isConta ? d.extratoId || null : null,
         extratoImportadoId: !isConta ? d.extratoId || null : null,
         scoreMatch: d.scoreMatch || null,
-        confiancaMatch: d.confiancaMatch || null,
-        scoreDetalhado: d.scoreDetalhado || null,
-        explicacoes: d.explicacoes || null,
-        candidatos: d.candidatos || null,
+        confiancaMatch: (d.confiancaMatch as ConfiancaMatch) || null,
+        scoreDetalhado: (d.scoreDetalhado as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+        explicacoes: (d.explicacoes as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+        candidatos: (d.candidatos as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         hashConciliacao: hashConciliacao || null,
         diferencaValor: d.diferencaValor || null,
         observacao: d.observacao || null,
@@ -84,11 +98,11 @@ export async function POST(
     })
 
     // Recalcular totais (usar statusFinal que pode ter sido alterado pela auto-confirmação)
-    const qtdConciliados = itensParaCriar.filter((d: any) =>
+    const qtdConciliados = itensParaCriar.filter((d) =>
       d.status === "AUTO_CONFIRMADO" || d.status === "CONFIRMADO_MANUAL"
     ).length
-    const qtdDivergentes = itensParaCriar.filter((d: any) => d.status === "REJEITADO").length
-    const qtdFaltandoErp = itensParaCriar.filter((d: any) => d.status === "SEM_MATCH").length
+    const qtdDivergentes = itensParaCriar.filter((d) => d.status === "REJEITADO").length
+    const qtdFaltandoErp = itensParaCriar.filter((d) => d.status === "SEM_MATCH").length
     const qtdFaltandoBanco = Array.isArray(erpsSobrando) ? erpsSobrando.length : 0
 
     // Atualizar conciliação

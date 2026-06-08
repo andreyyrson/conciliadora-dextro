@@ -10,10 +10,8 @@ import {
   FileText,
   Wallet,
   Upload,
-  ArrowLeft,
   ChevronRight,
   ChevronLeft,
-  Zap,
 } from "lucide-react"
 
 interface PainelSidebarProps {
@@ -112,27 +110,15 @@ export function PainelSidebar({
           visible: true,
         },
         {
+          label: "Importar Dados",
+          href: "/importar",
+          icon: Upload,
+          visible: true,
+        },
+        {
           label: "Conciliações",
           href: "/conciliacoes",
           icon: FileText,
-          visible: true,
-        },
-        {
-          label: "Upload ERP",
-          href: "/upload",
-          icon: Upload,
-          visible: true,
-        },
-        {
-          label: "Importação Extrato",
-          href: "/importacoes",
-          icon: Upload,
-          visible: true,
-        },
-        {
-          label: "Processamento em Lote",
-          href: "/processamento-lote",
-          icon: Zap,
           visible: true,
         },
       ],

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import Papa from "papaparse"
+import * as XLSX from "xlsx"
 
 export async function GET(req: Request) {
   try {
@@ -19,7 +23,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
 
-    console.log("GET /api/upload - empresaId:", empresaId)
 
     if (!empresaId) {
       return NextResponse.json(
@@ -40,14 +43,29 @@ export async function GET(req: Request) {
       )
     }
 
-    const uploads = await prisma.uploadErp.findMany({
-      where: { empresaId },
-      orderBy: { createdAt: "desc" }
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
+
+    const [uploads, total] = await Promise.all([
+      prisma.uploadErp.findMany({
+        where: { empresaId },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.uploadErp.count({ where: { empresaId } }),
+    ])
+
+    return NextResponse.json({
+      uploads,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
-
-    console.log("Uploads encontrados:", uploads.length)
-
-    return NextResponse.json({ uploads })
   } catch (error) {
     console.error("Erro ao buscar uploads:", error)
     return NextResponse.json(
@@ -65,6 +83,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Não autenticado" },
         { status: 401 }
+      )
+    }
+
+    const { success, remaining, resetAt } = rateLimit(`upload:${session.user.id}`, 10, 60 * 1000)
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitos uploads. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(10, remaining, resetAt) }
       )
     }
 
@@ -102,24 +128,22 @@ export async function POST(req: Request) {
     const fileName = file.name
 
     // Processar o arquivo (CSV ou XLSX)
-    let lancamentos: any[] = []
+    let lancamentos: Record<string, unknown>[] = []
 
     if (fileType === "text/csv" || fileName.endsWith(".csv")) {
-      const Papa = require("papaparse")
       const result = Papa.parse(buffer.toString("utf-8"), {
         header: true,
         skipEmptyLines: true
       })
-      lancamentos = result.data
+      lancamentos = result.data as Record<string, unknown>[]
     } else if (
       fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       fileName.endsWith(".xlsx")
     ) {
-      const XLSX = require("xlsx")
       const workbook = XLSX.read(buffer, { type: "buffer" })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[]
       lancamentos = jsonData
     } else {
       return NextResponse.json(
@@ -163,8 +187,8 @@ export async function POST(req: Request) {
         nomeArquivo: fileName,
         periodo: dataReferencia,
         totalLinhas: lancamentos.length,
-        mapeamentoColunas: mapeamento
-      } as any
+        mapeamentoColunas: mapeamento as Prisma.InputJsonValue
+      }
     })
 
     // Aplicar pipeline de normalização
@@ -182,7 +206,7 @@ export async function POST(req: Request) {
       banco: dado.banco || null,
       fornecedor: dado.fornecedor || null,
       categoria: dado.categoria || null,
-      rawData: dado.rawData
+      rawData: dado.rawData as unknown as Prisma.InputJsonValue
     }))
 
     // Salvar lançamentos em lote

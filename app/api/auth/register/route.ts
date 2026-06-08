@@ -1,18 +1,31 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { registerSchema } from "@/lib/schemas"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { email, password, name } = body
+    const ip = req.headers.get("x-forwarded-for") || "unknown"
+    const { success, remaining, resetAt } = rateLimit(`register:${ip}`, 5, 60 * 1000)
 
-    if (!email || !password) {
+    if (!success) {
       return NextResponse.json(
-        { error: "Email e senha são obrigatórios" },
+        { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+      )
+    }
+    const body = await req.json()
+
+    const validated = registerSchema.safeParse(body)
+    if (!validated.success) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: validated.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+
+    const { email, password, name } = validated.data
 
     const existingUser = await prisma.user.findUnique({
       where: { email }

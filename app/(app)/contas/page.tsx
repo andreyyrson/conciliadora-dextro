@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Button } from "@/components/ui/button"
@@ -38,43 +38,24 @@ export default function ContasPage() {
   const [modoManual, setModoManual] = useState(false)
   const [modoOFX, setModoOFX] = useState(false)
   const [modoCSV, setModoCSV] = useState(false)
-  const [modoPluggy, setModoPluggy] = useState(false)
   const [banco, setBanco] = useState("")
   const [agencia, setAgencia] = useState("")
   const [conta, setConta] = useState("")
   const [ofxFile, setOfxFile] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [analiseCsv, setAnaliseCsv] = useState<any>(null)
+  const [analiseCsv, setAnaliseCsv] = useState<{
+    colunas: string[]
+    mapeamento: { [campo: string]: string | null }
+    preview: { [coluna: string]: string }[]
+    colunasNaoMapeadas: string[]
+    confianca: { [campo: string]: number }
+    mapeamentoSalvo: boolean
+  } | null>(null)
   const [mostrarMapeamentoCsv, setMostrarMapeamentoCsv] = useState(false)
-  const [connectorId, setConnectorId] = useState("")
-  const [cpf, setCpf] = useState("")
-  const [cnpj, setCnpj] = useState("")
-
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, "")
-    if (numbers.length <= 3) return numbers
-    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`
-    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`
-    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`
-  }
-
-  const formatCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, "")
-    if (numbers.length <= 2) return numbers
-    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`
-    if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`
-    if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`
-    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`
-  }
-  const [user, setUser] = useState("")
-  const [password, setPassword] = useState("")
-  const [itemId, setItemId] = useState<string | null>(null)
-  const [polling, setPolling] = useState(false)
-  const [connectors, setConnectors] = useState<any[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchContas = async (empresaId: string) => {
+  const fetchContas = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/contas?empresaId=${empresaId}`)
       const data = await response.json()
@@ -82,9 +63,9 @@ export default function ContasPage() {
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
     }
-  }
+  }, [])
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -96,31 +77,20 @@ export default function ContasPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
-
-  const fetchConnectors = async () => {
-    // Integração Pluggy desativada
-    setConnectors([])
-  }
+  }, [selectedEmpresa, fetchContas])
 
   useEffect(() => {
     if (session) {
       fetchEmpresas()
     }
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
     if (empresaId) {
       setSelectedEmpresa(empresaId)
       fetchContas(empresaId)
     }
-  }, [empresaId])
-
-  useEffect(() => {
-    if (session) {
-      fetchConnectors()
-    }
-  }, [session])
+  }, [empresaId, fetchContas])
 
   const handleUploadOFX = async () => {
     if (!selectedEmpresa || !ofxFile) {
@@ -153,7 +123,7 @@ export default function ContasPage() {
       setModoOFX(false)
       setOfxFile(null)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao processar arquivo OFX")
       setLoading(false)
     }
@@ -191,7 +161,7 @@ export default function ContasPage() {
       setAnaliseCsv(data)
       setMostrarMapeamentoCsv(true)
       setLoading(false)
-    } catch (error) {
+    } catch {
       setError("Erro ao analisar arquivo CSV")
       setLoading(false)
     }
@@ -226,7 +196,7 @@ export default function ContasPage() {
       setAnaliseCsv(null)
       setMostrarMapeamentoCsv(false)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao processar arquivo CSV")
       setLoading(false)
     }
@@ -235,75 +205,6 @@ export default function ContasPage() {
   const handleCancelarMapeamentoCSV = () => {
     setMostrarMapeamentoCsv(false)
     setAnaliseCsv(null)
-  }
-
-  const handleConectarPluggy = async () => {
-    if (!selectedEmpresa || !connectorId) {
-      setError("Selecione uma empresa e um conector")
-      return
-    }
-
-    if (!cpf && !cnpj && !user) {
-      setError("Preencha pelo menos CPF, CNPJ ou Usuário")
-      return
-    }
-
-    const parameters: any = {}
-    if (cpf) parameters.cpf = cpf
-    if (cnpj) parameters.cnpj = cnpj
-    if (user) parameters.user = user
-    if (password) parameters.password = password
-
-    setError("")
-    setLoading(true)
-
-    try {
-      const response = await fetch("/api/contas/conectar", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          empresaId: selectedEmpresa,
-          connectorId: parseInt(connectorId),
-          parameters
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao conectar com Pluggy")
-        setLoading(false)
-        return
-      }
-
-      setItemId(data.itemId)
-      setLoading(false)
-      startPolling(data.itemId)
-    } catch (error) {
-      setError("Erro ao conectar com Pluggy")
-      setLoading(false)
-    }
-  }
-
-  const startPolling = (itemId: string) => {
-    setPolling(true)
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/contas/integration-status/${itemId}`)
-        const data = await response.json()
-
-        if (data.status === "UPDATED" || data.status === "ERROR") {
-          clearInterval(pollInterval)
-          setPolling(false)
-          setModoPluggy(false)
-          fetchContas(selectedEmpresa)
-        }
-      } catch (error) {
-        console.error("Erro ao verificar status:", error)
-      }
-    }, 3000)
   }
 
   const handleDeleteConta = async (contaId: string) => {
@@ -324,7 +225,7 @@ export default function ContasPage() {
 
       setDeleteConfirm(null)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao excluir conta")
     } finally {
       setDeleting(false)
@@ -367,30 +268,8 @@ export default function ContasPage() {
       setConta("")
       setModoManual(false)
       fetchContas(selectedEmpresa)
-    } catch (error) {
+    } catch {
       setError("Erro ao criar conta")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSincronizar = async (contaId: string) => {
-    setLoading(true)
-    try {
-      const response = await fetch(`/api/contas/${contaId}/sincronizar`, {
-        method: "POST"
-      })
-      const data = await response.json()
-
-      if (!response.ok) {
-        alert(data.error || "Erro ao sincronizar")
-        return
-      }
-
-      alert(data.message || "Sincronização iniciada")
-      fetchContas(selectedEmpresa)
-    } catch (error) {
-      alert("Erro ao sincronizar")
     } finally {
       setLoading(false)
     }
@@ -446,15 +325,8 @@ export default function ContasPage() {
           </div>
         )}
 
-        {!modoManual && !modoOFX && !modoCSV && !modoPluggy && (
+        {!modoManual && !modoOFX && !modoCSV && (
           <div className="flex gap-2 flex-wrap">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={() => setModoPluggy(true)}
-              >
-                Open Finance
-              </Button>
-            </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoOFX(true)}
@@ -593,113 +465,6 @@ export default function ContasPage() {
           </motion.div>
         )}
 
-        {modoPluggy && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="connectorId" className="block text-sm font-medium text-muted-foreground mb-1">
-                Conector *
-              </label>
-              <select
-                id="connectorId"
-                value={connectorId}
-                onChange={(e) => setConnectorId(e.target.value)}
-                className="w-full p-2 border rounded bg-background border-border text-foreground"
-                required
-              >
-                <option value="">Selecione um conector</option>
-                {connectors.map((connector) => (
-                  <option key={connector.id} value={connector.id}>
-                    {connector.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="cpf" className="block text-sm font-medium text-muted-foreground mb-1">
-                CPF
-              </label>
-              <Input
-                id="cpf"
-                type="text"
-                value={cpf}
-                onChange={(e) => setCpf(formatCPF(e.target.value))}
-                placeholder="000.000.000-00"
-                maxLength={14}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="cnpj" className="block text-sm font-medium text-muted-foreground mb-1">
-                CNPJ
-              </label>
-              <Input
-                id="cnpj"
-                type="text"
-                value={cnpj}
-                onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
-                placeholder="00.000.000/0000-00"
-                maxLength={18}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="user" className="block text-sm font-medium text-muted-foreground mb-1">
-                Usuário (para Sandbox)
-              </label>
-              <Input
-                id="user"
-                type="text"
-                value={user}
-                onChange={(e) => setUser(e.target.value)}
-                placeholder="Usuário do banco"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-1">
-                Senha (para Sandbox)
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Senha do banco"
-              />
-            </div>
-
-            {polling && (
-              <div className="text-sm text-brand bg-brand/10 p-3 rounded">
-                Sincronizando com Open Finance... Aguarde.
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={handleConectarPluggy}
-                  disabled={loading || polling}
-                >
-                  {loading ? "Conectando..." : polling ? "Sincronizando..." : "Conectar"}
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={() => setModoPluggy(false)}
-                  variant="outline"
-                >
-                  Voltar
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-
         {modoManual && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -809,13 +574,6 @@ export default function ContasPage() {
                   </td>
                   <td className="p-2">
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleSincronizar(conta.id)}
-                        disabled={loading}
-                      >
-                        Sincronizar
-                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"
