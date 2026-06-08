@@ -6,7 +6,7 @@ import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
-import { Calendar, ChevronDown, ChevronUp, Building2, AlertCircle, CheckCircle, MinusCircle } from "lucide-react"
+import { Calendar, ChevronDown, ChevronUp, Building2, AlertCircle, CheckCircle, MinusCircle, Download } from "lucide-react"
 
 interface TransacaoErp {
   id: string
@@ -32,7 +32,9 @@ interface DiaAnalise {
   totalCreditoErp: number
   totalDebitoExtrato: number
   totalCreditoExtrato: number
-  saldoFinalExtrato: number | null
+  saldoFinalErp: number
+  saldoFinalExtrato: number
+  saldoAposBanco: number | null
   transacoesErp: TransacaoErp[]
   transacoesExtrato: TransacaoExtrato[]
   statusDia: "CONCILIADO" | "DIVERGENTE" | "PARCIAL" | "SEM_DADOS"
@@ -63,6 +65,7 @@ export function AnaliseDiaScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [diasExpandidos, setDiasExpandidos] = useState<Set<string>>(new Set())
+  const [exportando, setExportando] = useState(false)
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -107,6 +110,30 @@ export function AnaliseDiaScreen() {
 
   const formatarValor = (valor: number) => {
     return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const downloadExcel = async () => {
+    if (!empresaId || !dataInicio || !dataFim) return
+    setExportando(true)
+    try {
+      const res = await fetch(
+        `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+      )
+      if (!res.ok) throw new Error("Erro ao exportar")
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `analise-dia-${dataInicio}-${dataFim}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao exportar")
+    } finally {
+      setExportando(false)
+    }
   }
 
   useEffect(() => {
@@ -156,6 +183,10 @@ export function AnaliseDiaScreen() {
           <Button onClick={buscarAnalise} disabled={loading}>
             <Calendar className="w-4 h-4 mr-2" />
             {loading ? "Carregando..." : "Analisar"}
+          </Button>
+          <Button onClick={downloadExcel} disabled={exportando || dias.length === 0} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            {exportando ? "Exportando..." : "Exportar Excel"}
           </Button>
         </div>
       </Card>
@@ -211,9 +242,14 @@ export function AnaliseDiaScreen() {
                         <div className={`text-sm font-medium ${status.color}`}>
                           {status.label}
                         </div>
-                        {dia.saldoFinalExtrato !== null && (
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          <span className="text-green-500">Ent: R$ {formatarValor(dia.totalCreditoExtrato || dia.totalCreditoErp)}</span>
+                          <span className="text-red-500">Sai: R$ {formatarValor(dia.totalDebitoExtrato || dia.totalDebitoErp)}</span>
+                          <span>Saldo: R$ {formatarValor(dia.saldoFinalExtrato !== undefined ? dia.saldoFinalExtrato : dia.saldoFinalErp)}</span>
+                        </div>
+                        {dia.saldoAposBanco !== null && (
                           <div className="text-xs text-muted-foreground">
-                            Saldo Extrato: R$ {formatarValor(dia.saldoFinalExtrato)}
+                            Banco: R$ {formatarValor(dia.saldoAposBanco)}
                           </div>
                         )}
                       </div>
