@@ -158,8 +158,11 @@ export async function GET(req: Request) {
         .filter(e => e.tipo === "CREDITO")
         .reduce((s, e) => s + e.valor, 0)
 
-      // Saldo final do extrato: último saldoApos do dia, se disponível
-      const saldoFinalExtrato = extratosDoDia.length > 0
+      const saldoFinalErp = totalCreditoErp - totalDebitoErp
+      const saldoFinalExtratoDia = totalCreditoExtrato - totalDebitoExtrato
+
+      // Saldo final do banco (último saldoApos do dia, se disponível)
+      const saldoAposBanco = extratosDoDia.length > 0
         ? extratosDoDia[extratosDoDia.length - 1].saldoApos
         : null
 
@@ -184,7 +187,9 @@ export async function GET(req: Request) {
         totalCreditoErp,
         totalDebitoExtrato,
         totalCreditoExtrato,
-        saldoFinalExtrato,
+        saldoFinalErp,
+        saldoFinalExtrato: saldoFinalExtratoDia,
+        saldoAposBanco,
         transacoesErp: erpsDoDia.map(e => ({
           id: e.id,
           descricao: e.descricao,
