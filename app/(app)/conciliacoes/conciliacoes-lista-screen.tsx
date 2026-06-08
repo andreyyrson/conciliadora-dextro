@@ -86,16 +86,29 @@ export function ConciliacoesListaScreen() {
   const fetchUploads = useCallback(async (empId: string) => {
     try {
       const response = await fetch(`/api/upload?empresaId=${empId}`)
+      if (!response.ok) {
+        console.error("API upload retornou", response.status)
+        setError(`Erro ao buscar uploads: ${response.status}`)
+        setUploads([])
+        return
+      }
       const data = await response.json()
+      console.log("Uploads recebidos:", data)
       setUploads(data.uploads || [])
     } catch (error) {
       console.error("Erro ao buscar uploads:", error)
+      setError("Erro de rede ao buscar uploads")
+      setUploads([])
     }
   }, [])
 
   const fetchContas = useCallback(async (empId: string) => {
     try {
       const response = await fetch(`/api/contas?empresaId=${empId}`)
+      if (!response.ok) {
+        console.error("API contas retornou", response.status)
+        return
+      }
       const data = await response.json()
       setContas(data.contas || [])
     } catch (error) {
@@ -106,7 +119,12 @@ export function ConciliacoesListaScreen() {
   const fetchImportacoes = useCallback(async (empId: string) => {
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empId}`)
+      if (!response.ok) {
+        console.error("API importacoes retornou", response.status)
+        return
+      }
       const data = await response.json()
+      console.log("Importacoes recebidas:", data)
       setImportacoes(data.importacoes || [])
     } catch (error) {
       console.error("Erro ao buscar importações:", error)
