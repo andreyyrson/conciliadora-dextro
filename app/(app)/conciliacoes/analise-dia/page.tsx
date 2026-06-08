@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
@@ -69,7 +69,7 @@ export default function AnaliseDiaPage() {
     }
   }
 
-  const buscarAnalise = async () => {
+  const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
       setError("Selecione empresa e período")
       return
@@ -91,7 +91,7 @@ export default function AnaliseDiaPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [empresaId, dataInicio, dataFim])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {

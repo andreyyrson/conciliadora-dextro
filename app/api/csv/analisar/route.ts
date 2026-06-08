@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { detectarColunas } from "@/lib/normalizacao/detector-colunas"
+import Papa from "papaparse"
 
 export async function POST(req: Request) {
   try {
@@ -46,7 +47,6 @@ export async function POST(req: Request) {
     const content = await file.text()
 
     // Parse CSV
-    const Papa = require("papaparse")
     const parseResult = Papa.parse(content, {
       header: true,
       skipEmptyLines: true

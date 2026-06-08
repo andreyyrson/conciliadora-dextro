@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import Papa from "papaparse"
+import * as XLSX from "xlsx"
 
 export async function GET(req: Request) {
   try {
@@ -128,7 +130,6 @@ export async function POST(req: Request) {
     let lancamentos: any[] = []
 
     if (fileType === "text/csv" || fileName.endsWith(".csv")) {
-      const Papa = require("papaparse")
       const result = Papa.parse(buffer.toString("utf-8"), {
         header: true,
         skipEmptyLines: true
@@ -138,7 +139,6 @@ export async function POST(req: Request) {
       fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       fileName.endsWith(".xlsx")
     ) {
-      const XLSX = require("xlsx")
       const workbook = XLSX.read(buffer, { type: "buffer" })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]

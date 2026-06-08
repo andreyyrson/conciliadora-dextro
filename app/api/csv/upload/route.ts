@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import Papa from "papaparse"
+import { executarPipeline } from "@/lib/normalizacao/pipeline"
 
 export async function POST(req: Request) {
   try {
@@ -47,7 +49,6 @@ export async function POST(req: Request) {
     const content = await file.text()
 
     // Parse CSV usando PapaParse
-    const Papa = require("papaparse")
     const parseResult = Papa.parse(content, {
       header: true,
       skipEmptyLines: true
@@ -94,9 +95,6 @@ export async function POST(req: Request) {
         mapeamentoColunas: mapeamento
       } as any
     })
-
-    // Importar pipeline de normalização
-    const { executarPipeline } = require("@/lib/normalizacao/pipeline")
 
     // Aplicar pipeline de normalização
     const dadosNormalizados = executarPipeline(rows, mapeamento)

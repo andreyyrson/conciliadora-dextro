@@ -13,6 +13,8 @@ import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ExtracaoPreview } from "@/components/extracao-preview"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion, AnimatePresence } from "framer-motion"
+import Papa from "papaparse"
+import * as XLSX from "xlsx"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarIcon, Trash2 } from "lucide-react"
@@ -185,14 +187,12 @@ export default function UploadPage() {
       let previewLines: any[] = []
 
       if (file.name.endsWith('.csv')) {
-        const Papa = require("papaparse")
         const result = Papa.parse(content, {
           header: true,
           skipEmptyLines: true
         })
         previewLines = result.data.slice(0, 100)
       } else if (file.name.endsWith('.xlsx')) {
-        const XLSX = require("xlsx")
         const workbook = XLSX.read(content, { type: 'binary' })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
