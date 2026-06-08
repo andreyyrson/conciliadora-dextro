@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { useRouter } from "next/navigation"
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [empresasStatus, setEmpresasStatus] = useState<EmpresaStatus[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchEmpresasComStatus = async () => {
+  const fetchEmpresasComStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -86,13 +86,13 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (session) {
       fetchEmpresasComStatus()
     }
-  }, [session])
+  }, [session, fetchEmpresasComStatus])
 
   const handleIniciarConciliacao = (empresaId: string) => {
     setEmpresa(empresaId)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Button } from "@/components/ui/button"
@@ -48,7 +48,7 @@ export default function ContasPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchContas = async (empresaId: string) => {
+  const fetchContas = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/contas?empresaId=${empresaId}`)
       const data = await response.json()
@@ -56,9 +56,9 @@ export default function ContasPage() {
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
     }
-  }
+  }, [])
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -70,20 +70,20 @@ export default function ContasPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
+  }, [selectedEmpresa, fetchContas])
 
   useEffect(() => {
     if (session) {
       fetchEmpresas()
     }
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
     if (empresaId) {
       setSelectedEmpresa(empresaId)
       fetchContas(empresaId)
     }
-  }, [empresaId])
+  }, [empresaId, fetchContas])
 
   const handleUploadOFX = async () => {
     if (!selectedEmpresa || !ofxFile) {

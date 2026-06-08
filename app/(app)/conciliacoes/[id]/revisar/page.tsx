@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import React from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
@@ -201,7 +201,7 @@ export default function RevisarConciliacaoPage() {
 
   const dadosAgrupados = agruparPorDia()
 
-  const fetchSugestoes = async () => {
+  const fetchSugestoes = useCallback(async () => {
     try {
       setLoading(true)
       setErro("")
@@ -252,11 +252,11 @@ export default function RevisarConciliacaoPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
   useEffect(() => {
     if (session && params.id) fetchSugestoes()
-  }, [session, params.id])
+  }, [session, params.id, fetchSugestoes])
 
   const setDecisao = (extratoId: string, dados: any) => {
     setDecisoes(prev => ({ ...prev, [extratoId]: dados }))

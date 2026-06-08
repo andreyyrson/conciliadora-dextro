@@ -53,13 +53,20 @@ export default function AnaliseDiaPage() {
   const { empresaId, setEmpresa } = useEmpresa()
   const [empresas, setEmpresas] = useState<{ id: string; nome: string }[]>([])
   const [dias, setDias] = useState<DiaAnalise[]>([])
-  const [dataInicio, setDataInicio] = useState("")
-  const [dataFim, setDataFim] = useState("")
+  const [dataInicio, setDataInicio] = useState(() => {
+    const hoje = new Date()
+    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+    return primeiroDia.toISOString().split("T")[0]
+  })
+  const [dataFim, setDataFim] = useState(() => {
+    const hoje = new Date()
+    return hoje.toISOString().split("T")[0]
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [diasExpandidos, setDiasExpandidos] = useState<Set<string>>(new Set())
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const res = await fetch("/api/empresas")
       const data = await res.json()
@@ -67,7 +74,7 @@ export default function AnaliseDiaPage() {
     } catch {
       console.error("Erro ao buscar empresas")
     }
-  }
+  }, [])
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -116,20 +123,13 @@ export default function AnaliseDiaPage() {
 
   useEffect(() => {
     if (session) fetchEmpresas()
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
     if (empresaId && dataInicio && dataFim) {
       buscarAnalise()
     }
-  }, [empresaId, dataInicio, dataFim])
-
-  useEffect(() => {
-    const hoje = new Date()
-    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-    setDataInicio(primeiroDia.toISOString().split("T")[0])
-    setDataFim(hoje.toISOString().split("T")[0])
-  }, [])
+  }, [empresaId, dataInicio, dataFim, buscarAnalise])
 
   if (!session) return null
 

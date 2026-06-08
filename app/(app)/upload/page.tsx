@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Button } from "@/components/ui/button"
@@ -60,7 +60,7 @@ export default function UploadPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -71,9 +71,9 @@ export default function UploadPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
+  }, [selectedEmpresa])
 
-  const fetchUploads = async () => {
+  const fetchUploads = useCallback(async () => {
     if (!selectedEmpresa) return
     try {
       const response = await fetch(`/api/upload?empresaId=${selectedEmpresa}`)
@@ -82,7 +82,7 @@ export default function UploadPage() {
     } catch (error) {
       console.error("Erro ao buscar uploads:", error)
     }
-  }
+  }, [selectedEmpresa])
 
   const handleDelete = async (id: string) => {
     setDeleting(true)
@@ -111,19 +111,19 @@ export default function UploadPage() {
     if (session) {
       fetchEmpresas()
     }
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
-    if (empresaId) {
+    if (empresaId && empresaId !== selectedEmpresa) {
       setSelectedEmpresa(empresaId)
     }
-  }, [empresaId])
+  }, [empresaId, selectedEmpresa])
 
   useEffect(() => {
     if (selectedEmpresa) {
       fetchUploads()
     }
-  }, [selectedEmpresa])
+  }, [selectedEmpresa, fetchUploads])
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()

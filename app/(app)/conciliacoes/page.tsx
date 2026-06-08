@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { useRouter } from "next/navigation"
@@ -81,7 +81,7 @@ export default function ConciliacoesPage() {
     }
   }, [showSuccessAnimation])
 
-  const fetchConciliacoes = async (empresaId: string) => {
+  const fetchConciliacoes = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/conciliacoes?empresaId=${empresaId}`)
       const data = await response.json()
@@ -89,7 +89,7 @@ export default function ConciliacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar conciliações:", error)
     }
-  }
+  }, [])
 
   const handleDeletar = async (id: string) => {
     setDeleting(true)
@@ -114,7 +114,7 @@ export default function ConciliacoesPage() {
     }
   }
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -127,9 +127,9 @@ export default function ConciliacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
+  }, [selectedEmpresa, setEmpresa, fetchConciliacoes])
 
-  const fetchUploads = async (empresaId: string) => {
+  const fetchUploads = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/upload?empresaId=${empresaId}`)
       const data = await response.json()
@@ -137,9 +137,9 @@ export default function ConciliacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar uploads:", error)
     }
-  }
+  }, [])
 
-  const fetchContas = async (empresaId: string) => {
+  const fetchContas = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/contas?empresaId=${empresaId}`)
       const data = await response.json()
@@ -147,9 +147,9 @@ export default function ConciliacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
     }
-  }
+  }, [])
 
-  const fetchImportacoes = async (empresaId: string) => {
+  const fetchImportacoes = useCallback(async (empresaId: string) => {
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empresaId}`)
       const data = await response.json()
@@ -157,13 +157,13 @@ export default function ConciliacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar importações:", error)
     }
-  }
+  }, [])
 
   useEffect(() => {
     if (session) {
       fetchEmpresas()
     }
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
     if (empresaId) {
@@ -173,7 +173,7 @@ export default function ConciliacoesPage() {
       fetchContas(empresaId)
       fetchImportacoes(empresaId)
     }
-  }, [empresaId])
+  }, [empresaId, fetchConciliacoes, fetchUploads, fetchContas, fetchImportacoes])
 
   const handleIniciarConciliacao = async () => {
     if (!selectedUpload) {

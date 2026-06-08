@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -57,28 +57,7 @@ export default function ProcessamentoLotePage() {
     message: ""
   })
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      carregarEmpresa()
-    }
-  }, [session])
-
-  const carregarEmpresa = async () => {
-    try {
-      const res = await fetch("/api/empresas")
-      if (res.ok) {
-        const data = await res.json()
-        if (data.empresas && data.empresas.length > 0) {
-          setEmpresaId(data.empresas[0].id)
-          carregarDados(data.empresas[0].id)
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao carregar empresa:", error)
-    }
-  }
-
-  const carregarDados = async (empId: string) => {
+  const carregarDados = useCallback(async (empId: string) => {
     try {
       const [uploadsRes, contasRes, importacoesRes] = await Promise.all([
         fetch(`/api/upload?empresaId=${empId}`),
@@ -103,7 +82,28 @@ export default function ProcessamentoLotePage() {
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
     }
-  }
+  }, [])
+
+  const carregarEmpresa = useCallback(async () => {
+    try {
+      const res = await fetch("/api/empresas")
+      if (res.ok) {
+        const data = await res.json()
+        if (data.empresas && data.empresas.length > 0) {
+          setEmpresaId(data.empresas[0].id)
+          carregarDados(data.empresas[0].id)
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao carregar empresa:", error)
+    }
+  }, [carregarDados, setEmpresaId])
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      carregarEmpresa()
+    }
+  }, [session, carregarEmpresa])
 
   const toggleUpload = (id: string) => {
     const newSelected = new Set(selectedUploads)

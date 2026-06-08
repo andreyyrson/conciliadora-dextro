@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -72,7 +72,7 @@ export default function ConciliacaoDetalhesPage() {
   const [observacaoEdit, setObservacaoEdit] = useState("")
   const [atualizando, setAtualizando] = useState(false)
 
-  const fetchDetalhes = async () => {
+  const fetchDetalhes = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/conciliacoes/${params.id}/detalhes?page=${currentPage}&limit=50&status=${statusFilter}`
@@ -87,13 +87,13 @@ export default function ConciliacaoDetalhesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id, currentPage, statusFilter])
 
   useEffect(() => {
     if (session && params.id) {
       fetchDetalhes()
     }
-  }, [session, params.id, currentPage, statusFilter])
+  }, [session, params.id, fetchDetalhes])
 
   // Redirecionar para revisão se status for PENDENTE_REVISAO
   useEffect(() => {

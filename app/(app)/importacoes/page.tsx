@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,7 +28,7 @@ export default function ImportacoesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const fetchEmpresas = async () => {
+  const fetchEmpresas = useCallback(async () => {
     try {
       const response = await fetch("/api/empresas")
       const data = await response.json()
@@ -39,9 +39,9 @@ export default function ImportacoesPage() {
     } catch (error) {
       console.error("Erro ao buscar empresas:", error)
     }
-  }
+  }, [])
 
-  const fetchImportacoes = async (empresaId: string) => {
+  const fetchImportacoes = useCallback(async (empresaId: string) => {
     setLoading(true)
     try {
       const response = await fetch(`/api/importacoes?empresaId=${empresaId}`)
@@ -52,7 +52,7 @@ export default function ImportacoesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const handleDeleteImportacao = async (importacaoId: string) => {
     setLoading(true)
@@ -84,13 +84,13 @@ export default function ImportacoesPage() {
     if (session) {
       fetchEmpresas()
     }
-  }, [session])
+  }, [session, fetchEmpresas])
 
   useEffect(() => {
     if (selectedEmpresa) {
       fetchImportacoes(selectedEmpresa)
     }
-  }, [selectedEmpresa])
+  }, [selectedEmpresa, fetchImportacoes])
 
   if (!session) {
     return (
