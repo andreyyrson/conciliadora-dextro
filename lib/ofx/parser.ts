@@ -58,7 +58,7 @@ export function parseOFX(content: string): OFXData {
     } else if (tag === 'ACCTID' && currentAccount) {
       currentAccount.accountId = value
     } else if (tag === 'ACCTTYPE' && currentAccount) {
-      currentAccount.accountType = value as any
+      currentAccount.accountType = value as OFXAccount["accountType"]
     } else if (tag === 'BALAMT' && currentAccount) {
       currentAccount.balance = parseFloat(value)
     } else if (tag === 'CURDEF' && currentAccount) {

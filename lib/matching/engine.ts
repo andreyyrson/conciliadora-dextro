@@ -115,7 +115,7 @@ function levenshteinSimilarity(a: string, b: string): number {
 }
 
 /** Similaridade híbrida: 40% token + 40% trigram + 20% Levenshtein */
-function similaridadeHibrida(a: string, b: string): number {
+export function similaridadeHibrida(a: string, b: string): number {
   const na = norm(a)
   const nb = norm(b)
   if (na === nb) return 1
@@ -127,7 +127,7 @@ function similaridadeHibrida(a: string, b: string): number {
 
 // ========== SCORE INDIVIDUAL ==========
 
-function scoreValor(v1: number, v2: number): number {
+export function scoreValor(v1: number, v2: number): number {
   const diff = Math.abs(v1 - v2)
   if (diff < 0.01) return 50
   const max = Math.max(v1, v2)
@@ -139,7 +139,7 @@ function scoreValor(v1: number, v2: number): number {
   return 0
 }
 
-function scoreData(d1: Date, d2: Date): number {
+export function scoreData(d1: Date, d2: Date): number {
   const diffMs = Math.abs(d1.getTime() - d2.getTime())
   const diffDays = diffMs / (1000 * 60 * 60 * 24)
   if (diffDays <= 0) return 10
@@ -148,12 +148,12 @@ function scoreData(d1: Date, d2: Date): number {
   return 0
 }
 
-function scoreDescricao(d1: string, d2: string): number {
+export function scoreDescricao(d1: string, d2: string): number {
   const sim = similaridadeHibrida(d1, d2)
   return Math.round(sim * 25)
 }
 
-function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtrato: string | null | undefined): number {
+export function scoreFornecedor(fornecedorErp: string | null | undefined, descricaoExtrato: string | null | undefined): number {
   const fornecedor = fornecedorErp || ""
   const descricao = descricaoExtrato || ""
   if (!fornecedor || !descricao) return 0
@@ -190,7 +190,7 @@ const MAPEAMENTO_BANCO: Record<string, string> = {
   "CAIXA ECONOMICA": "CAIXA ECONOMICA FEDERAL",
 }
 
-function normalizarBanco(banco: string): string {
+export function normalizarBanco(banco: string): string {
   // Aplicar mapeamento de abreviações
   const bancoMapeado = MAPEAMENTO_BANCO[banco.toUpperCase()] || banco
   
@@ -217,7 +217,7 @@ function normalizarBanco(banco: string): string {
   return resultado.trim().replace(/\s+/g, ' ')
 }
 
-function scoreBanco(bancoErp: string | null | undefined, bancoExtrato: string | null | undefined): number {
+export function scoreBanco(bancoErp: string | null | undefined, bancoExtrato: string | null | undefined): number {
   const banco1 = bancoErp || ""
   const banco2 = bancoExtrato || ""
   if (!banco1 || !banco2) return 0
@@ -240,7 +240,7 @@ function scoreBanco(bancoErp: string | null | undefined, bancoExtrato: string | 
 
 // ========== PRÉ-FILTRO ==========
 
-function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): boolean {
+export function passaPreFiltro(erp: EntradaConciliacao, extrato: EntradaConciliacao): boolean {
   // Tipo igual
   if (erp.tipo !== extrato.tipo) return false
   // Valor aproximado (<= 5%)
@@ -268,7 +268,7 @@ function agruparPorDia(entradas: EntradaConciliacao[]): Map<string, EntradaConci
 
 // ========== GERAÇÃO DE EXPLICAÇÕES ==========
 
-function gerarExplicacoes(sd: ScoreDetalhado): string[] {
+export function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   const exps: string[] = []
   if (sd.valor >= 50) exps.push("Valor idêntico")
   else if (sd.valor >= 45) exps.push("Valor muito próximo (≤ 0,5%)")
@@ -296,7 +296,7 @@ function gerarExplicacoes(sd: ScoreDetalhado): string[] {
   return exps
 }
 
-function calcularConfianca(score: number): "HIGH" | "MEDIUM" | "LOW" {
+export function calcularConfianca(score: number): "HIGH" | "MEDIUM" | "LOW" {
   if (score >= 90) return "HIGH"
   if (score >= 70) return "MEDIUM"
   return "LOW"

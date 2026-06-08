@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { uploadId, contaId, importacaoId, empresaId } = body
+    const { uploadId, contaId, importacaoId } = body
 
     if (!uploadId) {
       return NextResponse.json(
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
       )
     }
 
-    let extratoLancamentos: any[] = []
+    let extratoLancamentos: (Prisma.ExtratoLancamentoGetPayload<{}> | Prisma.ExtratoImportadoGetPayload<{}>)[] = []
 
     if (contaId) {
       // Buscar conta e verificar permissões
@@ -100,11 +101,11 @@ export async function POST(req: Request) {
 
     // Calcular totais líquidos (CREDITO - DEBITO)
     const totalErp = erpLancamentos.reduce(
-      (sum: number, l: any) => sum + (l.tipo === "CREDITO" ? 1 : -1) * Number(l.valor),
+      (sum, l) => sum + (l.tipo === "CREDITO" ? 1 : -1) * Number(l.valor),
       0
     )
     const totalExtrato = extratoLancamentos.reduce(
-      (sum: number, l: any) => sum + (l.tipo === "CREDITO" ? 1 : -1) * Number(l.valor),
+      (sum, l) => sum + (l.tipo === "CREDITO" ? 1 : -1) * Number(l.valor),
       0
     )
 

@@ -1,5 +1,6 @@
 import { PainelSidebar } from "@/components/painel-sidebar"
 import { PainelHeader } from "@/components/painel-header"
+import { EmpresaProvider } from "@/lib/empresa-context"
 
 export default function AppLayout({
   children,
@@ -7,12 +8,14 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-screen bg-background">
-      <PainelSidebar context="company" />
-      <div className="flex-1 flex flex-col min-w-0">
-        <PainelHeader context="company" tenants={[]} user={{}} />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+    <EmpresaProvider>
+      <div className="flex h-screen bg-background">
+        <PainelSidebar context="company" />
+        <div className="flex-1 flex flex-col min-w-0">
+          <PainelHeader context="company" user={{}} />
+          <main className="flex-1 overflow-auto p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </EmpresaProvider>
   )
 }

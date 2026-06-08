@@ -216,7 +216,7 @@ const HEURISTICAS: Record<CampoPadrao, string[]> = {
  * Calcula score de similaridade entre nome de coluna e heurísticas
  * Retorna score entre 0 e 1
  */
-function calcularScore(nomeColuna: string, campo: CampoPadrao): number {
+export function calcularScore(nomeColuna: string, campo: CampoPadrao): number {
   const nomeNormalizado = nomeColuna
     .toLowerCase()
     .normalize("NFD")
@@ -266,9 +266,9 @@ function calcularScore(nomeColuna: string, campo: CampoPadrao): number {
 /**
  * Detecta tipo de conteúdo das células para inferir o campo quando o nome da coluna não ajuda
  */
-function detectarPorConteudo(
+export function detectarPorConteudo(
   coluna: string,
-  previewLinhas: any[]
+  previewLinhas: Record<string, unknown>[]
 ): { campo: CampoPadrao | null; score: number } {
   const valores = previewLinhas
     .map(l => String(l[coluna] ?? "").trim())
@@ -290,7 +290,6 @@ function detectarPorConteudo(
 
   // === VALOR / SALDO ===
   // Detecta valores monetários: "1.050,23", "R$ 500,00", "-1.234,56", "1,234.56"
-  const valorRegex = /^[\-+]?(?:R\$\s*)?[\d.]*,?\d+$/
   const valoresMonetarios = amostra.filter(v => {
     const limpo = v.replace(/[R$\s]/g, "")
     return /^[\-+]?(?:\d{1,3}(?:\.\d{3})*,\d{2}|\d{1,3}(?:,\d{3})*\.\d{2}|\d+\.\d{2}|\d+,\d{2}|\d+)$/.test(limpo)
@@ -353,7 +352,7 @@ function detectarPorConteudo(
  */
 export function detectarColunas(
   colunas: string[],
-  previewLinhas: any[]
+  previewLinhas: Record<string, unknown>[]
 ): ResultadoDeteccao {
   const mapeamento: MapeamentoColunas = {}
   const confianca: { [campo: string]: number } = {}

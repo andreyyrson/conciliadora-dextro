@@ -1,60 +1,65 @@
 "use client"
 
 import React from "react"
-import { Building2, User, LogOut, Settings } from "lucide-react"
+import { Building2, User, LogOut, ChevronDown } from "lucide-react"
+import { useEmpresa } from "@/lib/use-empresa"
 
 interface PainelHeaderProps {
   context: "portfolio" | "company"
-  tenantId?: string
-  tenants: Array<{ id: string; name: string }>
   user: { name?: string; email?: string }
   role?: string
 }
 
 export function PainelHeader({
   context,
-  tenantId,
-  tenants,
   user,
-  role,
 }: PainelHeaderProps) {
-  const [showTenantDropdown, setShowTenantDropdown] = React.useState(false)
+  const [showEmpresaDropdown, setShowEmpresaDropdown] = React.useState(false)
   const [showProfileDropdown, setShowProfileDropdown] = React.useState(false)
+  const { empresaId, empresas, setEmpresa } = useEmpresa()
 
-  const canManage = role === "MASTER" || role === "ADMIN"
-  const canDelete = role === "MASTER"
-
-  const currentTenant = tenants.find((t) => t.id === tenantId)
+  const empresaAtual = empresas.find((e) => e.id === empresaId)
 
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-      {/* Tenant Selector */}
-      {context === "company" && tenantId && (
+      {/* Seletor de Empresa Global */}
+      {context === "company" ? (
         <div className="relative">
           <button
-            onClick={() => setShowTenantDropdown(!showTenantDropdown)}
+            onClick={() => setShowEmpresaDropdown(!showEmpresaDropdown)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors"
+            disabled={empresas.length === 0}
           >
             <Building2 size={18} className="text-muted-foreground" />
-            <span className="text-sm font-medium">{currentTenant?.name}</span>
+            <span className="text-sm font-medium">
+              {empresaAtual?.nome || "Selecione uma empresa"}
+            </span>
+            {empresas.length > 0 && (
+              <ChevronDown size={16} className="text-muted-foreground" />
+            )}
           </button>
 
-          {showTenantDropdown && (
-            <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50">
-              {tenants.map((tenant) => (
+          {showEmpresaDropdown && empresas.length > 0 && (
+            <div className="absolute top-full left-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
+              {empresas.map((empresa) => (
                 <button
-                  key={tenant.id}
+                  key={empresa.id}
                   onClick={() => {
-                    window.location.href = `/dashboard?tenantId=${tenant.id}`
+                    setEmpresa(empresa.id)
+                    setShowEmpresaDropdown(false)
                   }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors first:rounded-t-lg last:rounded-b-lg"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    empresa.id === empresaId ? "bg-accent font-medium" : ""
+                  }`}
                 >
-                  {tenant.name}
+                  {empresa.nome}
                 </button>
               ))}
             </div>
           )}
         </div>
+      ) : (
+        <div />
       )}
 
       {/* Profile Dropdown */}

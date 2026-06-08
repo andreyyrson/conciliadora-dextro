@@ -2,9 +2,12 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import Papa from "papaparse"
+import * as XLSX from "xlsx"
 
 export async function GET(req: Request) {
   try {
@@ -125,24 +128,22 @@ export async function POST(req: Request) {
     const fileName = file.name
 
     // Processar o arquivo (CSV ou XLSX)
-    let lancamentos: any[] = []
+    let lancamentos: Record<string, unknown>[] = []
 
     if (fileType === "text/csv" || fileName.endsWith(".csv")) {
-      const Papa = require("papaparse")
       const result = Papa.parse(buffer.toString("utf-8"), {
         header: true,
         skipEmptyLines: true
       })
-      lancamentos = result.data
+      lancamentos = result.data as Record<string, unknown>[]
     } else if (
       fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       fileName.endsWith(".xlsx")
     ) {
-      const XLSX = require("xlsx")
       const workbook = XLSX.read(buffer, { type: "buffer" })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[]
       lancamentos = jsonData
     } else {
       return NextResponse.json(
@@ -186,8 +187,8 @@ export async function POST(req: Request) {
         nomeArquivo: fileName,
         periodo: dataReferencia,
         totalLinhas: lancamentos.length,
-        mapeamentoColunas: mapeamento
-      } as any
+        mapeamentoColunas: mapeamento as Prisma.InputJsonValue
+      }
     })
 
     // Aplicar pipeline de normalização
@@ -205,7 +206,7 @@ export async function POST(req: Request) {
       banco: dado.banco || null,
       fornecedor: dado.fornecedor || null,
       categoria: dado.categoria || null,
-      rawData: dado.rawData
+      rawData: dado.rawData as unknown as Prisma.InputJsonValue
     }))
 
     // Salvar lançamentos em lote

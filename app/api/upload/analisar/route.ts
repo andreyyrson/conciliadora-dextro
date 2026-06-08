@@ -8,6 +8,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { detectarColunas } from "@/lib/normalizacao/detector-colunas"
+import Papa from "papaparse"
+import * as XLSX from "xlsx"
 
 export async function POST(req: Request) {
   try {
@@ -49,31 +51,29 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes)
     const content = buffer.toString("utf-8")
 
-    let lancamentos: any[] = []
+    let lancamentos: Record<string, unknown>[] = []
 
     // Se for JSON (preview do frontend)
     if (file.type === "application/json" || fileName === "preview.json") {
-      lancamentos = JSON.parse(content)
+      lancamentos = JSON.parse(content) as Record<string, unknown>[]
     } else {
       // Fallback para formato original (CSV/XLSX)
       const fileType = file.type
 
       if (fileType === "text/csv" || fileName.endsWith(".csv")) {
-        const Papa = require("papaparse")
         const result = Papa.parse(content, {
           header: true,
           skipEmptyLines: true
         })
-        lancamentos = result.data
+        lancamentos = result.data as Record<string, unknown>[]
       } else if (
         fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
         fileName.endsWith(".xlsx")
       ) {
-        const XLSX = require("xlsx")
         const workbook = XLSX.read(buffer, { type: "buffer" })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
-        lancamentos = XLSX.utils.sheet_to_json(worksheet)
+        lancamentos = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[]
       } else {
         return NextResponse.json(
           { error: "Tipo de arquivo não suportado. Use CSV ou XLSX" },
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     const uploadRecente = await prisma.uploadErp.findFirst({
       where: { empresaId },
       orderBy: { createdAt: "desc" }
-    }) as any
+    })
 
     let mapeamentoFinal = resultado.mapeamento
     if (uploadRecente?.mapeamentoColunas) {

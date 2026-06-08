@@ -26,13 +26,13 @@ export interface DadoNormalizado {
   categoria?: string
   projeto?: string
   natureza?: string
-  rawData: any  // Dados brutos originais para auditoria
+  rawData: unknown  // Dados brutos originais para auditoria
 }
 
 /**
  * Normaliza um valor monetário brasileiro para número
  */
-export function normalizarValor(valorRaw: any): number {
+export function normalizarValor(valorRaw: unknown): number {
   if (valorRaw === null || valorRaw === undefined || valorRaw === "") {
     return 0
   }
@@ -77,7 +77,7 @@ export function normalizarValor(valorRaw: any): number {
 /**
  * Normaliza uma data em formato brasileiro para Date
  */
-export function normalizarData(dataRaw: any): Date {
+export function normalizarData(dataRaw: unknown): Date {
   if (!dataRaw) return new Date()
 
   const dataStr = String(dataRaw).trim()
@@ -117,7 +117,7 @@ export function normalizarData(dataRaw: any): Date {
 /**
  * Normaliza descrição (trim, uppercase, remove espaços duplos)
  */
-export function normalizarDescricao(descRaw: any): string {
+export function normalizarDescricao(descRaw: unknown): string {
   if (!descRaw) return ""
   return String(descRaw)
     .trim()
@@ -128,7 +128,7 @@ export function normalizarDescricao(descRaw: any): string {
 /**
  * Normaliza CNPJ/CPF (remove pontos, traços, barras)
  */
-export function normalizarCnpj(cnpjRaw: any): string {
+export function normalizarCnpj(cnpjRaw: unknown): string {
   if (!cnpjRaw) return ""
   return String(cnpjRaw)
     .replace(/[^\d]/g, "")
@@ -139,7 +139,7 @@ export function normalizarCnpj(cnpjRaw: any): string {
  * Detecta tipo (CREDITO/DEBITO) a partir do valor e coluna de tipo
  */
 export function normalizarTipo(
-  tipoRaw: any,
+  tipoRaw: unknown,
   valor: number
 ): "CREDITO" | "DEBITO" {
   if (!tipoRaw) {
@@ -176,7 +176,7 @@ export function normalizarTipo(
  * Executa o pipeline completo de normalização em uma linha de dados
  */
 export function normalizarLinha(
-  linha: any,
+  linha: Record<string, unknown>,
   mapeamento: MapeamentoColunas
 ): DadoNormalizado {
   const m = mapeamento
@@ -240,7 +240,7 @@ export function normalizarLinha(
  * Executa o pipeline completo em todas as linhas
  */
 export function executarPipeline(
-  linhas: any[],
+  linhas: Record<string, unknown>[],
   mapeamento: MapeamentoColunas
 ): DadoNormalizado[] {
   return linhas
