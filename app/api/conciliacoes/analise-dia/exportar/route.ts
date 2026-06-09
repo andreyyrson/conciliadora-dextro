@@ -233,6 +233,14 @@ export async function GET(req: Request) {
       XLSX.utils.book_append_sheet(workbook, wsDif, "Diferença por Banco")
     }
 
+    // Se não houver nenhum dado no período, retornar erro amigável
+    if (workbook.SheetNames.length === 0) {
+      return NextResponse.json(
+        { error: "Nenhum dado encontrado no período selecionado." },
+        { status: 404 }
+      )
+    }
+
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
 
     return new NextResponse(buffer as ArrayBuffer, {

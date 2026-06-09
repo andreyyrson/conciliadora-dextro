@@ -11,6 +11,7 @@ import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { PageHeader } from "@/components/page-header"
 import { motion, AnimatePresence } from "framer-motion"
+import { FileCheck } from "lucide-react"
 
 interface ContaBancaria {
   id: string
@@ -52,6 +53,28 @@ export default function ContasPage() {
     mapeamentoSalvo: boolean
   } | null>(null)
   const [mostrarMapeamentoCsv, setMostrarMapeamentoCsv] = useState(false)
+  const [previewOFX, setPreviewOFX] = useState<{
+    nomeArquivo: string
+    totalContas: number
+    totalTransacoes: number
+    preview: {
+      data: string
+      descricao: string
+      valor: number
+      tipo: string
+      banco: string
+      identificador: string
+    }[]
+    contas: {
+      banco: string
+      conta: string
+      tipo: string
+      saldo: number
+      transacoes: number
+      moeda: string
+    }[]
+  } | null>(null)
+  const [mostrarPreviewOFX, setMostrarPreviewOFX] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -92,6 +115,44 @@ export default function ContasPage() {
     }
   }, [empresaId, fetchContas])
 
+  const handleAnalisarOFX = async () => {
+    if (!selectedEmpresa || !ofxFile) {
+      setError("Selecione uma empresa e um arquivo OFX")
+      return
+    }
+
+    setError("")
+    setLoading(true)
+    setPreviewOFX(null)
+    setMostrarPreviewOFX(false)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", ofxFile)
+      formData.append("empresaId", selectedEmpresa)
+
+      const response = await fetch("/api/ofx/analisar", {
+        method: "POST",
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao analisar arquivo OFX")
+        setLoading(false)
+        return
+      }
+
+      setPreviewOFX(data)
+      setMostrarPreviewOFX(true)
+      setLoading(false)
+    } catch {
+      setError("Erro ao analisar arquivo OFX")
+      setLoading(false)
+    }
+  }
+
   const handleUploadOFX = async () => {
     if (!selectedEmpresa || !ofxFile) {
       setError("Selecione uma empresa e um arquivo OFX")
@@ -122,6 +183,8 @@ export default function ContasPage() {
       setLoading(false)
       setModoOFX(false)
       setOfxFile(null)
+      setPreviewOFX(null)
+      setMostrarPreviewOFX(false)
       fetchContas(selectedEmpresa)
     } catch {
       setError("Erro ao processar arquivo OFX")
@@ -379,21 +442,112 @@ export default function ContasPage() {
             <div className="flex gap-2">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  onClick={handleUploadOFX}
-                  disabled={loading}
+                  onClick={handleAnalisarOFX}
+                  disabled={loading || !ofxFile}
                 >
-                  {loading ? "Processando..." : "Importar"}
+                  {loading && !mostrarPreviewOFX ? "Analisando..." : "Analisar OFX"}
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  onClick={() => setModoOFX(false)}
+                  onClick={() => { setModoOFX(false); setPreviewOFX(null); setMostrarPreviewOFX(false) }}
                   variant="outline"
                 >
                   Voltar
                 </Button>
               </motion.div>
             </div>
+
+            {/* Preview OFX */}
+            <AnimatePresence>
+              {mostrarPreviewOFX && previewOFX && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-6 space-y-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-success/10 rounded-lg">
+                      <FileCheck className="w-5 h-5 text-success" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Dados do OFX
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {previewOFX.nomeArquivo} — {previewOFX.totalContas} conta(s), {previewOFX.totalTransacoes} transação(ões)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Resumo das contas */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {previewOFX.contas.map((c, i) => (
+                      <div key={i} className="p-3 bg-muted rounded-lg">
+                        <div className="text-sm font-medium">{c.banco}</div>
+                        <div className="text-xs text-muted-foreground">Conta: {c.conta}</div>
+                        <div className="text-xs text-muted-foreground">Tipo: {c.tipo}</div>
+                        <div className="text-xs text-muted-foreground">Transações: {c.transacoes}</div>
+                        <div className="text-xs text-muted-foreground">Saldo: {c.saldo.toLocaleString("pt-BR", { style: "currency", currency: c.moeda || "BRL" })}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Preview de transações */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="p-2 text-left">Data</th>
+                          <th className="p-2 text-left">Descrição</th>
+                          <th className="p-2 text-right">Valor</th>
+                          <th className="p-2 text-left">Tipo</th>
+                          <th className="p-2 text-left">Banco</th>
+                          <th className="p-2 text-left">ID</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewOFX.preview.map((t, i) => (
+                          <tr key={i} className="border-b border-border">
+                            <td className="p-2">{t.data}</td>
+                            <td className="p-2">{t.descricao}</td>
+                            <td className={`p-2 text-right font-medium ${t.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
+                              {t.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td className="p-2">{t.tipo === "DEBITO" ? "Saída" : "Entrada"}</td>
+                            <td className="p-2">{t.banco}</td>
+                            <td className="p-2 text-xs text-muted-foreground">{t.identificador}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {previewOFX.preview.length < previewOFX.totalTransacoes && (
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Mostrando {previewOFX.preview.length} de {previewOFX.totalTransacoes} transações
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button onClick={handleUploadOFX} disabled={loading}>
+                        {loading ? "Importando..." : "Confirmar e Importar"}
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        onClick={() => { setPreviewOFX(null); setMostrarPreviewOFX(false) }}
+                        variant="outline"
+                      >
+                        Cancelar
+                      </Button>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 

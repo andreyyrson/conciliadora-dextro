@@ -142,7 +142,16 @@ export function AnaliseDiaScreen() {
       const res = await fetch(
         `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
       )
-      if (!res.ok) throw new Error("Erro ao exportar")
+      if (!res.ok) {
+        let msg = "Erro ao exportar"
+        try {
+          const data = await res.json()
+          if (data?.error) msg = data.error
+        } catch {
+          // resposta não-JSON, mantém mensagem padrão
+        }
+        throw new Error(msg)
+      }
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
