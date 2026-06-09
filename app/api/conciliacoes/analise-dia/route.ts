@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
 
 export async function GET(req: Request) {
   try {
@@ -166,13 +167,44 @@ export async function GET(req: Request) {
         ? extratosDoDia[extratosDoDia.length - 1].saldoApos
         : null
 
+      // Matching por dia
+      const erpEntradas: EntradaConciliacao[] = erpsDoDia.map(e => ({
+        id: e.id,
+        origem: "ERP",
+        data: e.data,
+        valor: Number(e.valor),
+        tipo: e.tipo as "CREDITO" | "DEBITO",
+        descricao: e.descricao,
+        documento: e.documento,
+        fornecedor: e.fornecedor,
+        categoria: e.categoria,
+        banco: e.banco,
+      }))
+
+      const extratoEntradas: EntradaConciliacao[] = extratosDoDia.map(e => ({
+        id: e.id,
+        origem: "EXTRATO",
+        data: e.data,
+        valor: e.valor,
+        tipo: e.tipo as "CREDITO" | "DEBITO",
+        descricao: e.descricao,
+        identificador: e.identificador,
+        banco: e.banco,
+      }))
+
+      const matching = gerarSugestoes(erpEntradas, extratoEntradas)
+
       const diferencaDebito = Math.abs(totalDebitoErp - totalDebitoExtrato)
       const diferencaCredito = Math.abs(totalCreditoErp - totalCreditoExtrato)
       const tolerancia = 0.01
 
-      let statusDia: "CONCILIADO" | "DIVERGENTE" | "PARCIAL" | "SEM_DADOS"
+      let statusDia: "CONCILIADO" | "DIVERGENTE" | "PARCIAL" | "SEM_DADOS" | "SUGERIDO"
       if (erpsDoDia.length === 0 && extratosDoDia.length === 0) {
         statusDia = "SEM_DADOS"
+      } else if (matching.itens.some(i => i.status === "AUTO_CONFIRMADO")) {
+        statusDia = "CONCILIADO"
+      } else if (matching.itens.some(i => i.status === "SUGERIDO" || i.status === "AMBIGUO")) {
+        statusDia = "SUGERIDO"
       } else if (diferencaDebito <= tolerancia && diferencaCredito <= tolerancia) {
         statusDia = "CONCILIADO"
       } else if ((totalDebitoErp > 0 || totalCreditoErp > 0) && (totalDebitoExtrato > 0 || totalCreditoExtrato > 0)) {
@@ -209,6 +241,28 @@ export async function GET(req: Request) {
         statusDia,
         qtdErp: erpsDoDia.length,
         qtdExtrato: extratosDoDia.length,
+        matches: {
+          autoConfirmados: matching.itens.filter(i => i.status === "AUTO_CONFIRMADO").length,
+          sugeridos: matching.itens.filter(i => i.status === "SUGERIDO").length,
+          ambiguos: matching.itens.filter(i => i.status === "AMBIGUO").length,
+          semMatch: matching.itens.filter(i => i.status === "SEM_MATCH").length,
+          erpsSobrando: matching.erpsSobrando.length,
+          detalhes: matching.itens.map(i => ({
+            extratoId: i.extrato.id,
+            extratoDescricao: i.extrato.descricao,
+            extratoValor: i.extrato.valor,
+            status: i.status,
+            confianca: i.confianca,
+            score: i.sugestoes[0]?.score || 0,
+            erpPareado: i.erpPareado ? {
+              id: i.erpPareado.id,
+              descricao: i.erpPareado.descricao,
+              valor: i.erpPareado.valor,
+            } : null,
+            diferencaValor: i.diferencaValor,
+            explicacoes: i.sugestoes[0]?.explicacoes || [],
+          })),
+        }
       }
     })
 
