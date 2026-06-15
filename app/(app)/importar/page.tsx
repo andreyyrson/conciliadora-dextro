@@ -2,34 +2,43 @@
 
 import { useState } from "react"
 import { PageHeader } from "@/components/page-header"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { UploadErpScreen } from "./upload-erp-screen"
 import { ExtratoScreen } from "./extrato-screen"
 
 export default function ImportarPage() {
-  const [tab, setTab] = useState("erp")
+  const [modo, setModo] = useState<"erp" | "extrato">("extrato")
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Importar Dados"
-        description="Faça upload de arquivos do ERP e gerencie importações de extrato"
+        description="Importe dados do ERP do sistema ou extratos bancários (OFX/CSV)"
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="erp">ERP</TabsTrigger>
-          <TabsTrigger value="extrato">Extrato</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setModo("extrato")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            modo === "extrato"
+              ? "bg-brand text-white"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          Extrato Bancário
+        </button>
+        <button
+          onClick={() => setModo("erp")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            modo === "erp"
+              ? "bg-brand text-white"
+              : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+          }`}
+        >
+          ERP do Sistema
+        </button>
+      </div>
 
-        <TabsContent value="erp" className="mt-6">
-          <UploadErpScreen />
-        </TabsContent>
-
-        <TabsContent value="extrato" className="mt-6">
-          <ExtratoScreen />
-        </TabsContent>
-      </Tabs>
+      {modo === "erp" ? <UploadErpScreen /> : <ExtratoScreen />}
     </div>
   )
 }

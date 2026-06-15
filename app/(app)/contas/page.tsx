@@ -7,10 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
-import { MapeamentoColunas } from "@/components/mapeamento-colunas"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { PageHeader } from "@/components/page-header"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 interface ContaBancaria {
   id: string
@@ -36,22 +35,9 @@ export default function ContasPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [modoManual, setModoManual] = useState(false)
-  const [modoOFX, setModoOFX] = useState(false)
-  const [modoCSV, setModoCSV] = useState(false)
   const [banco, setBanco] = useState("")
   const [agencia, setAgencia] = useState("")
   const [conta, setConta] = useState("")
-  const [ofxFile, setOfxFile] = useState<File | null>(null)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [analiseCsv, setAnaliseCsv] = useState<{
-    colunas: string[]
-    mapeamento: { [campo: string]: string | null }
-    preview: { [coluna: string]: string }[]
-    colunasNaoMapeadas: string[]
-    confianca: { [campo: string]: number }
-    mapeamentoSalvo: boolean
-  } | null>(null)
-  const [mostrarMapeamentoCsv, setMostrarMapeamentoCsv] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -91,121 +77,6 @@ export default function ContasPage() {
       fetchContas(empresaId)
     }
   }, [empresaId, fetchContas])
-
-  const handleUploadOFX = async () => {
-    if (!selectedEmpresa || !ofxFile) {
-      setError("Selecione uma empresa e um arquivo OFX")
-      return
-    }
-
-    setError("")
-    setLoading(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", ofxFile)
-      formData.append("empresaId", selectedEmpresa)
-
-      const response = await fetch("/api/ofx/upload", {
-        method: "POST",
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao processar arquivo OFX")
-        setLoading(false)
-        return
-      }
-
-      setLoading(false)
-      setModoOFX(false)
-      setOfxFile(null)
-      fetchContas(selectedEmpresa)
-    } catch {
-      setError("Erro ao processar arquivo OFX")
-      setLoading(false)
-    }
-  }
-
-  const handleAnalisarCSV = async () => {
-    if (!selectedEmpresa || !csvFile) {
-      setError("Selecione uma empresa e um arquivo CSV")
-      return
-    }
-
-    setError("")
-    setLoading(true)
-    setAnaliseCsv(null)
-    setMostrarMapeamentoCsv(false)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", csvFile)
-      formData.append("empresaId", selectedEmpresa)
-
-      const response = await fetch("/api/csv/analisar", {
-        method: "POST",
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao analisar arquivo CSV")
-        setLoading(false)
-        return
-      }
-
-      setAnaliseCsv(data)
-      setMostrarMapeamentoCsv(true)
-      setLoading(false)
-    } catch {
-      setError("Erro ao analisar arquivo CSV")
-      setLoading(false)
-    }
-  }
-
-  const handleConfirmarUploadCSV = async (mapeamento: { [campo: string]: string | null }) => {
-    setError("")
-    setLoading(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", csvFile!)
-      formData.append("empresaId", selectedEmpresa)
-      formData.append("mapeamento", JSON.stringify(mapeamento))
-
-      const response = await fetch("/api/csv/upload", {
-        method: "POST",
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || "Erro ao processar arquivo CSV")
-        setLoading(false)
-        return
-      }
-
-      setLoading(false)
-      setModoCSV(false)
-      setCsvFile(null)
-      setAnaliseCsv(null)
-      setMostrarMapeamentoCsv(false)
-      fetchContas(selectedEmpresa)
-    } catch {
-      setError("Erro ao processar arquivo CSV")
-      setLoading(false)
-    }
-  }
-
-  const handleCancelarMapeamentoCSV = () => {
-    setMostrarMapeamentoCsv(false)
-    setAnaliseCsv(null)
-  }
 
   const handleDeleteConta = async (contaId: string) => {
     setDeleting(true)
@@ -294,7 +165,7 @@ export default function ContasPage() {
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Adicionar Conta Bancária</h2>
           <p className="text-muted-foreground mb-4 text-sm">
-            Escolha o método de conexão: Open Finance, OFX ou manual.
+            Cadastre uma conta bancária manualmente.
           </p>
 
         <div className="mb-4">
@@ -325,24 +196,8 @@ export default function ContasPage() {
           </div>
         )}
 
-        {!modoManual && !modoOFX && !modoCSV && (
+        {!modoManual && (
           <div className="flex gap-2 flex-wrap">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={() => setModoOFX(true)}
-                variant="outline"
-              >
-                Importar OFX
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={() => setModoCSV(true)}
-                variant="outline"
-              >
-                Importar CSV
-              </Button>
-            </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 onClick={() => setModoManual(true)}
@@ -352,117 +207,6 @@ export default function ContasPage() {
               </Button>
             </motion.div>
           </div>
-        )}
-
-        {modoOFX && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="ofxFile" className="block text-sm font-medium text-muted-foreground mb-1">
-                Arquivo OFX *
-              </label>
-              <Input
-                id="ofxFile"
-                type="file"
-                accept=".ofx,.qfx"
-                onChange={(e) => setOfxFile(e.target.files?.[0] || null)}
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Formatos aceitos: .ofx, .qfx
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={handleUploadOFX}
-                  disabled={loading}
-                >
-                  {loading ? "Processando..." : "Importar"}
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={() => setModoOFX(false)}
-                  variant="outline"
-                >
-                  Voltar
-                </Button>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-
-        {modoCSV && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="csvFile" className="block text-sm font-medium text-muted-foreground mb-1">
-                Arquivo CSV *
-              </label>
-              <Input
-                id="csvFile"
-                type="file"
-                accept=".csv"
-                onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Formato esperado: data,descricao,valor,tipo,saldo
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={handleAnalisarCSV}
-                  disabled={loading || !csvFile}
-                >
-                  {loading ? "Analisando..." : "Analisar e Mapear Colunas"}
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={() => setModoCSV(false)}
-                  variant="outline"
-                >
-                  Voltar
-                </Button>
-              </motion.div>
-            </div>
-
-            {/* Seção de Mapeamento CSV */}
-            <AnimatePresence>
-              {mostrarMapeamentoCsv && analiseCsv && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-6"
-                >
-                  <MapeamentoColunas
-                    colunas={analiseCsv.colunas}
-                    mapeamento={analiseCsv.mapeamento}
-                    preview={analiseCsv.preview}
-                    colunasNaoMapeadas={analiseCsv.colunasNaoMapeadas}
-                    confianca={analiseCsv.confianca}
-                    mapeamentoSalvo={analiseCsv.mapeamentoSalvo}
-                    onConfirmar={handleConfirmarUploadCSV}
-                    onCancelar={handleCancelarMapeamentoCSV}
-                    tipo="EXTRATO"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
         )}
 
         {modoManual && (

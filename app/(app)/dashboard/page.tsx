@@ -230,7 +230,7 @@ export default function DashboardPage() {
                           size="sm"
                           variant="link"
                           className="text-brand p-0 h-auto ml-auto"
-                          onClick={() => router.push("/upload")}
+                          onClick={() => router.push("/importar")}
                         >
                           Fazer Upload
                         </Button>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                           size="sm"
                           variant="link"
                           className="text-brand p-0 h-auto ml-auto"
-                          onClick={() => router.push("/importacoes")}
+                          onClick={() => router.push("/importar")}
                         >
                           Importar
                         </Button>
