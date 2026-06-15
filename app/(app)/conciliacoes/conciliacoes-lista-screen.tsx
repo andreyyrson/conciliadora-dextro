@@ -9,7 +9,9 @@ import { Card } from "@/components/ui/card"
 import { Table } from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion, AnimatePresence } from "framer-motion"
-import { Eye, Trash2, CheckCircle } from "lucide-react"
+import { Eye, Trash2, CheckCircle, Pencil } from "lucide-react"
+import { TabelaComparativaConciliacao } from "./comparativo/tabela-comparativa"
+import { useComparativo } from "./comparativo/use-comparativo"
 
 interface Conciliacao {
   id: string
@@ -63,6 +65,23 @@ export function ConciliacoesListaScreen() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  const {
+    linhas,
+    pagination,
+    filtros,
+    setFiltros,
+    loading: loadingComparativo,
+    modoEdicao,
+    setModoEdicao,
+    error: errorComparativo,
+    onPageChange,
+    onSalvarErp,
+    onSalvarExtrato,
+    onDeletarErp,
+    onDeletarExtrato,
+    onAplicarFiltros,
+  } = useComparativo({ empresaId })
 
   useEffect(() => {
     if (showSuccessAnimation) {
@@ -351,10 +370,61 @@ export function ConciliacoesListaScreen() {
         </Card>
       </motion.div>
 
+      {/* Tabela Comparativa */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+      >
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Comparativo ERP x Extrato</h2>
+            <Button
+              variant={modoEdicao ? "default" : "outline"}
+              size="sm"
+              onClick={() => setModoEdicao(!modoEdicao)}
+            >
+              {modoEdicao ? (
+                <>
+                  <Eye className="w-4 h-4 mr-1" />
+                  Visualizar
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Editar
+                </>
+              )}
+            </Button>
+          </div>
+
+          {errorComparativo && (
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded mb-4">
+              {errorComparativo}
+            </div>
+          )}
+
+          <TabelaComparativaConciliacao
+            linhas={linhas}
+            modoEdicao={modoEdicao}
+            filtros={filtros}
+            onChangeFiltros={setFiltros}
+            onAplicarFiltros={onAplicarFiltros}
+            onSalvarErp={onSalvarErp}
+            onSalvarExtrato={onSalvarExtrato}
+            onDeletarErp={onDeletarErp}
+            onDeletarExtrato={onDeletarExtrato}
+            pagination={pagination}
+            onPageChange={onPageChange}
+            loading={loadingComparativo}
+          />
+        </Card>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Histórico de Conciliações</h2>
