@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { prisma } from "@/lib/db"
+import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
     const ip = req.headers.get("x-forwarded-for") || "unknown"
-    const { success, remaining, resetAt } = rateLimit(`ofx-upload:${ip}`, 5, 60 * 1000)
+    const { success, remaining, resetAt } = rateLimit(`ofx-analisar:${ip}`, 5, 60 * 1000)
 
     if (!success) {
       return NextResponse.json(
@@ -44,7 +44,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Verificar se a empresa pertence ao usuário
     const empresa = await prisma.empresa.findUnique({
       where: { id: empresaId }
     })
@@ -58,7 +57,6 @@ export async function POST(req: Request) {
 
     const content = await file.text()
 
-    // Validate OFX
     const validation = validateOFX(content)
     if (!validation.valid) {
       return NextResponse.json(
@@ -67,7 +65,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Parse OFX
     const ofxData = parseOFX(content)
 
     if (ofxData.accounts.length === 0) {
@@ -77,54 +74,55 @@ export async function POST(req: Request) {
       )
     }
 
-    // Criar ImportacaoExtrato
-    const importacao = await prisma.importacaoExtrato.create({
-      data: {
-        empresaId,
-        tipo: "OFX",
-        nomeArquivo: file.name,
-        totalLinhas: ofxData.accounts.reduce((acc, accData) => acc + accData.transactions.length, 0)
-      }
-    })
+    const totalTransacoes = ofxData.accounts.reduce(
+      (acc, accData) => acc + accData.transactions.length, 0
+    )
 
-    // Preparar todos os lançamentos de todas as contas (apenas com data válida)
-    const allTransactions = []
+    // Preview: first 50 transactions across all accounts
+    const preview: {
+      data: string
+      descricao: string
+      valor: number
+      tipo: string
+      banco: string
+      identificador: string
+    }[] = []
 
     for (const account of ofxData.accounts) {
-      for (const transaction of account.transactions) {
+      for (const transaction of account.transactions.slice(0, 50)) {
         if (!transaction.date) continue
-        allTransactions.push({
-          importacaoId: importacao.id,
-          data: transaction.date,
-          descricao: transaction.description,
-          valor: transaction.amount,
-          tipo: transaction.type === 'CREDIT' ? 'CREDITO' : 'DEBITO',
-          identificador: transaction.id,
-          banco: account.bankId || null,
-          saldoApos: null
+        preview.push({
+          data: transaction.date.toISOString().split("T")[0],
+          descricao: transaction.description || transaction.memo || "",
+          valor: Math.abs(transaction.amount),
+          tipo: transaction.type === "CREDIT" ? "CREDITO" : "DEBITO",
+          banco: account.bankId || "Não Informado",
+          identificador: transaction.id || "",
         })
+        if (preview.length >= 50) break
       }
+      if (preview.length >= 50) break
     }
-
-    // Salvar lançamentos em lote usando createMany
-    const result = await prisma.extratoImportado.createMany({
-      data: allTransactions,
-      skipDuplicates: true
-    })
 
     return NextResponse.json({
       success: true,
-      importacao: {
-        id: importacao.id,
-        tipo: importacao.tipo,
-        nomeArquivo: importacao.nomeArquivo
-      },
-      transactionsImported: result.count
+      nomeArquivo: file.name,
+      totalContas: ofxData.accounts.length,
+      totalTransacoes,
+      preview,
+      contas: ofxData.accounts.map(a => ({
+        banco: a.bankId || "Não Informado",
+        conta: a.accountId,
+        tipo: a.accountType,
+        saldo: a.balance,
+        transacoes: a.transactions.length,
+        moeda: a.currency,
+      })),
     })
   } catch (error) {
-    console.error("Erro ao processar arquivo OFX:", error)
+    console.error("Erro ao analisar arquivo OFX:", error)
     return NextResponse.json(
-      { error: "Erro ao processar arquivo OFX" },
+      { error: "Erro ao analisar arquivo OFX" },
       { status: 500 }
     )
   }

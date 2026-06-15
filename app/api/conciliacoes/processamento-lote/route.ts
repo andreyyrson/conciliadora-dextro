@@ -97,6 +97,10 @@ export async function POST(req: Request) {
     // Buscar todos os lançamentos do extrato das contas e importações
     const extratoLancamentos: (Prisma.ExtratoLancamentoGetPayload<object> | Prisma.ExtratoImportadoGetPayload<object>)[] = []
 
+    // Conjunto de ids que vêm de ExtratoImportado (importações OFX/CSV),
+    // usado para rotear a FK correta ao persistir ConciliacaoItem.
+    const importadoIds = new Set<string>()
+
     // Extratos de contas bancárias
     if (contaIds && contaIds.length > 0) {
       const extratosContas = await prisma.extratoLancamento.findMany({
@@ -110,6 +114,7 @@ export async function POST(req: Request) {
       const extratosImportados = await prisma.extratoImportado.findMany({
         where: { importacaoId: { in: importacaoIds } }
       })
+      extratosImportados.forEach(e => importadoIds.add(e.id))
       extratoLancamentos.push(...extratosImportados)
     }
 
@@ -159,10 +164,10 @@ export async function POST(req: Request) {
         status: "PENDENTE_REVISAO",
         totalErp,
         totalExtrato,
-        qtdConciliados: resultadoMatching.itens.filter(i => i.status === "AUTO_CONFIRMADO").length,
-        qtdDivergentes: resultadoMatching.itens.filter(i => i.status === "AMBIGUO" || i.status === "SUGERIDO").length,
+        qtdConciliados: resultadoMatching.itens.filter(i => i.status === "CONCILIADO" && i.autoConfirmado).length,
+        qtdDivergentes: resultadoMatching.itens.filter(i => i.status === "A_REVISAR").length,
         qtdFaltandoErp: resultadoMatching.erpsSobrando.length,
-        qtdFaltandoBanco: resultadoMatching.itens.filter(i => i.status === "SEM_MATCH").length
+        qtdFaltandoBanco: resultadoMatching.itens.filter(i => i.status === "NAO_CONCILIADO").length
       }
     })
 
@@ -170,23 +175,28 @@ export async function POST(req: Request) {
     const itensParaCriar = resultadoMatching.itens.map(item => {
       const match = item.sugestoes[0]
       
-      // Mapear status do engine para status do banco
+      // Mapear status unificado do engine para status do banco
       let statusBanco: "AUTO_CONFIRMADO" | "CONFIRMADO_MANUAL" | "REJEITADO" | "SEM_MATCH"
-      if (item.status === "AUTO_CONFIRMADO") {
+      if (item.status === "CONCILIADO" && item.autoConfirmado) {
         statusBanco = "AUTO_CONFIRMADO"
-      } else if (item.status === "SEM_MATCH") {
+      } else if (item.status === "NAO_CONCILIADO") {
         statusBanco = "SEM_MATCH"
       } else {
-        // SUGERIDO e AMBIGUO viram CONFIRMADO_MANUAL (precisam de revisão)
+        // A_REVISAR (ex-SUGERIDO/AMBIGUO) viram CONFIRMADO_MANUAL (precisam de revisão)
         statusBanco = "CONFIRMADO_MANUAL"
       }
+
+      // Rotear o id do extrato para a FK correta: extratos de contas vão em
+      // extratoId (FK -> ExtratoLancamento); extratos de importações OFX/CSV
+      // vão em extratoImportadoId (FK -> ExtratoImportado).
+      const isImportado = importadoIds.has(item.extrato.id)
 
       return {
         conciliacaoId: conciliacao.id,
         status: statusBanco,
-        extratoId: item.extrato.id,
+        extratoId: isImportado ? null : item.extrato.id,
         erpId: match?.entradaOrigemId || null,
-        extratoImportadoId: item.extrato.origem === "EXTRATO" ? item.extrato.id : null,
+        extratoImportadoId: isImportado ? item.extrato.id : null,
         diferencaValor: item.diferencaValor,
         scoreMatch: match?.score,
         confiancaMatch: match?.confianca,
@@ -206,7 +216,7 @@ export async function POST(req: Request) {
       conciliacaoId: conciliacao.id,
       status: "PENDENTE_REVISAO",
       totalItens: resultadoMatching.itens.length,
-      autoConfirmados: resultadoMatching.itens.filter(i => i.status === "AUTO_CONFIRMADO").length
+      autoConfirmados: resultadoMatching.itens.filter(i => i.status === "CONCILIADO" && i.autoConfirmado).length
     })
   } catch (error) {
     console.error("Erro ao processar lote:", error)

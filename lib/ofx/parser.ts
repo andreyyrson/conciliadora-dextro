@@ -2,7 +2,7 @@
 
 export interface OFXTransaction {
   id: string
-  date: Date
+  date: Date | null
   amount: number
   description: string
   type: "DEBIT" | "CREDIT"
@@ -92,13 +92,16 @@ export function parseOFX(content: string): OFXData {
     
     // Transaction end
     if (tag === '/STMTTRN' && currentTransaction) {
-      if (currentTransaction.id && currentTransaction.date && currentTransaction.amount !== undefined) {
+      const hasValidDate = currentTransaction.date !== undefined && currentTransaction.date !== null
+      const hasValidAmount = currentTransaction.amount !== undefined && !isNaN(currentTransaction.amount)
+      if (currentTransaction.id && hasValidDate && hasValidAmount) {
+        const amount = currentTransaction.amount as number
         currentTransactions.push({
           id: currentTransaction.id,
-          date: currentTransaction.date,
-          amount: currentTransaction.amount,
+          date: currentTransaction.date as Date,
+          amount,
           description: currentTransaction.description || currentTransaction.memo || '',
-          type: currentTransaction.type || (currentTransaction.amount < 0 ? 'DEBIT' : 'CREDIT'),
+          type: currentTransaction.type || (amount < 0 ? 'DEBIT' : 'CREDIT'),
           memo: currentTransaction.memo,
           checkNumber: currentTransaction.checkNumber
         })
@@ -142,11 +145,13 @@ export function parseOFX(content: string): OFXData {
 /**
  * Parse OFX date format (YYYYMMDDHHMMSS)
  */
-function parseOFXDate(dateStr: string): Date {
+function parseOFXDate(dateStr: string): Date | null {
+  if (!dateStr || dateStr.trim().length === 0) return null
+
   // OFX dates can be in various formats
   // Common format: YYYYMMDDHHMMSS[.sss]
-  const cleanDate = dateStr.replace(/\[.*\]/, '').replace(/\..*$/, '')
-  
+  const cleanDate = dateStr.replace(/\[.*\]/, '').replace(/\..*$/, '').trim()
+
   if (cleanDate.length >= 8) {
     const year = parseInt(cleanDate.substring(0, 4))
     const month = parseInt(cleanDate.substring(4, 6)) - 1
@@ -154,11 +159,15 @@ function parseOFXDate(dateStr: string): Date {
     const hour = cleanDate.length >= 10 ? parseInt(cleanDate.substring(8, 10)) : 0
     const minute = cleanDate.length >= 12 ? parseInt(cleanDate.substring(10, 12)) : 0
     const second = cleanDate.length >= 14 ? parseInt(cleanDate.substring(12, 14)) : 0
-    
-    return new Date(year, month, day, hour, minute, second)
+
+    const d = new Date(year, month, day, hour, minute, second)
+    // Verificar se a data é válida
+    if (!isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+      return d
+    }
   }
-  
-  return new Date()
+
+  return null
 }
 
 /**

@@ -70,9 +70,9 @@ describe("parseOFX", () => {
     expect(txn.type).toBe("DEBIT")
     expect(txn.amount).toBe(-150)
     expect(txn.description).toBe("Pagamento fornecedor")
-    expect(txn.date.getFullYear()).toBe(2024)
-    expect(txn.date.getMonth()).toBe(0) // Janeiro = 0
-    expect(txn.date.getDate()).toBe(15)
+    expect(txn.date!.getFullYear()).toBe(2024)
+    expect(txn.date!.getMonth()).toBe(0) // Janeiro = 0
+    expect(txn.date!.getDate()).toBe(15)
   })
 
   it("deve parsear transação CREDIT corretamente", () => {
