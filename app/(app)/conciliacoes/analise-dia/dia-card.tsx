@@ -157,7 +157,7 @@ export function DiaCard({ dia, expandido, onToggle }: DiaCardProps) {
                 <TransacoesTabela titulo="Lançamentos ERP" icon={Building2} transacoes={dia.transacoesErp} />
                 <TransacoesTabela titulo="Extrato Bancário" icon={Calendar} transacoes={dia.transacoesExtrato} />
 
-                <MatchesDetalhe matches={dia.matches} />
+                <MatchesDetalhe matches={dia.matches} diaData={dia.data} />
               </div>
             </motion.div>
           )}
