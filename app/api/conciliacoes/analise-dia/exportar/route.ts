@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import * as XLSX from "xlsx"
+import { runDailyMatching } from "@/lib/conciliacao"
 
 export async function GET(req: Request) {
   try {
@@ -152,47 +153,60 @@ export async function GET(req: Request) {
       }
     })
 
-    // === ABA 4: Diferença por Banco ===
-    const bancos = new Set<string>()
-    erpLancamentos.forEach(l => bancos.add(l.banco || "Não Informado"))
-    extratoLancamentos.forEach(l => bancos.add(contaMap.get(l.contaId) || l.banco || "Não Informado"))
-    extratosImportados.forEach(l => bancos.add(l.banco || "Não Informado"))
-
-    const bancosOrdenados = Array.from(bancos).sort()
-
-    const diferencaBancoRows = diasOrdenados.flatMap(dataKey => {
+    // === ABA 4: Não Conciliados (extratos sem correspondência no ERP) ===
+    const naoConciliadosRows = diasOrdenados.flatMap(dataKey => {
       const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
 
-      return bancosOrdenados.map(banco => {
-        const erpBanco = erpDia.filter(l => (l.banco || "Não Informado") === banco)
-        const extBancarioBanco = extBancarioDia.filter(l => (contaMap.get(l.contaId) || l.banco || "Não Informado") === banco)
-        const extImportadoBanco = extImportadoDia.filter(l => (l.banco || "Não Informado") === banco)
+      const erpTxs = erpDia.map(e => ({
+        id: e.id,
+        data: e.data,
+        descricao: e.descricao,
+        valor: Number(e.valor),
+        tipo: e.tipo,
+        documento: e.documento,
+        fornecedor: e.fornecedor,
+        banco: e.banco,
+        categoria: e.categoria,
+      }))
 
-        const entradasErp = erpBanco.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
-        const saidasErp = erpBanco.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
-        const entradasExtrato = [...extBancarioBanco, ...extImportadoBanco].filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
-        const saidasExtrato = [...extBancarioBanco, ...extImportadoBanco].filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
+      const extTxs = [
+        ...extBancarioDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco || contaMap.get(e.contaId) || null,
+        })),
+        ...extImportadoDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO_IMPORTADO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco,
+        })),
+      ]
 
-        const saldoErp = entradasErp - saidasErp
-        const saldoExtrato = entradasExtrato - saidasExtrato
+      const { matching } = runDailyMatching(erpTxs, extTxs)
 
-        // Só incluir linha se houver algum dado para este banco neste dia
-        if (erpBanco.length === 0 && extBancarioBanco.length === 0 && extImportadoBanco.length === 0) return null
-
-        return {
-          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
-          Banco: banco,
-          "Entradas ERP": entradasErp,
-          "Saídas ERP": saidasErp,
-          "Saldo ERP": saldoErp,
-          "Entradas Extrato": entradasExtrato,
-          "Saídas Extrato": saidasExtrato,
-          "Saldo Extrato": saldoExtrato,
-          "Diferença Saldo": saldoExtrato - saldoErp
-        }
-      }).filter(Boolean) as Record<string, string | number>[]
+      return matching.extratosSobrando.map(ex => ({
+        Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+        Descricao: ex.descricao,
+        Valor: ex.valor,
+        Tipo: ex.tipo === "CREDITO" ? "Entrada" : "Saída",
+        Origem: ex.origem === "EXTRATO" ? "Extrato Bancário" : "Extrato Importado",
+        Banco: ex.banco || "",
+        Identificador: ex.identificador || "",
+      }))
     })
 
     const workbook = XLSX.utils.book_new()
@@ -224,13 +238,13 @@ export async function GET(req: Request) {
       XLSX.utils.book_append_sheet(workbook, wsResumo, "Resumo Diário")
     }
 
-    // Aba Diferença por Banco
-    if (diferencaBancoRows.length > 0) {
-      const wsDif = XLSX.utils.json_to_sheet(diferencaBancoRows)
-      wsDif["!cols"] = [
-        { wch: 12 }, { wch: 25 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }
+    // Aba Não Conciliados
+    if (naoConciliadosRows.length > 0) {
+      const wsNao = XLSX.utils.json_to_sheet(naoConciliadosRows)
+      wsNao["!cols"] = [
+        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 25 }
       ]
-      XLSX.utils.book_append_sheet(workbook, wsDif, "Diferença por Banco")
+      XLSX.utils.book_append_sheet(workbook, wsNao, "Não Conciliados")
     }
 
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })

@@ -178,6 +178,7 @@ export interface MatchSummary {
   naoConciliados: number
   erpsSobrando: number
   detalhes: MatchDetail[]
+  erpsSobrandoDetalhes: { id: string; descricao: string; valor: number; tipo: string }[]
 }
 
 export interface MatchDetail {

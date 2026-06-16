@@ -141,7 +141,13 @@ export async function POST(req: Request) {
           aRevisar: matching.itens.filter(i => i.status === "A_REVISAR").length,
           naoConciliados: matching.erpsSobrando.length + matching.extratosSobrando.length,
           erpsSobrando: matching.erpsSobrando.length,
-          detalhes: []
+          detalhes: [],
+          erpsSobrandoDetalhes: matching.erpsSobrando.map(e => ({
+            id: e.id,
+            descricao: e.descricao,
+            valor: e.valor,
+            tipo: e.tipo,
+          })),
         }
       }
     })
