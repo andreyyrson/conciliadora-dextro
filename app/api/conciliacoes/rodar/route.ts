@@ -105,6 +105,9 @@ export async function POST(req: Request) {
       const totalDebitoExtrato = extDia.filter(e => e.tipo === "DEBITO").reduce((s, e) => s + Number(e.valor), 0)
       const totalCreditoExtrato = extDia.filter(e => e.tipo === "CREDITO").reduce((s, e) => s + Number(e.valor), 0)
 
+      const diferencaDebito = Math.abs(totalDebitoErp - totalDebitoExtrato)
+      const diferencaCredito = Math.abs(totalCreditoErp - totalCreditoExtrato)
+
       const statusDia = calculateStatus({
         qtdErp: erpDia.length,
         qtdExtrato: extDia.length,
@@ -113,8 +116,8 @@ export async function POST(req: Request) {
         totalCreditoErp,
         totalDebitoExtrato,
         totalCreditoExtrato,
-        diferencaDebito: Math.abs(totalDebitoErp - totalDebitoExtrato),
-        diferencaCredito: Math.abs(totalCreditoErp - totalCreditoExtrato),
+        diferencaDebito,
+        diferencaCredito,
       })
 
       return {
@@ -131,6 +134,8 @@ export async function POST(req: Request) {
         statusDia,
         qtdErp: erpDia.length,
         qtdExtrato: extDia.length,
+        diferencaDebito,
+        diferencaCredito,
         matches: {
           conciliados: matching.itens.filter(i => i.status === "CONCILIADO").length,
           aRevisar: matching.itens.filter(i => i.status === "A_REVISAR").length,
