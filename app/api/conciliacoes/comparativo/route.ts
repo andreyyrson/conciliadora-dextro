@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/app/(app)/conciliacoes/comparativo/use-comparativo"
+import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/lib/conciliacao/comparativo-types"
 import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 
 export async function GET(req: Request) {
