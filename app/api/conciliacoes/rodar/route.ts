@@ -134,7 +134,7 @@ export async function POST(req: Request) {
         matches: {
           conciliados: matching.itens.filter(i => i.status === "CONCILIADO").length,
           aRevisar: matching.itens.filter(i => i.status === "A_REVISAR").length,
-          naoConciliados: matching.itens.filter(i => i.status === "NAO_CONCILIADO").length,
+          naoConciliados: matching.erpsSobrando.length + matching.extratosSobrando.length,
           erpsSobrando: matching.erpsSobrando.length,
           detalhes: []
         }

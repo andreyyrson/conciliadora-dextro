@@ -49,23 +49,9 @@ export function buildDia(
   const matches: MatchSummary = {
     conciliados: matching.itens.filter(i => i.status === "CONCILIADO").length,
     aRevisar: matching.itens.filter(i => i.status === "A_REVISAR").length,
-    naoConciliados: matching.itens.filter(i => i.status === "NAO_CONCILIADO").length,
+    naoConciliados: matching.erpsSobrando.length + matching.extratosSobrando.length,
     erpsSobrando: matching.erpsSobrando.length,
-    detalhes: matching.itens.map(i => ({
-      extratoId: i.extrato.id,
-      extratoDescricao: i.extrato.descricao,
-      extratoValor: i.extrato.valor,
-      status: i.status,
-      confianca: i.confianca,
-      score: i.sugestoes[0]?.score || 0,
-      erpPareado: i.erpPareado ? {
-        id: i.erpPareado.id,
-        descricao: i.erpPareado.descricao,
-        valor: i.erpPareado.valor
-      } : null,
-      diferencaValor: i.diferencaValor,
-      explicacoes: i.sugestoes[0]?.explicacoes || []
-    }))
+    detalhes: []
   }
 
   return {

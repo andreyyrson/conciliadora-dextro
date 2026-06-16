@@ -25,8 +25,7 @@ export function calculateStatus({
 
   const temConciliado = matching.itens.some(i => i.status === "CONCILIADO")
   const temARevisar = matching.itens.some(i => i.status === "A_REVISAR")
-  const temNaoConciliado = matching.itens.some(i => i.status === "NAO_CONCILIADO")
-  const temErpsSobrando = matching.erpsSobrando.length > 0
+  const temErpsSobrando = matching.erpsSobrando.length > 0 || matching.extratosSobrando.length > 0
 
   if (qtdErp === 0 && qtdExtrato === 0) {
     return "SEM_DADOS"
@@ -37,7 +36,7 @@ export function calculateStatus({
     return "A_REVISAR"
   }
 
-  if (temNaoConciliado || temErpsSobrando) {
+  if (temErpsSobrando || diferencaDebito > tolerancia || diferencaCredito > tolerancia) {
     return "NAO_CONCILIADO"
   }
 
