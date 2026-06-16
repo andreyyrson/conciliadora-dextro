@@ -418,6 +418,7 @@ export function ConciliacoesListaScreen() {
             pagination={pagination}
             onPageChange={onPageChange}
             loading={loadingComparativo}
+            empresaId={empresaId}
           />
         </Card>
       </motion.div>
