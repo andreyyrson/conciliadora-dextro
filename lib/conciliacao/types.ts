@@ -30,6 +30,29 @@ function normalizeDescricao(s?: string | null): string {
   return noAccents.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
 }
 
+function tokenSet(str: string): Set<string> {
+  return new Set(str.split(" ").filter(t => t.length >= 3))
+}
+
+function jaccardSimilarity(a: string, b: string): number {
+  const A = tokenSet(a)
+  const B = tokenSet(b)
+  if (A.size === 0 && B.size === 0) return 1
+  let inter = 0
+  for (const t of A) if (B.has(t)) inter++
+  const uni = A.size + B.size - inter
+  return uni === 0 ? 0 : inter / uni
+}
+
+function descricaoParecida(a: string, b: string): boolean {
+  if (!a || !b) return false
+  // match se inclusão direta com comprimento mínimo
+  if (a.length >= 8 && b.includes(a)) return true
+  if (b.length >= 8 && a.includes(b)) return true
+  // ou similaridade de Jaccard por tokens
+  return jaccardSimilarity(a, b) >= 0.6
+}
+
 function isSameDay(d1: Date, d2: Date): boolean {
   return d1.getUTCFullYear() === d2.getUTCFullYear() && d1.getUTCMonth() === d2.getUTCMonth() && d1.getUTCDate() === d2.getUTCDate()
 }
@@ -83,7 +106,7 @@ export function gerarSugestoes(erps: EntradaConciliacao[], extratos: EntradaConc
       const normEx = normalizeDescricao(ex.descricao)
       const mValor = valorIgual(erp.valor, ex.valor) ? 1 : 0
       const mData = isSameDay(erp.data, ex.data) || isNextBusinessDay(erp.data, ex.data) ? 1 : 0
-      const mDesc = normErp.length > 0 && normErp === normEx ? 1 : 0
+      const mDesc = normErp.length > 0 && descricaoParecida(normErp, normEx) ? 1 : 0
       const score = mValor + mData + mDesc
       if (score < 2) continue
       const three = score === 3
