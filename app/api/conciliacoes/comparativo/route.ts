@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/app/(app)/conciliacoes/comparativo/use-comparativo"
+import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 
 export async function GET(req: Request) {
   try {
@@ -44,39 +45,38 @@ export async function GET(req: Request) {
       prisma.extratoImportado.findMany({ where: { importacaoId: { in: importacaoIds }, data: { gte: inicio, lte: fim } } }),
     ])
 
-    // Juntar extratos abertos e importados numa só lista normalizada
-    const extsAll = [
-      ...extLanc.map(l => ({ id: l.id, data: l.data.toISOString(), descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, identificador: l.identificador || null, banco: l.banco || null, saldoApos: l.saldoApos != null ? Number(l.saldoApos) : null })),
-      ...impLanc.map(l => ({ id: l.id, data: l.data.toISOString(), descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, identificador: l.identificador || null, banco: l.banco || null, saldoApos: l.saldoApos != null ? Number(l.saldoApos) : null })),
-    ] as unknown as ExtratoLancamento[]
+    // Preparar dias e rodar matching diário com regra 2-de-3 (implementada em gerarSugestoes)
+    const diasSet = new Set<string>()
+    erpLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
+    extLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
+    impLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
+    const datasOrdenadas = Array.from(diasSet).sort()
 
-    const erpsAll = erpLanc.map(l => ({ id: l.id, data: l.data.toISOString(), descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, documento: l.documento || null, fornecedor: l.fornecedor || null, categoria: l.categoria || null, centroCusto: null, banco: l.banco || null, upload: undefined })) as unknown as ErpLancamento[]
-
-    const mapa = new Map<string, { erps: ErpLancamento[]; exts: ExtratoLancamento[] }>()
-    for (const e of erpsAll) {
-      const key = (e.data as string).split('T')[0]
-      if (!mapa.has(key)) mapa.set(key, { erps: [], exts: [] })
-      mapa.get(key)!.erps.push(e)
-    }
-    for (const e of extsAll) {
-      const key = (e.data as string).split('T')[0]
-      if (!mapa.has(key)) mapa.set(key, { erps: [], exts: [] })
-      mapa.get(key)!.exts.push(e)
-    }
+    const toErpTx = (l: typeof erpLanc[number]) => ({ id: l.id, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, documento: l.documento, fornecedor: l.fornecedor, banco: l.banco, categoria: l.categoria })
+    const toExtTx = (l: typeof extLanc[number] | typeof impLanc[number]) => ({ id: l.id, origem: "EXTRATO" as const, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, saldoApos: (l as any).saldoApos != null ? Number((l as any).saldoApos) : null, identificador: (l as any).identificador || null, banco: (l as any).banco || null })
 
     const linhas: LinhaComparativa[] = []
-    const datasOrdenadas = Array.from(mapa.keys()).sort()
     for (const dataKey of datasOrdenadas) {
-      const { erps, exts } = mapa.get(dataKey)!
-      const maxLen = Math.max(erps.length, exts.length)
-      for (let i = 0; i < maxLen; i++) {
-        const erpItem = erps[i] || null
-        const extItem = exts[i] || null
-        let status: LinhaComparativa['status'] = 'match'
-        if (!erpItem) status = 'sobra_extrato'
-        else if (!extItem) status = 'sobra_erp'
-        else if (Math.abs((erpItem as any).valor - (extItem as any).valor) > 0.01 || (erpItem as any).tipo !== (extItem as any).tipo) status = 'divergente'
-        linhas.push({ data: dataKey, erp: erpItem as any, extrato: extItem as any, status })
+      const erpDia = erpLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toErpTx)
+      const extDia = [
+        ...extLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toExtTx),
+        ...impLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toExtTx),
+      ]
+      const { matching } = runDailyMatching(erpDia as any, extDia as any)
+
+      for (const it of matching.itens) {
+        linhas.push({
+          data: dataKey,
+          erp: it.erp ? { id: it.erp.id, data: it.erp.data.toISOString(), descricao: it.erp.descricao, valor: it.erp.valor, tipo: it.erp.tipo, documento: it.erp.documento || null, fornecedor: it.erp.fornecedor || null, categoria: it.erp.categoria || null, centroCusto: null, banco: it.erp.banco || null, upload: undefined } : null,
+          extrato: it.extrato ? { id: it.extrato.id, data: it.extrato.data.toISOString(), descricao: it.extrato.descricao, valor: it.extrato.valor, tipo: it.extrato.tipo, identificador: it.extrato.identificador || null, banco: it.extrato.banco || null, saldoApos: null, importacao: undefined } : null,
+          status: it.status === 'CONCILIADO' ? 'match' : 'divergente',
+        })
+      }
+      for (const sobra of matching.erpsSobrando) {
+        linhas.push({ data: dataKey, erp: { id: sobra.id, data: sobra.data.toISOString(), descricao: sobra.descricao, valor: sobra.valor, tipo: sobra.tipo, documento: sobra.documento || null, fornecedor: sobra.fornecedor || null, categoria: sobra.categoria || null, centroCusto: null, banco: sobra.banco || null, upload: undefined }, extrato: null, status: 'sobra_erp' })
+      }
+      for (const sobra of matching.extratosSobrando) {
+        linhas.push({ data: dataKey, erp: null, extrato: { id: sobra.id, data: sobra.data.toISOString(), descricao: sobra.descricao, valor: sobra.valor, tipo: sobra.tipo, identificador: sobra.identificador || null, banco: sobra.banco || null, saldoApos: null, importacao: undefined }, status: 'sobra_extrato' })
       }
     }
 
