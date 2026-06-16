@@ -243,7 +243,7 @@ export function TabelaComparativaConciliacao({
               <TableHead colSpan={modoEdicao ? 6 : 5} className="text-center bg-blue-500/5 border-l border-r border-border">
                 ERP do Sistema
               </TableHead>
-              <TableHead colSpan={modoEdicao ? 6 : 5} className="text-center bg-purple-500/5">
+              <TableHead colSpan={modoEdicao ? 7 : 6} className="text-center bg-purple-500/5">
                 Extrato Bancário
               </TableHead>
             </TableRow>
@@ -259,6 +259,7 @@ export function TabelaComparativaConciliacao({
               <TableHead className="text-xs">Descrição</TableHead>
               <TableHead className="text-xs text-right">Valor</TableHead>
               <TableHead className="text-xs">Tipo</TableHead>
+              <TableHead className="text-xs">Data (Extrato)</TableHead>
               <TableHead className="text-xs">Identificador</TableHead>
               <TableHead className="text-xs">Banco</TableHead>
               {modoEdicao && <TableHead className="text-xs text-right">Ações</TableHead>}
@@ -267,7 +268,7 @@ export function TabelaComparativaConciliacao({
           <TableBody>
             {linhas.map((linha) => {
               const erpEditando = modoEdicao && editandoId === linha.erp?.id && editandoLado === "erp"
-              const extEditando = modoEdicao && editandoId === linha.extrato?.id && editandoLado === "extrato"
+              const extEditando = false
               return (
                 <TableRow key={`${linha.data}-${linha.erp?.id || ""}-${linha.extrato?.id || ""}`} className={`border-b border-border ${statusRowBg(linha.status)}`}>
                   <TableCell className="py-2">{statusBadge(linha.status)}</TableCell>
@@ -345,65 +346,34 @@ export function TabelaComparativaConciliacao({
                   {linha.extrato ? (
                     <>
                       <TableCell className="py-2 text-sm">
-                        {extEditando ? (
-                          <Input value={String(form.descricao || "")} onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))} className="h-7 text-sm" />
-                        ) : (
-                          <span className="truncate max-w-[160px] inline-block" title={linha.extrato.descricao}>{linha.extrato.descricao}</span>
-                        )}
+                        <span className="truncate max-w-[160px] inline-block" title={linha.extrato.descricao}>{linha.extrato.descricao}</span>
                       </TableCell>
                       <TableCell className="py-2 text-sm text-right">
-                        {extEditando ? (
-                          <Input type="number" step="0.01" value={String(form.valor ?? "")} onChange={(e) => setForm((f) => ({ ...f, valor: parseFloat(e.target.value) }))} className="h-7 text-sm text-right" />
-                        ) : (
-                          <span className={`font-medium ${linha.extrato.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>R$ {formatarValor(linha.extrato.valor)}</span>
-                        )}
+                        <span className={`font-medium ${linha.extrato.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>R$ {formatarValor(linha.extrato.valor)}</span>
                       </TableCell>
                       <TableCell className="py-2">
-                        {extEditando ? (
-                          <Select value={String(form.tipo || "")} onValueChange={(v) => setForm((f) => ({ ...f, tipo: v }))}>
-                            <SelectTrigger className="h-7 text-xs w-[80px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="DEBITO">DÉBITO</SelectItem>
-                              <SelectItem value="CREDITO">CRÉDITO</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${linha.extrato.tipo === "DEBITO" ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"}`}>{linha.extrato.tipo}</span>
-                        )}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${linha.extrato.tipo === "DEBITO" ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"}`}>{linha.extrato.tipo}</span>
+                      </TableCell>
+                      <TableCell className="py-2 text-sm text-muted-foreground whitespace-nowrap">
+                        {formatarData(linha.extrato.data)}
                       </TableCell>
                       <TableCell className="py-2 text-sm text-muted-foreground">
-                        {extEditando ? (
-                          <Input value={String(form.identificador ?? "")} onChange={(e) => setForm((f) => ({ ...f, identificador: e.target.value || null }))} className="h-7 text-sm" />
-                        ) : (
-                          linha.extrato.identificador || "—"
-                        )}
+                        {linha.extrato.identificador || "—"}
                       </TableCell>
                       <TableCell className="py-2 text-sm text-muted-foreground">
-                        {extEditando ? (
-                          <Input value={String(form.banco ?? "")} onChange={(e) => setForm((f) => ({ ...f, banco: e.target.value || null }))} className="h-7 text-sm" />
-                        ) : (
-                          linha.extrato.banco || "—"
-                        )}
+                        {linha.extrato.banco || "—"}
                       </TableCell>
                       {modoEdicao && (
                         <TableCell className="py-2 text-right">
-                          {extEditando ? (
-                            <div className="flex items-center justify-end gap-1">
-                              <Button size="sm" variant="ghost" onClick={salvar} disabled={salvando} className="h-6 w-6 p-0"><Save className="w-3.5 h-3.5 text-green-500" /></Button>
-                              <Button size="sm" variant="ghost" onClick={cancelarEdicao} disabled={salvando} className="h-6 w-6 p-0"><X className="w-3.5 h-3.5 text-muted-foreground" /></Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => iniciarEdicao(linha.extrato!.id, "extrato", linha.extrato!)} className="h-6 w-6 p-0"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></Button>
-                              <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.extrato!.id, lado: "extrato" })} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
-                            </div>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.extrato!.id, lado: "extrato" })} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                          </div>
                         </TableCell>
                       )}
                     </>
                   ) : (
                     <>
-                      <TableCell colSpan={modoEdicao ? 6 : 5} className="py-2 text-center text-muted-foreground text-xs">
+                      <TableCell colSpan={modoEdicao ? 7 : 6} className="py-2 text-center text-muted-foreground text-xs">
                         — Sem correspondência Extrato —
                       </TableCell>
                     </>

@@ -41,12 +41,12 @@ describe("useComparativo", () => {
 
     // carregar
     await act(async () => {
-      await result.current.refetch()
+      await result.current.fetchDados()
     })
 
     // editar ERP
     await act(async () => {
-      await result.current.onEditErp("erp1", { descricao: "Nova" })
+      await result.current.onSalvarErp("erp1", { descricao: "Nova" })
     })
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/erp\/lancamentos\/erp1/),
@@ -55,7 +55,7 @@ describe("useComparativo", () => {
 
     // deletar extrato
     await act(async () => {
-      await result.current.onDeleteExtrato("ext1")
+      await result.current.onDeletarExtrato("ext1")
     })
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/importacoes\/lancamentos\/ext1/),
