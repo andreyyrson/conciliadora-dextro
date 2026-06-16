@@ -35,6 +35,7 @@ export interface MatchDia {
   naoConciliados: number
   erpsSobrando: number
   detalhes: MatchDetalhe[]
+  erpsSobrandoDetalhes: { id: string; descricao: string; valor: number; tipo: string }[]
 }
 
 export interface DiaAnalise {

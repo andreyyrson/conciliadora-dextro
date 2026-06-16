@@ -108,51 +108,32 @@ describe("Exportacao Analise Dia — mocked", () => {
       }
     })
 
-    // Aba 4: Diferença por Banco
-    const bancos = new Set<string>()
-    erpLancamentos.forEach(l => bancos.add(l.banco || "Não Informado"))
-    extratoLancamentos.forEach(l => bancos.add(l.banco || "Não Informado"))
-    extratosImportados.forEach(l => bancos.add(l.banco || "Não Informado"))
-    const bancosOrdenados = Array.from(bancos).sort()
-
-    const diferencaBancoRows = diasOrdenados.flatMap(dataKey => {
-      const erpDia = erpLancamentos.filter(l => iso(l.data) === dataKey)
+    // Aba 4: Não Conciliados (simulado: importados como sobras + extrato dia 03 sem ERP)
+    const naoConciliadosRows = diasOrdenados.flatMap(dataKey => {
       const extDia = extratoLancamentos.filter(l => iso(l.data) === dataKey)
       const impDia = extratosImportados.filter(l => iso(l.data) === dataKey)
+      const erpDia = erpLancamentos.filter(l => iso(l.data) === dataKey)
 
-      return bancosOrdenados.map(banco => {
-        const erpBanco = erpDia.filter(l => (l.banco || "Não Informado") === banco)
-        const extBanco = extDia.filter(l => (l.banco || "Não Informado") === banco)
-        const impBanco = impDia.filter(l => (l.banco || "Não Informado") === banco)
+      const sobras = [...extDia, ...impDia].filter(ext => {
+        // Simulação simples: sobra se não houver ERP com mesmo valor e tipo
+        return !erpDia.some(erp => erp.tipo === ext.tipo && Math.abs(Number(erp.valor) - Number(ext.valor)) < 0.01)
+      })
 
-        const entradasErp = erpBanco.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
-        const saidasErp = erpBanco.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
-        const entradasExtrato = [...extBanco, ...impBanco].filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
-        const saidasExtrato = [...extBanco, ...impBanco].filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
-
-        const saldoErp = entradasErp - saidasErp
-        const saldoExtrato = entradasExtrato - saidasExtrato
-
-        if (erpBanco.length === 0 && extBanco.length === 0 && impBanco.length === 0) return null
-
-        return {
-          Data: fmt(new Date(dataKey + "T12:00:00Z")),
-          Banco: banco,
-          "Entradas ERP": entradasErp,
-          "Saídas ERP": saidasErp,
-          "Saldo ERP": saldoErp,
-          "Entradas Extrato": entradasExtrato,
-          "Saídas Extrato": saidasExtrato,
-          "Saldo Extrato": saldoExtrato,
-          "Diferença Saldo": saldoExtrato - saldoErp,
-        }
-      }).filter(Boolean) as Record<string, string | number>[]
+      return sobras.map(ex => ({
+        Data: fmt(new Date(dataKey + "T12:00:00Z")),
+        Descricao: ex.descricao,
+        Valor: Number(ex.valor),
+        Tipo: ex.tipo === "CREDITO" ? "Entrada" : "Saída",
+        Origem: ("contaId" in ex) ? "Extrato Bancário" : "Extrato Importado",
+        Banco: ex.banco || ("contaId" in ex ? "Banco Teste" : ""),
+        Identificador: ex.identificador || "",
+      }))
     })
 
     expect(extratoRows).toHaveLength(5)
     expect(erpRows).toHaveLength(3)
     expect(resumoRows).toHaveLength(3)
-    expect(diferencaBancoRows.length).toBeGreaterThan(0)
+    expect(naoConciliadosRows.length).toBeGreaterThan(0)
 
     const resumoDia1 = resumoRows.find(r => r.Data === "01/06/2026")
     expect(resumoDia1).toBeDefined()
@@ -167,7 +148,7 @@ describe("Exportacao Analise Dia — mocked", () => {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(extratoRows), "Extrato Bancário")
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(erpRows), "ERP (Relatório)")
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumoRows), "Resumo Diário")
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(diferencaBancoRows), "Diferença por Banco")
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(naoConciliadosRows), "Não Conciliados")
 
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
     expect(buffer.length).toBeGreaterThan(0)
@@ -176,7 +157,7 @@ describe("Exportacao Analise Dia — mocked", () => {
     expect(wbRead.SheetNames).toContain("Extrato Bancário")
     expect(wbRead.SheetNames).toContain("ERP (Relatório)")
     expect(wbRead.SheetNames).toContain("Resumo Diário")
-    expect(wbRead.SheetNames).toContain("Diferença por Banco")
+    expect(wbRead.SheetNames).toContain("Não Conciliados")
   })
 })
 

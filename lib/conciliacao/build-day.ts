@@ -77,6 +77,12 @@ export function buildDia(
     naoConciliados: matching.erpsSobrando.length + matching.extratosSobrando.length,
     erpsSobrando: matching.erpsSobrando.length,
     detalhes,
+    erpsSobrandoDetalhes: matching.erpsSobrando.map(e => ({
+      id: e.id,
+      descricao: e.descricao,
+      valor: e.valor,
+      tipo: e.tipo,
+    })),
   }
 
   return {

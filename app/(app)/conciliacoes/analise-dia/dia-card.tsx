@@ -36,8 +36,19 @@ interface TabelaComparativaDiaProps {
 }
 
 function TabelaComparativaDia({ dia }: TabelaComparativaDiaProps) {
-  const maxRows = Math.max(dia.transacoesErp.length, dia.transacoesExtrato.length)
-  if (maxRows === 0) return null
+  const { detalhes, erpsSobrandoDetalhes } = dia.matches
+  const totalLinhas = detalhes.length + erpsSobrandoDetalhes.length
+  if (totalLinhas === 0) return null
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, { label: string; color: string }> = {
+      CONCILIADO: { label: "Conciliado", color: "text-green-500" },
+      A_REVISAR: { label: "A revisar", color: "text-yellow-500" },
+      NAO_CONCILIADO: { label: "Não conciliado", color: "text-red-500" },
+    }
+    const s = map[status] || { label: status, color: "text-muted-foreground" }
+    return <span className={`text-xs font-semibold ${s.color}`}>{s.label}</span>
+  }
 
   return (
     <div>
@@ -46,39 +57,57 @@ function TabelaComparativaDia({ dia }: TabelaComparativaDiaProps) {
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="p-2 text-left border-r border-border w-1/4">ERP — Descrição</th>
-              <th className="p-2 text-right border-r border-border w-[100px]">Valor</th>
-              <th className="p-2 text-left border-r border-border w-1/4">Extrato — Descrição</th>
-              <th className="p-2 text-right w-[100px]">Valor</th>
+              <th className="p-2 text-left border-r border-border w-[30%]">ERP — Descrição</th>
+              <th className="p-2 text-right border-r border-border w-[90px]">Valor</th>
+              <th className="p-2 text-left border-r border-border w-[30%]">Extrato — Descrição</th>
+              <th className="p-2 text-right border-r border-border w-[90px]">Valor</th>
+              <th className="p-2 text-center w-[100px]">Status</th>
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: maxRows }).map((_, i) => {
-              const erp = dia.transacoesErp[i]
-              const ext = dia.transacoesExtrato[i]
-              return (
-                <tr key={i} className="border-b border-border">
-                  <td className="p-2 border-r border-border text-muted-foreground">
-                    {erp ? <span className="text-foreground">{erp.descricao}</span> : <span className="text-xs italic">—</span>}
-                  </td>
-                  <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${erp?.tipo === "DEBITO" ? "text-red-500" : erp ? "text-green-500" : ""}`}>
-                    {erp ? `R$ ${formatarValor(erp.valor)}` : "—"}
-                  </td>
-                  <td className="p-2 border-r border-border text-muted-foreground">
-                    {ext ? <span className="text-foreground">{ext.descricao}</span> : <span className="text-xs italic">—</span>}
-                  </td>
-                  <td className={`p-2 text-right font-medium tabular-nums ${ext?.tipo === "DEBITO" ? "text-red-500" : ext ? "text-green-500" : ""}`}>
-                    {ext ? `R$ ${formatarValor(ext.valor)}` : "—"}
-                  </td>
-                </tr>
-              )
-            })}
+            {detalhes.map((m) => (
+              <tr key={m.extratoId} className="border-b border-border">
+                <td className="p-2 border-r border-border">
+                  {m.erpPareado ? (
+                    <span className="text-foreground">{m.erpPareado.descricao}</span>
+                  ) : (
+                    <span className="text-xs italic text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? (m.erpPareado.valor < 0 ? "text-red-500" : "text-foreground") : ""}`}>
+                  {m.erpPareado ? `R$ ${formatarValor(m.erpPareado.valor)}` : "—"}
+                </td>
+                <td className="p-2 border-r border-border">
+                  <span className="text-foreground">{m.extratoDescricao}</span>
+                </td>
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.extratoValor < 0 ? "text-red-500" : "text-foreground"}`}>
+                  R$ {formatarValor(m.extratoValor)}
+                </td>
+                <td className="p-2 text-center">{statusBadge(m.status)}</td>
+              </tr>
+            ))}
+            {erpsSobrandoDetalhes.map((e) => (
+              <tr key={e.id} className="border-b border-border bg-red-500/5">
+                <td className="p-2 border-r border-border">
+                  <span className="text-foreground">{e.descricao}</span>
+                </td>
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${e.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
+                  R$ {formatarValor(e.valor)}
+                </td>
+                <td className="p-2 border-r border-border">
+                  <span className="text-xs italic text-muted-foreground">—</span>
+                </td>
+                <td className="p-2 border-r border-border text-right text-muted-foreground">—</td>
+                <td className="p-2 text-center">{statusBadge("NAO_CONCILIADO")}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
-        <span>{dia.transacoesErp.length} lançamento(s) ERP</span>
-        <span>{dia.transacoesExtrato.length} lançamento(s) Extrato</span>
+        <span>{detalhes.filter(d => d.erpPareado).length} pareamento(s)</span>
+        <span>{detalhes.filter(d => !d.erpPareado).length} extrato(s) sem ERP</span>
+        <span>{erpsSobrandoDetalhes.length} ERP(s) sem extrato</span>
       </div>
     </div>
   )
@@ -230,11 +259,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   </div>
                 </div>
 
-                <TabelaComparativaDia dia={dia} />
-
-                <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
-
-                {/* Resumo de diferenças */}
+                {/* Resumo de diferenças — no topo */}
                 <div className={`p-3 rounded border border-border ${status.bg}`}>
                   <div className="text-xs font-medium text-muted-foreground mb-2">Diferenças do Dia</div>
                   <div className="grid grid-cols-2 gap-4">
@@ -252,6 +277,10 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                     </div>
                   </div>
                 </div>
+
+                <TabelaComparativaDia dia={dia} />
+
+                <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
 
                 <div className="flex items-center justify-end gap-2">
                   <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
