@@ -14,7 +14,6 @@ import {
   X as XIcon,
   Loader2
 } from "lucide-react"
-import { MatchesDetalhe } from "./matches-detalhe"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
 import { useEmpresa } from "@/lib/use-empresa"
 
@@ -279,8 +278,6 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                 </div>
 
                 <TabelaComparativaDia dia={dia} />
-
-                <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
 
                 <div className="flex items-center justify-end gap-2">
                   <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
