@@ -307,8 +307,8 @@ export default function ConciliacaoDetalhesPage() {
                           </td>
                           <td className="p-2 text-foreground">
                             {item.diferencaValor !== null && item.diferencaValor !== undefined ? (
-                              <span className={item.diferencaValor === 0 ? "text-success" : "text-destructive"}>
-                                R$ {item.diferencaValor.toFixed(2)}
+                              <span className={Number(item.diferencaValor) === 0 ? "text-success" : "text-destructive"}>
+                                R$ {Number(item.diferencaValor).toFixed(2)}
                               </span>
                             ) : "-"}
                           </td>

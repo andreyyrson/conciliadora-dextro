@@ -165,16 +165,16 @@ export async function POST(
     } else {
       // Se não há decisões extras, aplicar auto-confirmação nos itens originais do matching
       resultado.itens.forEach((item: ResultadoExtrato) => {
-        // Se já é AUTO_CONFIRMADO, não associar a usuário - aprovação automática do sistema
-        if (item.status === "AUTO_CONFIRMADO") {
+        // Se já é CONCILIADO e autoConfirmado, não associar a usuário - aprovação automática do sistema
+        if (item.status === "CONCILIADO" && item.autoConfirmado) {
           decisoesMap.set(item.extrato.id, {
             status: "AUTO_CONFIRMADO",
             resolvidoPor: null,
             resolvidoEm: null
           })
         }
-        // Se não é AMBIGUO e tem confiança HIGH com score >= 80, aprovar automaticamente
-        else if (item.status !== "AMBIGUO" && item.sugestoes[0]?.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
+        // Se não é A_REVISAR e tem confiança HIGH com score >= 80, aprovar automaticamente
+        else if (item.status !== "A_REVISAR" && item.sugestoes[0]?.confianca === "HIGH" && item.sugestoes[0]?.score >= 80) {
           decisoesMap.set(item.extrato.id, {
             status: "AUTO_CONFIRMADO",
             resolvidoPor: null,

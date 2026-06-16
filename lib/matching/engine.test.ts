@@ -37,13 +37,14 @@ describe("gerarSugestoes", () => {
   it("deve auto-confirmar match perfeito", () => {
     const resultado = gerarSugestoes([baseErp], [baseExtrato])
     expect(resultado.itens).toHaveLength(1)
-    expect(resultado.itens[0].status).toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("CONCILIADO")
+    expect(resultado.itens[0].autoConfirmado).toBe(true)
     expect(resultado.itens[0].confianca).toBe("HIGH")
     expect(resultado.itens[0].erpPareado).toBeDefined()
     expect(resultado.itens[0].erpPareado!.id).toBe("erp-1")
   })
 
-  it("deve sugerir match parcial", () => {
+  it("deve marcar como a revisar quando match não é auto-confirmado", () => {
     const erp = { ...baseErp, id: "erp-2" }
     const ext = {
       ...baseExtrato,
@@ -53,24 +54,26 @@ describe("gerarSugestoes", () => {
     }
     const resultado = gerarSugestoes([erp], [ext])
     expect(resultado.itens).toHaveLength(1)
-    expect(resultado.itens[0].status).toBe("SUGERIDO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].autoConfirmado).toBe(false)
     expect(resultado.itens[0].sugestoes.length).toBeGreaterThan(0)
   })
 
-  it("deve retornar SEM_MATCH quando não há correspondência", () => {
+  it("deve retornar NAO_CONCILIADO quando não há correspondência", () => {
     const erp = { ...baseErp, id: "erp-3", valor: 50000 }
     const ext = { ...baseExtrato, id: "ext-3", valor: 10 }
     const resultado = gerarSugestoes([erp], [ext])
     expect(resultado.itens).toHaveLength(1)
-    expect(resultado.itens[0].status).toBe("SEM_MATCH")
+    expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
+    expect(resultado.itens[0].autoConfirmado).toBe(false)
     expect(resultado.itens[0].sugestoes).toHaveLength(0)
   })
 
-  it("deve detectar ambiguidade quando há múltiplos candidatos bons", () => {
+  it("deve marcar como a revisar quando há múltiplos candidatos bons", () => {
     // Estratégia: valor 1% dif (sv = 40), descrição idêntica (25), data igual (10),
     // fornecedor presente mas NÃO na descrição (sforn = 0), sem banco.
     // Score = 40 + 10 + 25 + 0 + 0 = 75 >= 70
-    // Auto-confirmado falha: temFornecedor=true mas sforn=0 < 10
+    // Atalho bate (mesmo dia + valor + descrição), mas fornecedor diverge → A_REVISAR
     const ext = { ...baseExtrato, id: "ext-ambiguo", descricao: "PGTO FORNECEDOR" }
     const erp1 = {
       ...baseErp,
@@ -90,7 +93,8 @@ describe("gerarSugestoes", () => {
     }
     const resultado = gerarSugestoes([erp1, erp2], [ext])
     expect(resultado.itens).toHaveLength(1)
-    expect(resultado.itens[0].status).toBe("AMBIGUO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].requerDecisaoManual).toBe(true)
   })
 
   it("deve retornar ERPs sobrando quando não há match", () => {
@@ -106,7 +110,7 @@ describe("gerarSugestoes", () => {
     const erp = { ...baseErp, id: "erp-tipo", tipo: "CREDITO" as const }
     const ext = { ...baseExtrato, id: "ext-tipo", tipo: "DEBITO" as const }
     const resultado = gerarSugestoes([erp], [ext])
-    expect(resultado.itens[0].status).toBe("SEM_MATCH")
+    expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
   })
 
   it("não deve fazer match quando data difere mais de 7 dias", () => {
@@ -114,7 +118,7 @@ describe("gerarSugestoes", () => {
     const ext = { ...baseExtrato, id: "ext-data", data: new Date("2024-01-15") }
     const resultado = gerarSugestoes([erp], [ext])
     // 14 dias de diferença deve ser rejeitado pelo pré-filtro
-    expect(resultado.itens[0].status).toBe("SEM_MATCH")
+    expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
   })
 
   it("deve calcular totais corretamente", () => {

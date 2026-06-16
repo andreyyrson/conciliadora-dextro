@@ -33,11 +33,13 @@ export interface MatchSugestao {
 
 export interface ResultadoExtrato {
   extrato: EntradaConciliacao
-  status: "AUTO_CONFIRMADO" | "SUGERIDO" | "AMBIGUO" | "SEM_MATCH"
+  status: "CONCILIADO" | "A_REVISAR" | "NAO_CONCILIADO"
   confianca: "HIGH" | "MEDIUM" | "LOW"
   sugestoes: MatchSugestao[]      // top 3 candidatos
-  erpPareado?: EntradaConciliacao  // se auto-confirmado
+  erpPareado?: EntradaConciliacao  // se casado
   diferencaValor?: number         // diferença absoluta entre ERP e extrato
+  autoConfirmado: boolean         // para auditoria (auto vs manual) — só no Excel
+  requerDecisaoManual?: boolean   // ênfase visual na revisão (ex-AMBIGUO)
 }
 
 export interface ResultadoErpSobrando {
@@ -57,6 +59,11 @@ export interface ResultadoMatching {
 
 function norm(s: string): string {
   return s.toUpperCase().trim().replace(/\s+/g, " ")
+}
+
+/** Verifica se duas datas são o mesmo dia de calendário */
+function mesmaData(a: Date, b: Date): boolean {
+  return a.toISOString().split("T")[0] === b.toISOString().split("T")[0]
 }
 
 /** Remove máscaras, símbolos, extrai números quando aplicável */
@@ -321,6 +328,7 @@ export function gerarSugestoes(
     explicacoes: string[]
     confianca: "HIGH" | "MEDIUM" | "LOW"
     autoConfirmado: boolean
+    requerConferencia: boolean
   }
 
   const candidatos: Candidato[] = []
@@ -354,16 +362,25 @@ export function gerarSugestoes(
         const explicacoes = gerarExplicacoes(scoreDetalhado)
         const confianca = calcularConfianca(score)
         
-        // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data + banco (se existir)
+        // Nova heurística de auto-confirmação:
+        // Atalho núcleo forte: valor ≤1% + descrição ≥60% + data no DIA EXATO
+        // → se fornecedor/banco também baterem: CONCILIADO (auto)
+        // → se fornecedor/banco divergirem: A_REVISAR (não é rejeitado)
+        // Fallback (dias ±1..7): mantém regra rígida atual
         const temFornecedor = !!erp.fornecedor
         const temBanco = !!erp.banco
-        const autoConfirmado =
-          score >= 50 &&
-          sv >= 40 && // valor muito próximo (≤ 1%)
-          sdesc >= 15 && // descrição similar (≥ 75%)
-          sd >= 5 && // data próxima (≤ 7 dias)
-          (!temFornecedor || sforn >= 10) && // fornecedor similar se existir
-          (!temBanco || sbanc >= 15) // banco similar se existir
+        const fornecedorOk = !temFornecedor || sforn >= 10
+        const bancoOk = !temBanco || sbanc >= 15
+        const dataExata = mesmaData(erp.data, extrato.data)
+        const nucleoForte = sv >= 40 && sdesc >= 15
+
+        const atalho = nucleoForte && dataExata
+        const regraRigida = score >= 50 && sv >= 40 && sdesc >= 15 && sd >= 5 && fornecedorOk && bancoOk
+
+        // Auto-confirma: atalho completo (com fornecedor/banco) OU regra rígida
+        const autoConfirmado = (atalho && fornecedorOk && bancoOk) || regraRigida
+        // Marca para conferência quando atalho bate mas fornecedor/banco divergem
+        const requerConferencia = atalho && (!fornecedorOk || !bancoOk)
 
         candidatos.push({
           extratoId: extrato.id,
@@ -372,14 +389,15 @@ export function gerarSugestoes(
           scoreDetalhado,
           explicacoes,
           confianca,
-          autoConfirmado
+          autoConfirmado,
+          requerConferencia
         })
       }
     }
 
-    // Segundo: se não encontrou match no mesmo dia, tentar dias próximos (±3 dias)
+    // Segundo: se não encontrou match no mesmo dia, tentar dias próximos (±7 dias)
     const dataExtratoDate = new Date(dataExtrato)
-    for (let offset = -3; offset <= 3; offset++) {
+    for (let offset = -7; offset <= 7; offset++) {
       if (offset === 0) continue // já verificado
       const dataOffset = new Date(dataExtratoDate)
       dataOffset.setDate(dataOffset.getDate() + offset)
@@ -417,16 +435,19 @@ export function gerarSugestoes(
           const explicacoes = gerarExplicacoes(scoreDetalhado)
           const confianca = calcularConfianca(score)
           
-          // Auto-confirmação: score >= 50 + valor + descrição + fornecedor (se existir) + data + banco (se existir)
+          // Nova heurística de auto-confirmação (fallback para dias ±1..7)
           const temFornecedor = !!erp.fornecedor
           const temBanco = !!erp.banco
-          const autoConfirmado =
-            score >= 50 &&
-            sv >= 40 &&
-            sdesc >= 15 &&
-            sd >= 5 &&
-            (!temFornecedor || sforn >= 10) &&
-            (!temBanco || sbanc >= 15)
+          const fornecedorOk = !temFornecedor || sforn >= 10
+          const bancoOk = !temBanco || sbanc >= 15
+          const dataExata = mesmaData(erp.data, extrato.data)
+          const nucleoForte = sv >= 40 && sdesc >= 15
+
+          const atalho = nucleoForte && dataExata
+          const regraRigida = score >= 50 && sv >= 40 && sdesc >= 15 && sd >= 5 && fornecedorOk && bancoOk
+
+          const autoConfirmado = (atalho && fornecedorOk && bancoOk) || regraRigida
+          const requerConferencia = atalho && (!fornecedorOk || !bancoOk)
 
           candidatos.push({
             extratoId: extrato.id,
@@ -435,7 +456,8 @@ export function gerarSugestoes(
             scoreDetalhado,
             explicacoes,
             confianca,
-            autoConfirmado
+            autoConfirmado,
+            requerConferencia
           })
         }
       }
@@ -487,46 +509,44 @@ export function gerarSugestoes(
       const diffValor = Math.abs(erp.valor - extrato.valor)
       itens.push({
         extrato,
-        status: "AUTO_CONFIRMADO",
+        status: "CONCILIADO",
         confianca: "HIGH",
         sugestoes: sugestoes.slice(0, 3),
         erpPareado: erp,
-        diferencaValor: diffValor
+        diferencaValor: diffValor,
+        autoConfirmado: true
       })
     } else if (match) {
       const erp = erpEntradas.find(e => e.id === match.erpId)!
       const diffValor = Math.abs(erp.valor - extrato.valor)
-      // Verificar se é ambíguo: top1 e top2 com score >= 70 e diferença <= 5
-      const top1 = sugestoes[0]
-      const top2 = sugestoes[1]
-      const isAmbiguo =
-        top1 && top1.score >= 70 &&
-        top2 && top2.score >= 70 &&
-        Math.abs(top1.score - top2.score) <= 5
 
-      if (isAmbiguo) {
-        itens.push({
-          extrato,
-          status: "AMBIGUO",
-          confianca: calcularConfianca(match.score),
-          sugestoes: sugestoes.slice(0, 3),
-          diferencaValor: diffValor
-        })
-      } else {
-        itens.push({
-          extrato,
-          status: "SUGERIDO",
-          confianca: calcularConfianca(match.score),
-          sugestoes: sugestoes.slice(0, 3),
-          diferencaValor: diffValor
-        })
+      // Se o atalho bateu mas fornecedor/banco divergiram → A revisar com ênfase
+      const requerDecisaoManual = match.requerConferencia
+
+      if (requerDecisaoManual) {
+        // Adiciona explicação de aviso
+        const exps = [...match.explicacoes]
+        exps.push("⚠ Conferir: fornecedor/banco divergente")
+        match.explicacoes = exps
       }
+
+      itens.push({
+        extrato,
+        status: "A_REVISAR",
+        confianca: calcularConfianca(match.score),
+        sugestoes: sugestoes.slice(0, 3),
+        erpPareado: erp,
+        diferencaValor: diffValor,
+        autoConfirmado: false,
+        requerDecisaoManual
+      })
     } else {
       itens.push({
         extrato,
-        status: "SEM_MATCH",
+        status: "NAO_CONCILIADO",
         confianca: "LOW",
-        sugestoes: []
+        sugestoes: [],
+        autoConfirmado: false
       })
     }
   }

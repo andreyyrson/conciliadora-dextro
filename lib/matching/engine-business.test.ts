@@ -265,38 +265,44 @@ describe("gerarSugestoes - auto-confirmação", () => {
 
   it("deve auto-confirmar match perfeito com fornecedor e banco", () => {
     const resultado = gerarSugestoes([erpBase], [extBase])
-    expect(resultado.itens[0].status).toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("CONCILIADO")
+    expect(resultado.itens[0].autoConfirmado).toBe(true)
     expect(resultado.itens[0].sugestoes[0].autoConfirmado).toBe(true)
   })
 
   it("NÃO deve auto-confirmar se fornecedor não está na descrição", () => {
     const erp = { ...erpBase, fornecedor: "ABC LTDA" }
     const resultado = gerarSugestoes([erp], [extBase])
-    expect(resultado.itens[0].status).not.toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("NÃO deve auto-confirmar se banco é diferente", () => {
     const erp = { ...erpBase, banco: "BRADESCO" }
     const resultado = gerarSugestoes([erp], [extBase])
-    expect(resultado.itens[0].status).not.toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("NÃO deve auto-confirmar se valor difere > 1%", () => {
     const ext = { ...extBase, valor: 980 } // 2% diferença
     const resultado = gerarSugestoes([erpBase], [ext])
-    expect(resultado.itens[0].status).not.toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("deve auto-confirmar mesmo sem fornecedor se demais critérios atendem", () => {
     const erp = { ...erpBase, fornecedor: null }
     const resultado = gerarSugestoes([erp], [extBase])
-    expect(resultado.itens[0].status).toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("CONCILIADO")
+    expect(resultado.itens[0].autoConfirmado).toBe(true)
   })
 
   it("deve auto-confirmar mesmo sem banco se demais critérios atendem", () => {
     const erp = { ...erpBase, banco: null }
     const resultado = gerarSugestoes([erp], [extBase])
-    expect(resultado.itens[0].status).toBe("AUTO_CONFIRMADO")
+    expect(resultado.itens[0].status).toBe("CONCILIADO")
+    expect(resultado.itens[0].autoConfirmado).toBe(true)
   })
 })
 
@@ -311,11 +317,12 @@ describe("gerarSugestoes - ambiguidade", () => {
     descricao: "PGTO FORNECEDOR",
   }
 
-  it("deve classificar como AMBIGUO quando top1 e top2 têm score ≥ 70 e diferença ≤ 5", () => {
+  it("deve marcar como A_REVISAR quando top1 e top2 têm score ≥ 70 e diferença ≤ 5", () => {
     const erp1 = { ...extBase, id: "erp-a", descricao: "PGTO FORNECEDOR", fornecedor: "A" }
     const erp2 = { ...extBase, id: "erp-b", descricao: "PGTO FORNECEDOR", fornecedor: "B" }
     const resultado = gerarSugestoes([erp1, erp2], [extBase])
-    expect(resultado.itens[0].status).toBe("AMBIGUO")
+    expect(resultado.itens[0].status).toBe("A_REVISAR")
+    expect(resultado.itens[0].requerDecisaoManual).toBe(true)
   })
 })
 
@@ -350,7 +357,7 @@ describe("gerarSugestoes - consumo único de ERP", () => {
 
   it("deve consumir cada ERP apenas uma vez", () => {
     const resultado = gerarSugestoes([erp], [ext1, ext2])
-    const matches = resultado.itens.filter(i => i.status === "SUGERIDO" || i.status === "AUTO_CONFIRMADO")
+    const matches = resultado.itens.filter(i => i.status === "CONCILIADO" || i.status === "A_REVISAR")
     expect(matches).toHaveLength(1)
     expect(resultado.erpsSobrando).toHaveLength(0)
   })

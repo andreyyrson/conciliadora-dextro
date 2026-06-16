@@ -6,9 +6,20 @@ import { Prisma } from "@prisma/client"
 import Papa from "papaparse"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown"
+    const { success, remaining, resetAt } = rateLimit(`csv-upload:${ip}`, 5, 60 * 1000)
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+      )
+    }
+
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {

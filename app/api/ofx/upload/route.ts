@@ -3,9 +3,20 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { prisma } from "@/lib/db"
+import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown"
+    const { success, remaining, resetAt } = rateLimit(`ofx-upload:${ip}`, 5, 60 * 1000)
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+      )
+    }
+
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -76,11 +87,12 @@ export async function POST(req: Request) {
       }
     })
 
-    // Preparar todos os lançamentos de todas as contas
+    // Preparar todos os lançamentos de todas as contas (apenas com data válida)
     const allTransactions = []
-    
+
     for (const account of ofxData.accounts) {
       for (const transaction of account.transactions) {
+        if (!transaction.date) continue
         allTransactions.push({
           importacaoId: importacao.id,
           data: transaction.date,

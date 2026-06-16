@@ -52,8 +52,19 @@ export async function POST(
       }
     }
 
-    // Buscar tipo de extrato (contaId vs importacaoId)
-    const isConta = !!conciliacao.contaId
+    // Uma conciliação pode misturar extratos de contas (ExtratoLancamento) e de
+    // importações OFX/CSV (ExtratoImportado). Por isso, determinamos a origem de
+    // cada extratoId individualmente, em vez de usar uma flag por conciliação.
+    const extratoIds = decisoes
+      .map(d => d.extratoId)
+      .filter((id): id is string => !!id)
+    const importadosExistentes = extratoIds.length > 0
+      ? await prisma.extratoImportado.findMany({
+          where: { id: { in: extratoIds } },
+          select: { id: true }
+        })
+      : []
+    const importadoIds = new Set(importadosExistentes.map(e => e.id))
 
     // Deletar itens anteriores (se houver) para reprocessamento
     await prisma.conciliacaoItem.deleteMany({
@@ -72,12 +83,14 @@ export async function POST(
         resolvidoManualmente = false
       }
 
+      const isImportado = !!d.extratoId && importadoIds.has(d.extratoId)
+
       return {
         conciliacaoId,
         status: statusFinal as ConciliacaoItemStatus,
         erpId: d.erpId || null,
-        extratoId: isConta ? d.extratoId || null : null,
-        extratoImportadoId: !isConta ? d.extratoId || null : null,
+        extratoId: isImportado ? null : d.extratoId || null,
+        extratoImportadoId: isImportado ? d.extratoId || null : null,
         scoreMatch: d.scoreMatch || null,
         confiancaMatch: (d.confiancaMatch as ConfiancaMatch) || null,
         scoreDetalhado: (d.scoreDetalhado as Prisma.InputJsonValue) ?? Prisma.JsonNull,
