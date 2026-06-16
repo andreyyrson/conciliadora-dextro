@@ -2,6 +2,30 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model AprovacaoDia {
+  id           String   @id @default(cuid())
+  empresaId    String
+  dataDia      DateTime
+  status       String   // AGUARDANDO | APROVADO | REPROVADO
+  justificativa String?
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([empresaId, dataDia])
+  @@index([empresaId, dataDia])
+}
+
+model AprovacaoDiaLog {
+  id            String   @id @default(cuid())
+  aprovacaoDiaId String
+  deStatus      String?
+  paraStatus    String
+  justificativa String?
+  userId        String
+  createdAt     DateTime @default(now())
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

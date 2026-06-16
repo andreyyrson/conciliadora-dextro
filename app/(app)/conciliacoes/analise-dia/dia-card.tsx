@@ -88,6 +88,21 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [justificativa, setJustificativa] = React.useState("")
   const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar'>(null)
+  const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let ignore = false
+    async function load() {
+      if (!empresaId) return
+      const url = `/api/conciliacoes/aprovacoes?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}`
+      const res = await fetch(url)
+      if (!res.ok) return
+      const data = await res.json().catch(() => ({}))
+      if (!ignore) setAprovStatus(data.aprovacoes?.[dia.data]?.status || 'AGUARDANDO')
+    }
+    load()
+    return () => { ignore = true }
+  }, [empresaId, dia.data])
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -138,6 +153,13 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className={`text-sm font-medium ${status.color}`}>{status.label}</div>
+              {aprovStatus && (
+                <div className="text-xs mt-0.5">
+                  <span className={`px-2 py-0.5 rounded ${aprovStatus === 'APROVADO' ? 'bg-green-500/10 text-green-600' : aprovStatus === 'REPROVADO' ? 'bg-red-500/10 text-red-600' : 'bg-gray-500/10 text-gray-500'}`}>
+                    {aprovStatus}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-3 text-xs text-muted-foreground">
                 <span className="text-green-500">Ent: R$ {formatarValor(dia.totalCreditoExtrato || dia.totalCreditoErp)}</span>
                 <span className="text-red-500">Sai: R$ {formatarValor(dia.totalDebitoExtrato || dia.totalDebitoErp)}</span>

@@ -18,8 +18,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Empresa não encontrada ou não pertence ao usuário" }, { status: 403 })
     }
 
-    // TODO: Persistir aprovação por dia (schema AprovacaoDia). Placeholder por enquanto.
-    return NextResponse.json({ status: "APROVADO", dataDia, justificativa: justificativa || null }, { status: 200 })
+    const dia = new Date(`${dataDia}T00:00:00.000Z`)
+    const userId = session.user.id
+
+    const result = await prisma.$transaction(async (tx) => {
+      const p: any = tx as any
+      const existente = await p.aprovacaoDia.findUnique({ where: { empresaId_dataDia: { empresaId, dataDia: dia } } }).catch(() => null)
+      const deStatus = existente?.status || null
+
+      const atual = await p.aprovacaoDia.upsert({
+        where: { empresaId_dataDia: { empresaId, dataDia: dia } },
+        update: { status: "APROVADO", justificativa: justificativa || null, userId },
+        create: { empresaId, dataDia: dia, status: "APROVADO", justificativa: justificativa || null, userId },
+      })
+
+      await p.aprovacaoDiaLog.create({ data: { aprovacaoDiaId: atual.id, deStatus, paraStatus: "APROVADO", justificativa: justificativa || null, userId } })
+      return atual
+    })
+
+    return NextResponse.json({ status: result.status, dataDia, updatedAt: result.updatedAt }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Erro ao aprovar dia" }, { status: 500 })
   }
