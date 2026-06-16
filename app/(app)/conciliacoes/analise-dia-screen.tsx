@@ -22,6 +22,7 @@ export function AnaliseDiaScreen() {
   const [error, setError] = useState("")
   const [diasExpandidos, setDiasExpandidos] = useState<Set<string>>(new Set())
   const [exportando, setExportando] = useState(false)
+  const [tipo, setTipo] = useState<"TODAS" | "RECEITAS" | "DESPESAS">("TODAS")
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -31,8 +32,9 @@ export function AnaliseDiaScreen() {
     setLoading(true)
     setError("")
     try {
+      const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}`
       )
       const data = await res.json()
       if (!res.ok) {
@@ -45,7 +47,7 @@ export function AnaliseDiaScreen() {
     } finally {
       setLoading(false)
     }
-  }, [empresaId, dataInicio, dataFim])
+  }, [empresaId, dataInicio, dataFim, tipo])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {
@@ -84,7 +86,7 @@ export function AnaliseDiaScreen() {
     if (empresaId && dataInicio && dataFim) {
       buscarAnalise()
     }
-  }, [empresaId, dataInicio, dataFim, buscarAnalise])
+  }, [empresaId, dataInicio, dataFim, tipo, buscarAnalise])
 
   if (!session) return null
 
@@ -103,11 +105,13 @@ export function AnaliseDiaScreen() {
       <FiltrosPeriodo
         dataInicio={dataInicio}
         dataFim={dataFim}
+        tipo={tipo}
         loading={loading}
         exportando={exportando}
         podeExportar={dias.length > 0}
         onChangeInicio={setDataInicio}
         onChangeFim={setDataFim}
+        onChangeTipo={setTipo}
         onAnalisar={buscarAnalise}
         onExportar={downloadExcel}
       />

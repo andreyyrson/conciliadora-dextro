@@ -5,10 +5,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  Calendar,
   ChevronDown,
   ChevronUp,
-  Building2,
   AlertCircle,
   CheckCircle,
   MinusCircle,
@@ -33,41 +31,54 @@ export const statusConfig: Record<StatusDia, {
   SEM_DADOS: { label: "Sem Dados", icon: MinusCircle, color: "text-gray-400", bg: "bg-gray-500/10", border: "border-l-gray-400" }
 }
 
-interface TransacoesTabelaProps {
-  titulo: string
-  icon: typeof Building2
-  transacoes: { id: string; descricao: string; tipo: string; valor: number }[]
+interface TabelaComparativaDiaProps {
+  dia: DiaAnalise
 }
 
-function TransacoesTabela({ titulo, icon: Icon, transacoes }: TransacoesTabelaProps) {
-  if (transacoes.length === 0) return null
+function TabelaComparativaDia({ dia }: TabelaComparativaDiaProps) {
+  const maxRows = Math.max(dia.transacoesErp.length, dia.transacoesExtrato.length)
+  if (maxRows === 0) return null
+
   return (
     <div>
-      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-        <Icon className="w-4 h-4" />
-        {titulo} ({transacoes.length})
-      </h4>
-      <div className="overflow-x-auto">
+      <h4 className="text-sm font-semibold mb-2">Lançamentos — ERP vs Extrato</h4>
+      <div className="overflow-x-auto border border-border rounded-lg">
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="p-2 text-left">Descrição</th>
-              <th className="p-2 text-left">Tipo</th>
-              <th className="p-2 text-right">Valor</th>
+              <th className="p-2 text-left border-r border-border w-1/4">ERP — Descrição</th>
+              <th className="p-2 text-right border-r border-border w-[100px]">Valor</th>
+              <th className="p-2 text-left border-r border-border w-1/4">Extrato — Descrição</th>
+              <th className="p-2 text-right w-[100px]">Valor</th>
             </tr>
           </thead>
           <tbody>
-            {transacoes.map((t) => (
-              <tr key={t.id} className="border-b border-border">
-                <td className="p-2">{t.descricao}</td>
-                <td className="p-2">{t.tipo}</td>
-                <td className={`p-2 text-right font-medium ${t.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
-                  R$ {formatarValor(t.valor)}
-                </td>
-              </tr>
-            ))}
+            {Array.from({ length: maxRows }).map((_, i) => {
+              const erp = dia.transacoesErp[i]
+              const ext = dia.transacoesExtrato[i]
+              return (
+                <tr key={i} className="border-b border-border">
+                  <td className="p-2 border-r border-border text-muted-foreground">
+                    {erp ? <span className="text-foreground">{erp.descricao}</span> : <span className="text-xs italic">—</span>}
+                  </td>
+                  <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${erp?.tipo === "DEBITO" ? "text-red-500" : erp ? "text-green-500" : ""}`}>
+                    {erp ? `R$ ${formatarValor(erp.valor)}` : "—"}
+                  </td>
+                  <td className="p-2 border-r border-border text-muted-foreground">
+                    {ext ? <span className="text-foreground">{ext.descricao}</span> : <span className="text-xs italic">—</span>}
+                  </td>
+                  <td className={`p-2 text-right font-medium tabular-nums ${ext?.tipo === "DEBITO" ? "text-red-500" : ext ? "text-green-500" : ""}`}>
+                    {ext ? `R$ ${formatarValor(ext.valor)}` : "—"}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
+      </div>
+      <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
+        <span>{dia.transacoesErp.length} lançamento(s) ERP</span>
+        <span>{dia.transacoesExtrato.length} lançamento(s) Extrato</span>
       </div>
     </div>
   )
@@ -219,10 +230,29 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   </div>
                 </div>
 
-                <TransacoesTabela titulo="Lançamentos ERP" icon={Building2} transacoes={dia.transacoesErp} />
-                <TransacoesTabela titulo="Extrato Bancário" icon={Calendar} transacoes={dia.transacoesExtrato} />
+                <TabelaComparativaDia dia={dia} />
 
                 <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
+
+                {/* Resumo de diferenças */}
+                <div className={`p-3 rounded border border-border ${status.bg}`}>
+                  <div className="text-xs font-medium text-muted-foreground mb-2">Diferenças do Dia</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex justify-between text-sm">
+                      <span>Despesas (Débito):</span>
+                      <span className={`font-medium tabular-nums ${dia.diferencaDebito > 0.01 ? "text-red-500" : "text-green-500"}`}>
+                        R$ {formatarValor(dia.diferencaDebito)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Receitas (Crédito):</span>
+                      <span className={`font-medium tabular-nums ${dia.diferencaCredito > 0.01 ? "text-red-500" : "text-green-500"}`}>
+                        R$ {formatarValor(dia.diferencaCredito)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-end gap-2">
                   <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
                     {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}

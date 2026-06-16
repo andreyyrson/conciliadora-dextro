@@ -168,6 +168,8 @@ export interface DiaConciliacao {
   qtdErp: number
   qtdExtrato: number
   matches: MatchSummary
+  diferencaDebito: number
+  diferencaCredito: number
 }
 
 export interface MatchSummary {
