@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/app/(app)/conciliacoes/comparativo/use-comparativo"
+import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/lib/conciliacao/comparativo-types"
 import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 
 export async function GET(req: Request) {
@@ -55,12 +55,37 @@ export async function GET(req: Request) {
     const toErpTx = (l: typeof erpLanc[number]) => ({ id: l.id, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, documento: l.documento, fornecedor: l.fornecedor, banco: l.banco, categoria: l.categoria })
     const toExtTx = (l: typeof extLanc[number] | typeof impLanc[number]) => ({ id: l.id, origem: "EXTRATO" as const, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, saldoApos: (l as any).saldoApos != null ? Number((l as any).saldoApos) : null, identificador: (l as any).identificador || null, banco: (l as any).banco || null })
 
+    // Indexar extratos por dia para permitir D+1 útil
+    const dayOf = (d: Date) => d.toISOString().split('T')[0]
+    function nextBusinessDayStr(key: string): string {
+      const [y, m, d] = key.split('-').map(Number)
+      const base = new Date(Date.UTC(y, (m - 1), d))
+      let nb = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate() + 1))
+      const wd = nb.getUTCDay()
+      if (wd === 6) nb.setUTCDate(nb.getUTCDate() + 2)
+      else if (wd === 0) nb.setUTCDate(nb.getUTCDate() + 1)
+      return nb.toISOString().split('T')[0]
+    }
+
+    const extratosByDay = new Map<string, ReturnType<typeof toExtTx>[]>()
+    for (const l of extLanc) {
+      const k = dayOf(l.data)
+      if (!extratosByDay.has(k)) extratosByDay.set(k, [])
+      extratosByDay.get(k)!.push(toExtTx(l))
+    }
+    for (const l of impLanc) {
+      const k = dayOf(l.data)
+      if (!extratosByDay.has(k)) extratosByDay.set(k, [])
+      extratosByDay.get(k)!.push(toExtTx(l))
+    }
+
     const linhas: LinhaComparativa[] = []
     for (const dataKey of datasOrdenadas) {
       const erpDia = erpLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toErpTx)
+      const nextKey = nextBusinessDayStr(dataKey)
       const extDia = [
-        ...extLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toExtTx),
-        ...impLanc.filter(l => l.data.toISOString().startsWith(dataKey)).map(toExtTx),
+        ...(extratosByDay.get(dataKey) || []),
+        ...(extratosByDay.get(nextKey) || []),
       ]
       const { matching } = runDailyMatching(erpDia as any, extDia as any)
 

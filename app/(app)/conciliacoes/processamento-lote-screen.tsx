@@ -24,6 +24,8 @@ function ComparativoPreview({ empresaId, periodo }: { empresaId: string | null; 
     onDeletarErp,
     onDeletarExtrato,
     onAplicarFiltros,
+    allLinhas,
+    onAceitarDivergentes,
   } = useComparativo({ empresaId })
 
   // Ajustar filtros pelo período selecionado (yyyy-mm)
@@ -52,6 +54,8 @@ function ComparativoPreview({ empresaId, periodo }: { empresaId: string | null; 
       pagination={pagination as any}
       onPageChange={onPageChange}
       loading={loading}
+      allLinhas={allLinhas}
+      onAceitarDivergentes={onAceitarDivergentes}
     />
   )
 }
