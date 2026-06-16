@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { CheckCircle } from "lucide-react"
 import { formatarValor, type MatchDia } from "./types"
 import { Button } from "@/components/ui/button"
@@ -7,10 +8,17 @@ import { Button } from "@/components/ui/button"
 interface MatchesDetalheProps {
   matches: MatchDia
   diaData?: string // yyyy-mm-dd
+  onAfterAction?: () => void
 }
 
-export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
+export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetalheProps) {
   if (!matches || matches.detalhes.length === 0) return null
+  const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  React.useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   async function completarCampoERP(
     erpId: string,
@@ -47,6 +55,8 @@ export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
       const data = await res.json().catch(() => ({}))
       throw new Error(data.error || `Falha ao completar ${campo}`)
     }
+    setToast({ type: 'success', message: `${campo === 'data' ? 'Data' : campo === 'valor' ? 'Valor' : 'Descrição'} completado(a)` })
+    onAfterAction?.()
   }
 
   return (
@@ -55,6 +65,11 @@ export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
         <CheckCircle className="w-4 h-4" />
         Matching ({matches.conciliados} conciliados, {matches.aRevisar} a revisar, {matches.naoConciliados} não conciliados)
       </h4>
+      {toast && (
+        <div className={`mb-2 text-xs px-2 py-1 rounded inline-block ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="space-y-2">
         {matches.detalhes.map((m) => {
           const confColor = m.confianca === "HIGH" ? "text-green-500" : m.confianca === "MEDIUM" ? "text-yellow-500" : "text-red-500"
@@ -103,11 +118,10 @@ export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
                               m.extratoDescricao,
                               m.erpPareado!.descricao
                             )
-                            // Opcional: feedback visual simples
-                            // eslint-disable-next-line no-alert
-                            alert("Descrição completada com sucesso")
+                            setToast({ type: 'success', message: 'Descrição completada' })
+                            onAfterAction?.()
                           } catch (e: any) {
-                            alert(e.message || "Falha ao completar descrição")
+                            setToast({ type: 'error', message: e.message || 'Falha ao completar descrição' })
                           }
                         }}
                       >
@@ -125,9 +139,10 @@ export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
                               m.extratoValor,
                               m.erpPareado!.valor
                             )
-                            alert("Valor completado com sucesso")
+                            setToast({ type: 'success', message: 'Valor completado' })
+                            onAfterAction?.()
                           } catch (e: any) {
-                            alert(e.message || "Falha ao completar valor")
+                            setToast({ type: 'error', message: e.message || 'Falha ao completar valor' })
                           }
                         }}
                       >
@@ -146,9 +161,10 @@ export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
                               dataParaAplicar,
                               undefined
                             )
-                            alert("Data completada com sucesso")
+                            setToast({ type: 'success', message: 'Data completada' })
+                            onAfterAction?.()
                           } catch (e: any) {
-                            alert(e.message || "Falha ao completar data")
+                            setToast({ type: 'error', message: e.message || 'Falha ao completar data' })
                           }
                         }}
                       >

@@ -126,6 +126,7 @@ export function AnaliseDiaScreen() {
               dia={dia}
               expandido={diasExpandidos.has(dia.data)}
               onToggle={() => toggleDia(dia.data)}
+              onAfterAction={() => buscarAnalise()}
             />
           ))}
         </div>

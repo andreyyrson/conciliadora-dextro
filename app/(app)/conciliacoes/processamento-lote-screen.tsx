@@ -1,16 +1,18 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Zap, Check, AlertCircle, Loader2 } from "lucide-react"
+import { Zap, Check, AlertCircle, Loader2, Calendar as CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { useComparativo } from "./comparativo/use-comparativo"
 import { TabelaComparativaConciliacao } from "./comparativo/tabela-comparativa"
 
-function ComparativoPreview({ empresaId }: { empresaId: string | null }) {
+function ComparativoPreview({ empresaId, periodo }: { empresaId: string | null; periodo?: string }) {
   const {
     linhas,
     pagination,
@@ -23,6 +25,17 @@ function ComparativoPreview({ empresaId }: { empresaId: string | null }) {
     onDeletarExtrato,
     onAplicarFiltros,
   } = useComparativo({ empresaId })
+
+  // Ajustar filtros pelo período selecionado (yyyy-mm)
+  React.useEffect(() => {
+    if (!periodo) return
+    const [y, m] = periodo.split("-")
+    if (!y || !m) return
+    const inicio = `${y}-${m}-01`
+    const fimDate = new Date(Number(y), Number(m), 0) // último dia do mês
+    const fim = fimDate.toISOString().split("T")[0]
+    setFiltros((prev: any) => ({ ...prev, dataInicio: inicio, dataFim: fim }))
+  }, [periodo, setFiltros])
 
   return (
     <TabelaComparativaConciliacao
@@ -222,17 +235,35 @@ export function ProcessamentoLoteScreen() {
     )
   }
 
+  const [openPeriodo, setOpenPeriodo] = useState(false)
+
   return (
     <div className="space-y-6">
       {/* Seleção de Período */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Período</h3>
-        <input
-          type="month"
-          value={periodo}
-          onChange={(e) => setPeriodo(e.target.value)}
-          className="w-full max-w-xs bg-background border border-border text-foreground p-2 rounded"
-        />
+        <Popover open={openPeriodo} onOpenChange={setOpenPeriodo}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="justify-start w-[220px]" role="combobox">
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {periodo ? `${periodo}` : "Selecionar mês"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="p-2">
+            <Calendar
+              mode="single"
+              selected={periodo ? new Date(`${periodo}-01`) : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  const y = date.getFullYear()
+                  const m = String(date.getMonth() + 1).padStart(2, "0")
+                  setPeriodo(`${y}-${m}`)
+                  setOpenPeriodo(false)
+                }
+              }}
+            />
+          </PopoverContent>
+        </Popover>
       </Card>
 
       {/* Seleção de Uploads ERP */}
@@ -322,7 +353,7 @@ export function ProcessamentoLoteScreen() {
       {/* Pré-visualização Comparativa ERP x Extrato (reutilizado) */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Pré-visualização Comparativa</h3>
-        <ComparativoPreview empresaId={empresaId} />
+        <ComparativoPreview empresaId={empresaId} periodo={periodo} />
       </Card>
 
       {/* Status do Processamento */}

@@ -50,5 +50,8 @@ describe("TabelaComparativaConciliacao", () => {
     // Deve existir algum botão (ícones ghost) para editar/deletar
     const buttons = screen.getAllByRole("button")
     expect(buttons.length).toBeGreaterThan(0)
+
+    // Lado do extrato deve ser somente leitura (sem inputs com valor do extrato)
+    expect(screen.queryByDisplayValue("EXT desc")).toBeNull()
   })
 })

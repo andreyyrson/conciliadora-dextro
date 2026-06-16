@@ -71,9 +71,10 @@ interface DiaCardProps {
   dia: DiaAnalise
   expandido: boolean
   onToggle: () => void
+  onAfterAction?: () => void
 }
 
-export function DiaCard({ dia, expandido, onToggle }: DiaCardProps) {
+export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProps) {
   const status = statusConfig[dia.statusDia]
   const StatusIcon = status.icon
 
@@ -157,7 +158,7 @@ export function DiaCard({ dia, expandido, onToggle }: DiaCardProps) {
                 <TransacoesTabela titulo="Lançamentos ERP" icon={Building2} transacoes={dia.transacoesErp} />
                 <TransacoesTabela titulo="Extrato Bancário" icon={Calendar} transacoes={dia.transacoesExtrato} />
 
-                <MatchesDetalhe matches={dia.matches} diaData={dia.data} />
+                <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
               </div>
             </motion.div>
           )}

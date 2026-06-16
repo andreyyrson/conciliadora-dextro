@@ -266,7 +266,14 @@ export function TabelaComparativaConciliacao({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {linhas.map((linha) => {
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={modoEdicao ? 15 : 13} className="text-center text-muted-foreground py-8">
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && linhas.map((linha) => {
               const erpEditando = modoEdicao && editandoId === linha.erp?.id && editandoLado === "erp"
               const extEditando = false
               return (
@@ -322,13 +329,13 @@ export function TabelaComparativaConciliacao({
                         <TableCell className="py-2 text-right border-r border-border">
                           {erpEditando ? (
                             <div className="flex items-center justify-end gap-1">
-                              <Button size="sm" variant="ghost" onClick={salvar} disabled={salvando} className="h-6 w-6 p-0"><Save className="w-3.5 h-3.5 text-green-500" /></Button>
-                              <Button size="sm" variant="ghost" onClick={cancelarEdicao} disabled={salvando} className="h-6 w-6 p-0"><X className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                              <Button size="sm" variant="ghost" onClick={salvar} disabled={salvando || loading} className="h-6 w-6 p-0"><Save className="w-3.5 h-3.5 text-green-500" /></Button>
+                              <Button size="sm" variant="ghost" onClick={cancelarEdicao} disabled={salvando || loading} className="h-6 w-6 p-0"><X className="w-3.5 h-3.5 text-muted-foreground" /></Button>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1">
-                              <Button size="sm" variant="ghost" onClick={() => iniciarEdicao(linha.erp!.id, "erp", linha.erp!)} className="h-6 w-6 p-0"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></Button>
-                              <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.erp!.id, lado: "erp" })} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                              <Button size="sm" variant="ghost" onClick={() => iniciarEdicao(linha.erp!.id, "erp", linha.erp!)} disabled={loading} className="h-6 w-6 p-0"><Pencil className="w-3.5 h-3.5 text-muted-foreground" /></Button>
+                              <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.erp!.id, lado: "erp" })} disabled={loading} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
                             </div>
                           )}
                         </TableCell>
@@ -366,7 +373,7 @@ export function TabelaComparativaConciliacao({
                       {modoEdicao && (
                         <TableCell className="py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.extrato!.id, lado: "extrato" })} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ id: linha.extrato!.id, lado: "extrato" })} disabled={loading} className="h-6 w-6 p-0"><Trash2 className="w-3.5 h-3.5 text-destructive" /></Button>
                           </div>
                         </TableCell>
                       )}
@@ -381,7 +388,7 @@ export function TabelaComparativaConciliacao({
                 </TableRow>
               )
             })}
-            {linhas.length === 0 && (
+            {!loading && linhas.length === 0 && (
               <TableRow>
                 <TableCell colSpan={modoEdicao ? 15 : 13} className="text-center text-muted-foreground py-8">
                   Nenhum lançamento encontrado

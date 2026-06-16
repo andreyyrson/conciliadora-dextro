@@ -257,6 +257,7 @@ export function ConciliacoesListaScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="hidden"
       >
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Nova Conciliação</h2>
@@ -425,6 +426,7 @@ export function ConciliacoesListaScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
+        className="hidden"
       >
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4">Histórico de Conciliações</h2>
