@@ -93,6 +93,8 @@ export function buildDia(
     statusDia,
     qtdErp: erpsDoDia.length,
     qtdExtrato: extratosDoDia.length,
-    matches
+    matches,
+    diferencaDebito,
+    diferencaCredito,
   }
 }

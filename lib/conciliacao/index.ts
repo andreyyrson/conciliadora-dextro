@@ -17,9 +17,10 @@ export { calculateStatus } from "./calculate-status"
 export async function analisarPorDia(
   empresaId: string,
   inicio: Date,
-  fim: Date
+  fim: Date,
+  tipo?: "RECEITAS" | "DESPESAS"
 ): Promise<DiaConciliacao[]> {
-  const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim)
+  const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim, tipo)
 
   const { erpPorDia, extratoPorDia, dias } = groupByDay(
     erpLancamentos,

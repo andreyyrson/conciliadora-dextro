@@ -9,8 +9,10 @@ export interface FetchDataResult {
 export async function fetchConciliationData(
   empresaId: string,
   inicio: Date,
-  fim: Date
+  fim: Date,
+  tipo?: "RECEITAS" | "DESPESAS"
 ): Promise<FetchDataResult> {
+  const filtroTipo = tipo === "RECEITAS" ? "CREDITO" : tipo === "DESPESAS" ? "DEBITO" : undefined
   // Buscar uploads da empresa para filtrar ERP lançamentos
   const uploads = await prisma.uploadErp.findMany({
     where: { empresaId },
@@ -59,7 +61,7 @@ export async function fetchConciliationData(
     orderBy: { data: "asc" }
   })
 
-  const erpLancamentos: ErpTransaction[] = erpRows.map(e => ({
+  let erpLancamentos: ErpTransaction[] = erpRows.map(e => ({
     id: e.id,
     data: e.data,
     descricao: e.descricao,
@@ -70,8 +72,9 @@ export async function fetchConciliationData(
     banco: e.banco,
     categoria: e.categoria
   }))
+  if (filtroTipo) erpLancamentos = erpLancamentos.filter(e => e.tipo === filtroTipo)
 
-  const extratoLancamentos: ExtratoTransaction[] = [
+  let extratoLancamentos: ExtratoTransaction[] = [
     ...extratoRows.map(e => ({
       id: e.id,
       origem: "EXTRATO" as const,
@@ -95,6 +98,7 @@ export async function fetchConciliationData(
       banco: e.banco
     }))
   ]
+  if (filtroTipo) extratoLancamentos = extratoLancamentos.filter(e => e.tipo === filtroTipo)
 
   return { erpLancamentos, extratoLancamentos }
 }

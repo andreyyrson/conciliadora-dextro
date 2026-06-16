@@ -10,11 +10,13 @@ import { Calendar } from "@/components/ui/calendar"
 interface FiltrosPeriodoProps {
   dataInicio: string
   dataFim: string
+  tipo: "TODAS" | "RECEITAS" | "DESPESAS"
   loading: boolean
   exportando: boolean
   podeExportar: boolean
   onChangeInicio: (v: string) => void
   onChangeFim: (v: string) => void
+  onChangeTipo: (v: "TODAS" | "RECEITAS" | "DESPESAS") => void
   onAnalisar: () => void
   onExportar: () => void
 }
@@ -22,11 +24,13 @@ interface FiltrosPeriodoProps {
 export function FiltrosPeriodo({
   dataInicio,
   dataFim,
+  tipo,
   loading,
   exportando,
   podeExportar,
   onChangeInicio,
   onChangeFim,
+  onChangeTipo,
   onAnalisar,
   onExportar
 }: FiltrosPeriodoProps) {
@@ -83,6 +87,21 @@ export function FiltrosPeriodo({
               />
             </PopoverContent>
           </Popover>
+        </div>
+        <div className="flex rounded-md border border-border overflow-hidden">
+          {(["TODAS", "RECEITAS", "DESPESAS"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => onChangeTipo(t)}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${
+                tipo === t
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {t === "TODAS" ? "Todas" : t === "RECEITAS" ? "Receitas" : "Despesas"}
+            </button>
+          ))}
         </div>
         <Button onClick={onAnalisar} disabled={loading}>
           {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarIcon className="w-4 h-4 mr-2" />}

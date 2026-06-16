@@ -52,6 +52,8 @@ export interface DiaAnalise {
   qtdErp: number
   qtdExtrato: number
   matches: MatchDia
+  diferencaDebito: number
+  diferencaCredito: number
 }
 
 export type StatusDia = DiaAnalise["statusDia"]
