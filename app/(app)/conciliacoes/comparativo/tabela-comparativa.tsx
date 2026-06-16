@@ -278,10 +278,10 @@ export function TabelaComparativaConciliacao({
           <div className="p-3 border border-border rounded-lg bg-accent/50 grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-              <Select value={filtros.tipo} onValueChange={(v) => onChangeFiltros({ ...filtros, tipo: v })}>
+              <Select value={filtros.tipo || "ALL"} onValueChange={(v) => onChangeFiltros({ ...filtros, tipo: v === "ALL" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="ALL">Todos</SelectItem>
                   <SelectItem value="DEBITO">Débito</SelectItem>
                   <SelectItem value="CREDITO">Crédito</SelectItem>
                 </SelectContent>
@@ -289,10 +289,10 @@ export function TabelaComparativaConciliacao({
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Status</label>
-              <Select value={filtros.status} onValueChange={(v) => onChangeFiltros({ ...filtros, status: v })}>
+              <Select value={filtros.status || "ALL"} onValueChange={(v) => onChangeFiltros({ ...filtros, status: v === "ALL" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="ALL">Todos</SelectItem>
                   <SelectItem value="match">Match</SelectItem>
                   <SelectItem value="divergente">Divergente</SelectItem>
                   <SelectItem value="sobra_erp">Sobra ERP</SelectItem>
