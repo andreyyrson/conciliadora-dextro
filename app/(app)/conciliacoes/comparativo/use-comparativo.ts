@@ -224,6 +224,16 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
     []
   )
 
+  const onAceitarDivergentes = useCallback((ids: string[]) => {
+    const idSet = new Set(ids)
+    setLinhas(prev => prev.map(l => {
+      if (l.status !== "divergente") return l
+      const lineId = l.erp?.id || l.extrato?.id || ""
+      if (idSet.has(lineId)) return { ...l, status: "match" as const }
+      return l
+    }))
+  }, [])
+
   const onAplicarFiltros = useCallback(() => {
     fetchDados()
   }, [fetchDados])
@@ -252,5 +262,6 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
     onDeletarExtrato,
     onAplicarFiltros,
     fetchDados,
+    onAceitarDivergentes,
   }
 }

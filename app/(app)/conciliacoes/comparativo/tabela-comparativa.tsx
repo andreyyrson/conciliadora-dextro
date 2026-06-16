@@ -16,8 +16,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { motion } from "framer-motion"
-import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter, Play, FileDown, Loader2, Calendar as CalendarIcon } from "lucide-react"
+import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter, Play, FileDown, Loader2, Calendar as CalendarIcon, CheckCheck } from "lucide-react"
 import type { ErpLancamento, ExtratoLancamento, LinhaComparativa } from "./use-comparativo"
+import { ModalAceitarARevisar } from "./modal-aceitar-a-revisar"
 
 interface FiltrosComparativo {
   search: string
@@ -46,6 +47,8 @@ interface TabelaComparativaProps {
   onPageChange: (page: number) => void
   loading?: boolean
   empresaId?: string | null
+  allLinhas?: LinhaComparativa[]
+  onAceitarDivergentes?: (ids: string[]) => void
 }
 
 function formatarValor(valor: number): string {
@@ -97,6 +100,8 @@ export function TabelaComparativaConciliacao({
   onPageChange,
   loading,
   empresaId,
+  allLinhas,
+  onAceitarDivergentes,
 }: TabelaComparativaProps) {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [editandoLado, setEditandoLado] = useState<"erp" | "extrato" | null>(null)
@@ -109,6 +114,7 @@ export function TabelaComparativaConciliacao({
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [openInicio, setOpenInicio] = useState(false)
   const [openFim, setOpenFim] = useState(false)
+  const [modalAceitar, setModalAceitar] = useState(false)
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -227,6 +233,7 @@ export function TabelaComparativaConciliacao({
   }
 
   const temFiltros = filtros.search || filtros.tipo || filtros.dataInicio || filtros.dataFim || filtros.status
+  const divergentes = (allLinhas || linhas).filter(l => l.status === "divergente")
 
   return (
     <div className="space-y-4">
@@ -271,6 +278,17 @@ export function TabelaComparativaConciliacao({
               {acaoLoading === 'rodar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Play className="w-4 h-4 mr-1" />}
               Rodar Conciliação
             </Button>
+            {onAceitarDivergentes && divergentes.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-yellow-500 text-yellow-600 hover:bg-yellow-500/10"
+                onClick={() => setModalAceitar(true)}
+              >
+                <CheckCheck className="w-4 h-4 mr-1" />
+                A Revisar ({divergentes.length})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -541,6 +559,18 @@ export function TabelaComparativaConciliacao({
             </Button>
           </div>
         </div>
+      )}
+
+      {onAceitarDivergentes && (
+        <ModalAceitarARevisar
+          open={modalAceitar}
+          onOpenChange={setModalAceitar}
+          divergentes={divergentes}
+          onConfirmar={(ids) => {
+            onAceitarDivergentes(ids)
+            showToast('success', `${ids.length} item(ns) aceito(s) como conciliado(s)`)
+          }}
+        />
       )}
 
       <ConfirmDialog

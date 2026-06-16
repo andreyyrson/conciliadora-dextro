@@ -81,6 +81,8 @@ export function ConciliacoesListaScreen() {
     onDeletarErp,
     onDeletarExtrato,
     onAplicarFiltros,
+    allLinhas,
+    onAceitarDivergentes,
   } = useComparativo({ empresaId })
 
   useEffect(() => {
@@ -419,6 +421,8 @@ export function ConciliacoesListaScreen() {
             onPageChange={onPageChange}
             loading={loadingComparativo}
             empresaId={empresaId}
+            allLinhas={allLinhas}
+            onAceitarDivergentes={onAceitarDivergentes}
           />
         </Card>
       </motion.div>
