@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { motion } from "framer-motion"
-import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter } from "lucide-react"
+import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter, Play, FileDown, Loader2 } from "lucide-react"
 import type { ErpLancamento, ExtratoLancamento, LinhaComparativa } from "./use-comparativo"
 
 interface FiltrosComparativo {
@@ -43,6 +43,7 @@ interface TabelaComparativaProps {
   }
   onPageChange: (page: number) => void
   loading?: boolean
+  empresaId?: string | null
 }
 
 function formatarValor(valor: number): string {
@@ -93,6 +94,7 @@ export function TabelaComparativaConciliacao({
   pagination,
   onPageChange,
   loading,
+  empresaId,
 }: TabelaComparativaProps) {
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [editandoLado, setEditandoLado] = useState<"erp" | "extrato" | null>(null)
@@ -101,6 +103,63 @@ export function TabelaComparativaConciliacao({
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; lado: "erp" | "extrato" } | null>(null)
   const [deletando, setDeletando] = useState(false)
   const [filtrosExpandidos, setFiltrosExpandidos] = useState(false)
+  const [acaoLoading, setAcaoLoading] = useState<"rodar" | "exportar" | null>(null)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  async function onExportarExcel() {
+    if (!empresaId || !filtros.dataInicio || !filtros.dataFim) {
+      showToast('error', 'Defina empresa e período para exportar')
+      return
+    }
+    try {
+      setAcaoLoading('exportar')
+      const url = `/api/conciliacoes/analise-dia/exportar?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${encodeURIComponent(filtros.dataInicio)}&dataFim=${encodeURIComponent(filtros.dataFim)}`
+      const res = await fetch(url)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Falha ao exportar')
+      }
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `conciliacao-${filtros.dataInicio}_a_${filtros.dataFim}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      showToast('success', 'Exportação iniciada')
+    } catch (e: any) {
+      showToast('error', e.message || 'Falha ao exportar')
+    } finally {
+      setAcaoLoading(null)
+    }
+  }
+
+  async function onRodarConciliacao() {
+    if (!empresaId || !filtros.dataInicio || !filtros.dataFim) {
+      showToast('error', 'Defina empresa e período para conciliar')
+      return
+    }
+    try {
+      setAcaoLoading('rodar')
+      const res = await fetch('/api/conciliacoes/rodar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, dataInicio: filtros.dataInicio, dataFim: filtros.dataFim }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Falha ao rodar conciliação')
+      showToast('success', data.message || 'Conciliação concluída')
+    } catch (e: any) {
+      showToast('error', e.message || 'Falha ao conciliar')
+    } finally {
+      setAcaoLoading(null)
+    }
+  }
 
   const iniciarEdicao = (id: string, lado: "erp" | "extrato", item: ErpLancamento | ExtratoLancamento) => {
     setEditandoId(id)
@@ -180,6 +239,12 @@ export function TabelaComparativaConciliacao({
               className="pl-9"
             />
           </div>
+
+      {toast && (
+        <div className={`text-xs px-3 py-2 rounded ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+          {toast.message}
+        </div>
+      )}
           <Button
             variant="outline"
             size="sm"
@@ -193,6 +258,16 @@ export function TabelaComparativaConciliacao({
           <Button size="sm" onClick={onAplicarFiltros} disabled={loading}>
             Buscar
           </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={onExportarExcel} disabled={acaoLoading !== null || loading || !empresaId}>
+              {acaoLoading === 'exportar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <FileDown className="w-4 h-4 mr-1" />}
+              Exportar Excel
+            </Button>
+            <Button size="sm" onClick={onRodarConciliacao} disabled={acaoLoading !== null || loading || !empresaId}>
+              {acaoLoading === 'rodar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Play className="w-4 h-4 mr-1" />}
+              Rodar Conciliação
+            </Button>
+          </div>
         </div>
 
         {filtrosExpandidos && (
