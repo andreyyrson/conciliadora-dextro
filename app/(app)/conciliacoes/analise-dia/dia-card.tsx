@@ -1,6 +1,8 @@
 "use client"
 
+import React from "react"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Calendar,
@@ -9,10 +11,14 @@ import {
   Building2,
   AlertCircle,
   CheckCircle,
-  MinusCircle
+  MinusCircle,
+  Check,
+  X as XIcon,
+  Loader2
 } from "lucide-react"
 import { MatchesDetalhe } from "./matches-detalhe"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
+import { useEmpresa } from "@/lib/use-empresa"
 
 export const statusConfig: Record<StatusDia, {
   label: string
@@ -77,6 +83,52 @@ interface DiaCardProps {
 export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProps) {
   const status = statusConfig[dia.statusDia]
   const StatusIcon = status.icon
+  const { empresaId } = useEmpresa()
+  const [acaoLoading, setAcaoLoading] = React.useState<null | 'aprovar' | 'reprovar'>(null)
+  const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [justificativa, setJustificativa] = React.useState("")
+  const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar'>(null)
+  const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    let ignore = false
+    async function load() {
+      if (!empresaId) return
+      const url = `/api/conciliacoes/aprovacoes?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}`
+      const res = await fetch(url)
+      if (!res.ok) return
+      const data = await res.json().catch(() => ({}))
+      if (!ignore) setAprovStatus(data.aprovacoes?.[dia.data]?.status || 'AGUARDANDO')
+    }
+    load()
+    return () => { ignore = true }
+  }, [empresaId, dia.data])
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 2200)
+  }
+
+  async function aprovarReprovar(tipo: 'aprovar' | 'reprovar') {
+    try {
+      setAcaoLoading(tipo)
+      const res = await fetch(`/api/conciliacoes/${tipo}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, dataDia: dia.data, justificativa: justificativa || undefined })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Falha na ação')
+      showToast('success', tipo === 'aprovar' ? 'Dia aprovado' : 'Dia reprovado')
+      setConfirmando(null)
+      setJustificativa("")
+      onAfterAction?.()
+    } catch (e: any) {
+      showToast('error', e.message || 'Falha na ação')
+    } finally {
+      setAcaoLoading(null)
+    }
+  }
 
   return (
     <motion.div
@@ -101,6 +153,13 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className={`text-sm font-medium ${status.color}`}>{status.label}</div>
+              {aprovStatus && (
+                <div className="text-xs mt-0.5">
+                  <span className={`px-2 py-0.5 rounded ${aprovStatus === 'APROVADO' ? 'bg-green-500/10 text-green-600' : aprovStatus === 'REPROVADO' ? 'bg-red-500/10 text-red-600' : 'bg-gray-500/10 text-gray-500'}`}>
+                    {aprovStatus}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-3 text-xs text-muted-foreground">
                 <span className="text-green-500">Ent: R$ {formatarValor(dia.totalCreditoExtrato || dia.totalCreditoErp)}</span>
                 <span className="text-red-500">Sai: R$ {formatarValor(dia.totalDebitoExtrato || dia.totalDebitoErp)}</span>
@@ -109,6 +168,11 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
               {dia.saldoAposBanco !== null && (
                 <div className="text-xs text-muted-foreground">
                   Banco: R$ {formatarValor(dia.saldoAposBanco)}
+                </div>
+              )}
+              {toast && (
+                <div className={`mt-1 text-xs px-2 py-0.5 rounded inline-block ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                  {toast.message}
                 </div>
               )}
             </div>
@@ -159,11 +223,43 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                 <TransacoesTabela titulo="Extrato Bancário" icon={Calendar} transacoes={dia.transacoesExtrato} />
 
                 <MatchesDetalhe matches={dia.matches} diaData={dia.data} onAfterAction={onAfterAction} />
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
+                    {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                    Aprovar Dia
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
+                    {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
+                    Reprovar Dia
+                  </Button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </Card>
+      {confirmando && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-background border border-border rounded-md p-4 w-full max-w-md">
+            <h4 className="font-semibold mb-2">{confirmando === 'aprovar' ? 'Aprovar dia' : 'Reprovar dia'}</h4>
+            <p className="text-sm text-muted-foreground mb-2">Data: {new Date(dia.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+            <textarea
+              className="w-full border border-border rounded p-2 text-sm bg-background text-foreground"
+              placeholder="Justificativa (opcional)"
+              rows={3}
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setConfirmando(null)}>Cancelar</Button>
+              <Button size="sm" onClick={() => aprovarReprovar(confirmando)} disabled={acaoLoading !== null}>
+                {acaoLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }
