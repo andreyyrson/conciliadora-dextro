@@ -90,68 +90,70 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
     setLoading(true)
     setError("")
     try {
-      const [erpRes, extRes] = await Promise.all([
-        fetch(buildParams("/api/erp/lancamentos")),
-        fetch(buildParams("/api/importacoes/lancamentos")),
-      ])
+      // Se período definido, usar endpoint do motor; caso contrário, caminho legado
+      if (filtros.dataInicio && filtros.dataFim) {
+        const params = new URLSearchParams()
+        params.set("empresaId", empresaId!)
+        params.set("dataInicio", filtros.dataInicio)
+        params.set("dataFim", filtros.dataFim)
+        if (filtros.tipo) params.set("tipo", filtros.tipo)
+        if (filtros.status) params.set("status", filtros.status)
+        if (filtros.search) params.set("search", filtros.search)
 
-      const erpData = await erpRes.json()
-      const extData = await extRes.json()
+        const res = await fetch(`/api/conciliacoes/comparativo?${params.toString()}`)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Erro ao buscar comparativo")
+        const linhasApi: LinhaComparativa[] = data.linhas || []
+        setLinhas(linhasApi)
+        setPagination({ page: 1, limit: 50, total: linhasApi.length, totalPages: Math.ceil(linhasApi.length / 50) })
+      } else {
+        const [erpRes, extRes] = await Promise.all([
+          fetch(buildParams("/api/erp/lancamentos")),
+          fetch(buildParams("/api/importacoes/lancamentos")),
+        ])
 
-      if (!erpRes.ok) throw new Error(erpData.error || "Erro ao buscar ERP")
-      if (!extRes.ok) throw new Error(extData.error || "Erro ao buscar extrato")
+        const erpData = await erpRes.json()
+        const extData = await extRes.json()
 
-      const erps: ErpLancamento[] = erpData.lancamentos || []
-      const exts: ExtratoLancamento[] = extData.lancamentos || []
+        if (!erpRes.ok) throw new Error(erpData.error || "Erro ao buscar ERP")
+        if (!extRes.ok) throw new Error(extData.error || "Erro ao buscar extrato")
 
-      setErpLancamentos(erps)
-      setExtratoLancamentos(exts)
+        const erps: ErpLancamento[] = erpData.lancamentos || []
+        const exts: ExtratoLancamento[] = extData.lancamentos || []
 
-      // Agrupar por data aproximada (mesmo dia)
-      const mapaData = new Map<string, { erps: ErpLancamento[]; exts: ExtratoLancamento[] }>()
+        setErpLancamentos(erps)
+        setExtratoLancamentos(exts)
 
-      for (const e of erps) {
-        const dataKey = e.data.split("T")[0]
-        if (!mapaData.has(dataKey)) mapaData.set(dataKey, { erps: [], exts: [] })
-        mapaData.get(dataKey)!.erps.push(e)
-      }
-
-      for (const e of exts) {
-        const dataKey = e.data.split("T")[0]
-        if (!mapaData.has(dataKey)) mapaData.set(dataKey, { erps: [], exts: [] })
-        mapaData.get(dataKey)!.exts.push(e)
-      }
-
-      // Montar linhas comparativas simples: para cada data, parear sequencialmente
-      const resultado: LinhaComparativa[] = []
-      const datasOrdenadas = Array.from(mapaData.keys()).sort()
-
-      for (const data of datasOrdenadas) {
-        const { erps, exts } = mapaData.get(data)!
-        const maxLen = Math.max(erps.length, exts.length)
-        for (let i = 0; i < maxLen; i++) {
-          const erpItem = erps[i] || null
-          const extItem = exts[i] || null
-          let status: LinhaComparativa["status"] = "match"
-          if (!erpItem) status = "sobra_extrato"
-          else if (!extItem) status = "sobra_erp"
-          else if (Math.abs(erpItem.valor - extItem.valor) > 0.01 || erpItem.tipo !== extItem.tipo) status = "divergente"
-          resultado.push({ data, erp: erpItem, extrato: extItem, status })
+        const mapaData = new Map<string, { erps: ErpLancamento[]; exts: ExtratoLancamento[] }>()
+        for (const e of erps) {
+          const dataKey = e.data.split("T")[0]
+          if (!mapaData.has(dataKey)) mapaData.set(dataKey, { erps: [], exts: [] })
+          mapaData.get(dataKey)!.erps.push(e)
         }
+        for (const e of exts) {
+          const dataKey = e.data.split("T")[0]
+          if (!mapaData.has(dataKey)) mapaData.set(dataKey, { erps: [], exts: [] })
+          mapaData.get(dataKey)!.exts.push(e)
+        }
+        const resultado: LinhaComparativa[] = []
+        const datasOrdenadas = Array.from(mapaData.keys()).sort()
+        for (const data of datasOrdenadas) {
+          const { erps, exts } = mapaData.get(data)!
+          const maxLen = Math.max(erps.length, exts.length)
+          for (let i = 0; i < maxLen; i++) {
+            const erpItem = erps[i] || null
+            const extItem = exts[i] || null
+            let status: LinhaComparativa["status"] = "match"
+            if (!erpItem) status = "sobra_extrato"
+            else if (!extItem) status = "sobra_erp"
+            else if (Math.abs(erpItem.valor - extItem.valor) > 0.01 || erpItem.tipo !== extItem.tipo) status = "divergente"
+            resultado.push({ data, erp: erpItem, extrato: extItem, status })
+          }
+        }
+        const filtrado = filtros.status ? resultado.filter((l) => l.status === filtros.status) : resultado
+        setLinhas(filtrado)
+        setPagination({ page: 1, limit: 50, total: filtrado.length, totalPages: Math.ceil(filtrado.length / 50) })
       }
-
-      // Aplicar filtro de status
-      const filtrado = filtros.status
-        ? resultado.filter((l) => l.status === filtros.status)
-        : resultado
-
-      setLinhas(filtrado)
-      setPagination({
-        page: 1,
-        limit: 50,
-        total: filtrado.length,
-        totalPages: Math.ceil(filtrado.length / 50),
-      })
     } catch (err: any) {
       setError(err.message)
     } finally {
