@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button"
 
 interface MatchesDetalheProps {
   matches: MatchDia
+  diaData?: string // yyyy-mm-dd
 }
 
-export function MatchesDetalhe({ matches }: MatchesDetalheProps) {
+export function MatchesDetalhe({ matches, diaData }: MatchesDetalheProps) {
   if (!matches || matches.detalhes.length === 0) return null
 
   async function completarCampoERP(
     erpId: string,
-    campo: "descricao" | "valor",
+    campo: "descricao" | "valor" | "data",
     valorExtrato: string | number,
     valorErpAtual: string | number | null | undefined
   ) {
@@ -30,7 +31,12 @@ export function MatchesDetalhe({ matches }: MatchesDetalheProps) {
     }
 
     const payload: any = {}
-    payload[campo] = valorExtrato
+    if (campo === "data") {
+      // valorExtrato deve ser yyyy-mm-dd
+      payload.data = valorExtrato
+    } else {
+      payload[campo] = valorExtrato
+    }
 
     const res = await fetch(`/api/erp/lancamentos/${erpId}`, {
       method: "PATCH",
@@ -127,7 +133,27 @@ export function MatchesDetalhe({ matches }: MatchesDetalheProps) {
                       >
                         Completar Valor
                       </Button>
-                      {/* Em uma próxima etapa, adicionaremos "Completar Data" quando o detalhe expuser a data do extrato */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={async () => {
+                          try {
+                            const dataParaAplicar = diaData || new Date().toISOString().split("T")[0]
+                            await completarCampoERP(
+                              m.erpPareado!.id,
+                              "data",
+                              dataParaAplicar,
+                              undefined
+                            )
+                            alert("Data completada com sucesso")
+                          } catch (e: any) {
+                            alert(e.message || "Falha ao completar data")
+                          }
+                        }}
+                      >
+                        Completar Data
+                      </Button>
                     </div>
                   )}
                 </div>
