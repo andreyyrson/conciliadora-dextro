@@ -46,12 +46,37 @@ export function buildDia(
     diferencaCredito
   })
 
+  const detalhes: MatchSummary["detalhes"] = [
+    ...matching.itens.map(item => ({
+      extratoId: item.extrato?.id ?? "",
+      extratoDescricao: item.extrato?.descricao ?? "",
+      extratoValor: item.extrato?.valor ?? 0,
+      status: item.status,
+      confianca: item.status === "CONCILIADO" ? "HIGH" : "MEDIUM",
+      score: item.status === "CONCILIADO" ? 3 : 2,
+      erpPareado: item.erp ? { id: item.erp.id, descricao: item.erp.descricao, valor: item.erp.valor } : null,
+      diferencaValor: item.erp && item.extrato ? Math.abs(item.erp.valor - item.extrato.valor) : undefined,
+      explicacoes: [],
+    })),
+    ...matching.extratosSobrando.map(ex => ({
+      extratoId: ex.id,
+      extratoDescricao: ex.descricao,
+      extratoValor: ex.valor,
+      status: "NAO_CONCILIADO",
+      confianca: "LOW",
+      score: 0,
+      erpPareado: null,
+      diferencaValor: undefined,
+      explicacoes: [],
+    })),
+  ]
+
   const matches: MatchSummary = {
     conciliados: matching.itens.filter(i => i.status === "CONCILIADO").length,
     aRevisar: matching.itens.filter(i => i.status === "A_REVISAR").length,
     naoConciliados: matching.erpsSobrando.length + matching.extratosSobrando.length,
     erpsSobrando: matching.erpsSobrando.length,
-    detalhes: []
+    detalhes,
   }
 
   return {
