@@ -4,11 +4,9 @@ import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  LayoutDashboard,
   Building2,
   Users,
   FileText,
-  Wallet,
   Upload,
   ChevronRight,
   ChevronLeft,
@@ -56,57 +54,14 @@ export function PainelSidebar({
     },
   ]
 
-  const companyNav = [
-    {
-      label: "Visão geral",
-      items: [
-        {
-          label: "Início",
-          href: `/dashboard`,
-          icon: LayoutDashboard,
-          visible: true,
-        },
-      ],
-    },
-    {
-      label: "Financeiro",
-      items: [
-        {
-          label: "DRE",
-          href: `/dre`,
-          icon: FileText,
-          visible: canManage,
-        },
-        {
-          label: "Lançamentos",
-          href: `/lancamentos`,
-          icon: Wallet,
-          visible: canManage,
-        },
-      ],
-    },
-  ]
-
   const conciliacaoNav = [
     {
-      label: "Conciliação",
+      label: "Menu",
       items: [
-        {
-          label: "Dashboard",
-          href: "/dashboard",
-          icon: LayoutDashboard,
-          visible: true,
-        },
         {
           label: "Empresas",
           href: "/empresas",
           icon: Building2,
-          visible: true,
-        },
-        {
-          label: "Contas",
-          href: "/contas",
-          icon: Wallet,
           visible: true,
         },
         {
