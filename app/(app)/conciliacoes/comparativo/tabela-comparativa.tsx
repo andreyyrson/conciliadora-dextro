@@ -13,8 +13,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { motion } from "framer-motion"
-import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter, Play, FileDown, Loader2 } from "lucide-react"
+import { Pencil, Trash2, Save, X, ChevronLeft, ChevronRight, Search, Filter, Play, FileDown, Loader2, Calendar as CalendarIcon } from "lucide-react"
 import type { ErpLancamento, ExtratoLancamento, LinhaComparativa } from "./use-comparativo"
 
 interface FiltrosComparativo {
@@ -105,6 +107,8 @@ export function TabelaComparativaConciliacao({
   const [filtrosExpandidos, setFiltrosExpandidos] = useState(false)
   const [acaoLoading, setAcaoLoading] = useState<"rodar" | "exportar" | null>(null)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [openInicio, setOpenInicio] = useState(false)
+  const [openFim, setOpenFim] = useState(false)
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -271,7 +275,7 @@ export function TabelaComparativaConciliacao({
         </div>
 
         {filtrosExpandidos && (
-          <div className="p-3 border border-border rounded-lg bg-accent/50 grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="p-3 border border-border rounded-lg bg-accent/50 grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
               <Select value={filtros.tipo} onValueChange={(v) => onChangeFiltros({ ...filtros, tipo: v })}>
@@ -298,11 +302,58 @@ export function TabelaComparativaConciliacao({
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Data início</label>
-              <Input type="date" value={filtros.dataInicio} onChange={(e) => onChangeFiltros({ ...filtros, dataInicio: e.target.value })} />
+              <Popover open={openInicio} onOpenChange={setOpenInicio}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {filtros.dataInicio || "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="p-2">
+                  <Calendar
+                    mode="single"
+                    selected={filtros.dataInicio ? new Date(`${filtros.dataInicio}T00:00:00`) : undefined}
+                    onSelect={(date) => {
+                      if (!date) return
+                      const y = date.getFullYear()
+                      const m = String(date.getMonth() + 1).padStart(2, "0")
+                      const d = String(date.getDate()).padStart(2, "0")
+                      onChangeFiltros({ ...filtros, dataInicio: `${y}-${m}-${d}` })
+                      setOpenInicio(false)
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Data fim</label>
-              <Input type="date" value={filtros.dataFim} onChange={(e) => onChangeFiltros({ ...filtros, dataFim: e.target.value })} />
+              <Popover open={openFim} onOpenChange={setOpenFim}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start">
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {filtros.dataFim || "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="p-2">
+                  <Calendar
+                    mode="single"
+                    selected={filtros.dataFim ? new Date(`${filtros.dataFim}T00:00:00`) : undefined}
+                    onSelect={(date) => {
+                      if (!date) return
+                      const y = date.getFullYear()
+                      const m = String(date.getMonth() + 1).padStart(2, "0")
+                      const d = String(date.getDate()).padStart(2, "0")
+                      onChangeFiltros({ ...filtros, dataFim: `${y}-${m}-${d}` })
+                      setOpenFim(false)
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex items-end">
+              <Button className="w-full" size="sm" onClick={onAplicarFiltros} disabled={loading}>
+                Buscar
+              </Button>
             </div>
           </div>
         )}
