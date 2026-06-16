@@ -7,6 +7,41 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Zap, Check, AlertCircle, Loader2 } from "lucide-react"
+import { useComparativo } from "./comparativo/use-comparativo"
+import { TabelaComparativaConciliacao } from "./comparativo/tabela-comparativa"
+
+function ComparativoPreview({ empresaId }: { empresaId: string | null }) {
+  const {
+    linhas,
+    pagination,
+    filtros,
+    setFiltros,
+    loading,
+    onPageChange,
+    onSalvarErp,
+    onDeletarErp,
+    onDeletarExtrato,
+    onAplicarFiltros,
+  } = useComparativo({ empresaId })
+
+  return (
+    <TabelaComparativaConciliacao
+      linhas={linhas}
+      modoEdicao
+      filtros={filtros as any}
+      onChangeFiltros={setFiltros as any}
+      onAplicarFiltros={onAplicarFiltros}
+      onSalvarErp={onSalvarErp}
+      // Extrato é somente delete
+      onSalvarExtrato={async () => { /* no-op */ }}
+      onDeletarErp={onDeletarErp}
+      onDeletarExtrato={onDeletarExtrato}
+      pagination={pagination as any}
+      onPageChange={onPageChange}
+      loading={loading}
+    />
+  )
+}
 
 interface UploadErp {
   id: string
@@ -282,6 +317,12 @@ export function ProcessamentoLoteScreen() {
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* Pré-visualização Comparativa ERP x Extrato (reutilizado) */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Pré-visualização Comparativa</h3>
+        <ComparativoPreview empresaId={empresaId} />
       </Card>
 
       {/* Status do Processamento */}
