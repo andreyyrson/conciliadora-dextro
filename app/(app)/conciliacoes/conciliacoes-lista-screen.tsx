@@ -299,7 +299,7 @@ export function ConciliacoesListaScreen() {
                   onChange={(e) => setModoExtrato(e.target.value as "conta" | "importacao")}
                   className="bg-background border-border"
                 />
-                <span className="text-foreground">Conta Bancária (Open Finance)</span>
+                <span className="text-foreground">Conta Bancária</span>
               </label>
               <label htmlFor="modo-importacao" className="flex items-center gap-2 cursor-pointer">
                 <input

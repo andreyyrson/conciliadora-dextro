@@ -71,7 +71,7 @@ function valorIgual(a: number, b: number, tol = 0.01): boolean {
   return Math.abs(a - b) <= tol
 }
 
-export function gerarSugestoes(erps: EntradaConciliacao[], extratos: EntradaConciliacao[]): ResultadoMatching {
+export function gerarSugestoesComparativo(erps: EntradaConciliacao[], extratos: EntradaConciliacao[]): ResultadoMatching {
   const usadosExtrato = new Set<string>()
   const itens: ResultadoMatchingItem[] = []
 

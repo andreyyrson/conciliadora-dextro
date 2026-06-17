@@ -1,5 +1,5 @@
 import type { EntradaConciliacao, ResultadoMatching } from "./types"
-import { gerarSugestoes } from "./types"
+import { gerarSugestoesComparativo } from "./types"
 import type { ErpTransaction, ExtratoTransaction } from "./types"
 
 export interface DailyMatchingResult {
@@ -36,7 +36,7 @@ export function runDailyMatching(
     banco: e.banco || undefined
   }))
 
-  const matching = gerarSugestoes(erpEntradas, extratoEntradas)
+  const matching = gerarSugestoesComparativo(erpEntradas, extratoEntradas)
 
   return { matching, erpEntradas, extratoEntradas }
 }

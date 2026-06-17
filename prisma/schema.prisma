@@ -67,19 +67,15 @@ model Empresa {
 }
 
 model ContaBancaria {
-  id                String              @id @default(cuid())
-  empresaId         String
-  banco             String
-  agencia           String?
-  conta             String
-  polpAccountId     String?
-  polpIntegrationId String?
-  pluggyItemId      String?
-  ultimaSincAt      DateTime?
-  ativa             Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  empresa           Empresa             @relation(fields: [empresaId], references: [id])
-  extratos          ExtratoLancamento[]
+  id        String              @id @default(cuid())
+  empresaId String
+  banco     String
+  agencia   String?
+  conta     String
+  ativa     Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  empresa   Empresa             @relation(fields: [empresaId], references: [id])
+  extratos  ExtratoLancamento[]
 }
 
 /// @deprecated Será unificado com ExtratoImportado em futura migração. Use fetchExtratos() para acessar extratos de todas as fontes.

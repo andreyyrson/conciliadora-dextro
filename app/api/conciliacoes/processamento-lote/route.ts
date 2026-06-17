@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { gerarSugestoes } from "@/lib/matching/engine"
+import { gerarSugestoesDetalhado } from "@/lib/matching/engine"
 
 export async function POST(req: Request) {
   try {
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     }))
 
     // Executar matching
-    const resultadoMatching = gerarSugestoes(erpEntradas, extratoEntradas)
+    const resultadoMatching = gerarSugestoesDetalhado(erpEntradas, extratoEntradas)
 
     // Calcular totais
     const totalErp = erpEntradas.reduce((s, e) => s + (e.tipo === "CREDITO" ? e.valor : -e.valor), 0)

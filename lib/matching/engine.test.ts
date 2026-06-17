@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { gerarSugestoes, EntradaConciliacao, normalizarDocumento } from "./engine"
+import { gerarSugestoesDetalhado, EntradaConciliacao, normalizarDocumento } from "./engine"
 
 describe("normalizarDocumento", () => {
   it("deve remover caracteres especiais", () => {
@@ -11,7 +11,7 @@ describe("normalizarDocumento", () => {
   })
 })
 
-describe("gerarSugestoes", () => {
+describe("gerarSugestoesDetalhado", () => {
   const baseErp: EntradaConciliacao = {
     id: "erp-1",
     origem: "ERP",
@@ -35,7 +35,7 @@ describe("gerarSugestoes", () => {
   }
 
   it("deve auto-confirmar match perfeito", () => {
-    const resultado = gerarSugestoes([baseErp], [baseExtrato])
+    const resultado = gerarSugestoesDetalhado([baseErp], [baseExtrato])
     expect(resultado.itens).toHaveLength(1)
     expect(resultado.itens[0].status).toBe("CONCILIADO")
     expect(resultado.itens[0].autoConfirmado).toBe(true)
@@ -52,7 +52,7 @@ describe("gerarSugestoes", () => {
       valor: 990.0, // 1% de diferença
       descricao: "PAGAMENTO FORNECEDOR ABC", // descrição diferente
     }
-    const resultado = gerarSugestoes([erp], [ext])
+    const resultado = gerarSugestoesDetalhado([erp], [ext])
     expect(resultado.itens).toHaveLength(1)
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].autoConfirmado).toBe(false)
@@ -62,7 +62,7 @@ describe("gerarSugestoes", () => {
   it("deve retornar NAO_CONCILIADO quando não há correspondência", () => {
     const erp = { ...baseErp, id: "erp-3", valor: 50000 }
     const ext = { ...baseExtrato, id: "ext-3", valor: 10 }
-    const resultado = gerarSugestoes([erp], [ext])
+    const resultado = gerarSugestoesDetalhado([erp], [ext])
     expect(resultado.itens).toHaveLength(1)
     expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
     expect(resultado.itens[0].autoConfirmado).toBe(false)
@@ -91,7 +91,7 @@ describe("gerarSugestoes", () => {
       fornecedor: "ABC LTDA", // diferente mas também não na descrição
       banco: null,
     }
-    const resultado = gerarSugestoes([erp1, erp2], [ext])
+    const resultado = gerarSugestoesDetalhado([erp1, erp2], [ext])
     expect(resultado.itens).toHaveLength(1)
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].requerDecisaoManual).toBe(true)
@@ -100,7 +100,7 @@ describe("gerarSugestoes", () => {
   it("deve retornar ERPs sobrando quando não há match", () => {
     const erp = { ...baseErp, id: "erp-sobrando" }
     const ext = { ...baseExtrato, id: "ext-match", valor: 99999 }
-    const resultado = gerarSugestoes([erp], [ext])
+    const resultado = gerarSugestoesDetalhado([erp], [ext])
     expect(resultado.erpsSobrando).toHaveLength(1)
     expect(resultado.erpsSobrando[0].erp.id).toBe("erp-sobrando")
     expect(resultado.erpsSobrando[0].status).toBe("FALTANDO_BANCO")
@@ -109,14 +109,14 @@ describe("gerarSugestoes", () => {
   it("não deve fazer match quando tipo é diferente", () => {
     const erp = { ...baseErp, id: "erp-tipo", tipo: "CREDITO" as const }
     const ext = { ...baseExtrato, id: "ext-tipo", tipo: "DEBITO" as const }
-    const resultado = gerarSugestoes([erp], [ext])
+    const resultado = gerarSugestoesDetalhado([erp], [ext])
     expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
   })
 
   it("não deve fazer match quando data difere mais de 7 dias", () => {
     const erp = { ...baseErp, id: "erp-data", data: new Date("2024-01-01") }
     const ext = { ...baseExtrato, id: "ext-data", data: new Date("2024-01-15") }
-    const resultado = gerarSugestoes([erp], [ext])
+    const resultado = gerarSugestoesDetalhado([erp], [ext])
     // 14 dias de diferença deve ser rejeitado pelo pré-filtro
     expect(resultado.itens[0].status).toBe("NAO_CONCILIADO")
   })
@@ -154,14 +154,14 @@ describe("gerarSugestoes", () => {
       tipo: "DEBITO",
       descricao: "PAGAMENTO",
     }
-    const resultado = gerarSugestoes([erpCredito, erpDebito], [extCredito, extDebito])
+    const resultado = gerarSugestoesDetalhado([erpCredito, erpDebito], [extCredito, extDebito])
     expect(resultado.totalErp).toBe(200) // 500 - 300
     expect(resultado.totalExtrato).toBe(200)
   })
 
   it("deve gerar hash determinístico", () => {
-    const r1 = gerarSugestoes([baseErp], [baseExtrato])
-    const r2 = gerarSugestoes([baseErp], [baseExtrato])
+    const r1 = gerarSugestoesDetalhado([baseErp], [baseExtrato])
+    const r2 = gerarSugestoesDetalhado([baseErp], [baseExtrato])
     expect(r1.hashConciliacao).toBe(r2.hashConciliacao)
   })
 
@@ -172,7 +172,7 @@ describe("gerarSugestoes", () => {
       valor: 1000 + i,
     }))
     const ext = { ...baseExtrato, id: "ext-multi" }
-    const resultado = gerarSugestoes(erps, [ext])
+    const resultado = gerarSugestoesDetalhado(erps, [ext])
     expect(resultado.itens[0].sugestoes.length).toBeLessThanOrEqual(3)
   })
 })

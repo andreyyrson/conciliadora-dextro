@@ -10,7 +10,7 @@ import {
   gerarExplicacoes,
   normalizarBanco,
   similaridadeHibrida,
-  gerarSugestoes,
+  gerarSugestoesDetalhado,
   EntradaConciliacao,
 } from "./engine"
 
@@ -241,7 +241,7 @@ describe("gerarExplicacoes - regras de mensagens", () => {
 })
 
 // ========== REGRAS DE NEGÓCIO: AUTO-CONFIRMAÇÃO ==========
-describe("gerarSugestoes - auto-confirmação", () => {
+describe("gerarSugestoesDetalhado - auto-confirmação", () => {
   const erpBase: EntradaConciliacao = {
     id: "erp-auto",
     origem: "ERP",
@@ -264,7 +264,7 @@ describe("gerarSugestoes - auto-confirmação", () => {
   }
 
   it("deve auto-confirmar match perfeito com fornecedor e banco", () => {
-    const resultado = gerarSugestoes([erpBase], [extBase])
+    const resultado = gerarSugestoesDetalhado([erpBase], [extBase])
     expect(resultado.itens[0].status).toBe("CONCILIADO")
     expect(resultado.itens[0].autoConfirmado).toBe(true)
     expect(resultado.itens[0].sugestoes[0].autoConfirmado).toBe(true)
@@ -272,42 +272,42 @@ describe("gerarSugestoes - auto-confirmação", () => {
 
   it("NÃO deve auto-confirmar se fornecedor não está na descrição", () => {
     const erp = { ...erpBase, fornecedor: "ABC LTDA" }
-    const resultado = gerarSugestoes([erp], [extBase])
+    const resultado = gerarSugestoesDetalhado([erp], [extBase])
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("NÃO deve auto-confirmar se banco é diferente", () => {
     const erp = { ...erpBase, banco: "BRADESCO" }
-    const resultado = gerarSugestoes([erp], [extBase])
+    const resultado = gerarSugestoesDetalhado([erp], [extBase])
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("NÃO deve auto-confirmar se valor difere > 1%", () => {
     const ext = { ...extBase, valor: 980 } // 2% diferença
-    const resultado = gerarSugestoes([erpBase], [ext])
+    const resultado = gerarSugestoesDetalhado([erpBase], [ext])
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].autoConfirmado).toBe(false)
   })
 
   it("deve auto-confirmar mesmo sem fornecedor se demais critérios atendem", () => {
     const erp = { ...erpBase, fornecedor: null }
-    const resultado = gerarSugestoes([erp], [extBase])
+    const resultado = gerarSugestoesDetalhado([erp], [extBase])
     expect(resultado.itens[0].status).toBe("CONCILIADO")
     expect(resultado.itens[0].autoConfirmado).toBe(true)
   })
 
   it("deve auto-confirmar mesmo sem banco se demais critérios atendem", () => {
     const erp = { ...erpBase, banco: null }
-    const resultado = gerarSugestoes([erp], [extBase])
+    const resultado = gerarSugestoesDetalhado([erp], [extBase])
     expect(resultado.itens[0].status).toBe("CONCILIADO")
     expect(resultado.itens[0].autoConfirmado).toBe(true)
   })
 })
 
 // ========== REGRAS DE NEGÓCIO: AMBIGUIDADE ==========
-describe("gerarSugestoes - ambiguidade", () => {
+describe("gerarSugestoesDetalhado - ambiguidade", () => {
   const extBase: EntradaConciliacao = {
     id: "ext-amb",
     origem: "EXTRATO",
@@ -320,14 +320,14 @@ describe("gerarSugestoes - ambiguidade", () => {
   it("deve marcar como A_REVISAR quando top1 e top2 têm score ≥ 70 e diferença ≤ 5", () => {
     const erp1 = { ...extBase, id: "erp-a", descricao: "PGTO FORNECEDOR", fornecedor: "A" }
     const erp2 = { ...extBase, id: "erp-b", descricao: "PGTO FORNECEDOR", fornecedor: "B" }
-    const resultado = gerarSugestoes([erp1, erp2], [extBase])
+    const resultado = gerarSugestoesDetalhado([erp1, erp2], [extBase])
     expect(resultado.itens[0].status).toBe("A_REVISAR")
     expect(resultado.itens[0].requerDecisaoManual).toBe(true)
   })
 })
 
 // ========== REGRAS DE NEGÓCIO: CONSUMO ÚNICO DE ERP ==========
-describe("gerarSugestoes - consumo único de ERP", () => {
+describe("gerarSugestoesDetalhado - consumo único de ERP", () => {
   const ext1: EntradaConciliacao = {
     id: "ext-1",
     origem: "EXTRATO",
@@ -356,7 +356,7 @@ describe("gerarSugestoes - consumo único de ERP", () => {
   }
 
   it("deve consumir cada ERP apenas uma vez", () => {
-    const resultado = gerarSugestoes([erp], [ext1, ext2])
+    const resultado = gerarSugestoesDetalhado([erp], [ext1, ext2])
     const matches = resultado.itens.filter(i => i.status === "CONCILIADO" || i.status === "A_REVISAR")
     expect(matches).toHaveLength(1)
     expect(resultado.erpsSobrando).toHaveLength(0)
@@ -364,7 +364,7 @@ describe("gerarSugestoes - consumo único de ERP", () => {
 })
 
 // ========== REGRAS DE NEGÓCIO: HASH DETERMINÍSTICO ==========
-describe("gerarSugestoes - hash determinístico", () => {
+describe("gerarSugestoesDetalhado - hash determinístico", () => {
   it("deve gerar hash idêntico para mesmos dados", () => {
     const erp: EntradaConciliacao = {
       id: "erp-hash",
@@ -382,8 +382,8 @@ describe("gerarSugestoes - hash determinístico", () => {
       tipo: "DEBITO",
       descricao: "TESTE",
     }
-    const r1 = gerarSugestoes([erp], [ext])
-    const r2 = gerarSugestoes([erp], [ext])
+    const r1 = gerarSugestoesDetalhado([erp], [ext])
+    const r2 = gerarSugestoesDetalhado([erp], [ext])
     expect(r1.hashConciliacao).toBe(r2.hashConciliacao)
   })
 
@@ -412,14 +412,14 @@ describe("gerarSugestoes - hash determinístico", () => {
       tipo: "DEBITO",
       descricao: "TESTE",
     }
-    const r1 = gerarSugestoes([erp1], [ext])
-    const r2 = gerarSugestoes([erp2], [ext])
+    const r1 = gerarSugestoesDetalhado([erp1], [ext])
+    const r2 = gerarSugestoesDetalhado([erp2], [ext])
     expect(r1.hashConciliacao).not.toBe(r2.hashConciliacao)
   })
 })
 
 // ========== REGRAS DE NEGÓCIO: TOTAIS ==========
-describe("gerarSugestoes - totais", () => {
+describe("gerarSugestoesDetalhado - totais", () => {
   it("deve calcular total ERP corretamente (créditos - débitos)", () => {
     const erpCredito: EntradaConciliacao = {
       id: "erp-c",
@@ -445,7 +445,7 @@ describe("gerarSugestoes - totais", () => {
       tipo: "CREDITO",
       descricao: "RECEBIMENTO",
     }
-    const resultado = gerarSugestoes([erpCredito, erpDebito], [ext])
+    const resultado = gerarSugestoesDetalhado([erpCredito, erpDebito], [ext])
     expect(resultado.totalErp).toBe(200) // 500 - 300
   })
 })
