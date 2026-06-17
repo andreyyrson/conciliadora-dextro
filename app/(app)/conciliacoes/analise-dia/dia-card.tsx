@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
+import { MatchesDetalhe } from "./matches-detalhe"
 import { useEmpresa } from "@/lib/use-empresa"
 
 export const statusConfig: Record<StatusDia, {
@@ -32,9 +33,18 @@ export const statusConfig: Record<StatusDia, {
 
 interface TabelaComparativaDiaProps {
   dia: DiaAnalise
+  completando: null | { id: string; campo: string }
+  setCompletando: (v: null | { id: string; campo: string }) => void
+  completarCampoERP: (
+    erpId: string,
+    campo: "descricao" | "valor" | "data",
+    valorExtrato: string | number,
+    valorErpAtual?: string | number | null
+  ) => Promise<void>
+  showToast: (type: 'success' | 'error', message: string) => void
 }
 
-function TabelaComparativaDia({ dia }: TabelaComparativaDiaProps) {
+function TabelaComparativaDia({ dia, completando, setCompletando, completarCampoERP, showToast }: TabelaComparativaDiaProps) {
   const { detalhes, erpsSobrandoDetalhes } = dia.matches
   const totalLinhas = detalhes.length + erpsSobrandoDetalhes.length
   if (totalLinhas === 0) return null
@@ -82,7 +92,71 @@ function TabelaComparativaDia({ dia }: TabelaComparativaDiaProps) {
                 <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.extratoValor < 0 ? "text-red-500" : "text-foreground"}`}>
                   R$ {formatarValor(m.extratoValor)}
                 </td>
-                <td className="p-2 text-center">{statusBadge(m.status)}</td>
+                <td className="p-2 text-center">
+                  {statusBadge(m.status)}
+                  {m.erpPareado && (() => {
+                    const erp = m.erpPareado
+                    if (!erp) return null
+                    return (
+                      <div className="mt-2 grid grid-cols-1 gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-1"
+                          disabled={completando?.id === erp.id && completando?.campo === "descricao"}
+                          onClick={async () => {
+                            try {
+                              setCompletando({ id: erp.id, campo: "descricao" })
+                              await completarCampoERP(erp.id, "descricao", m.extratoDescricao, erp.descricao)
+                            } catch (e: any) {
+                              showToast('error', e.message || 'Falha ao completar descrição')
+                            } finally {
+                              setCompletando(null)
+                            }
+                          }}
+                        >
+                          {completando?.id === erp.id && completando?.campo === "descricao" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Completar Descrição"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-1"
+                          disabled={completando?.id === erp.id && completando?.campo === "valor"}
+                          onClick={async () => {
+                            try {
+                              setCompletando({ id: erp.id, campo: "valor" })
+                              await completarCampoERP(erp.id, "valor", m.extratoValor, erp.valor)
+                            } catch (e: any) {
+                              showToast('error', e.message || 'Falha ao completar valor')
+                            } finally {
+                              setCompletando(null)
+                            }
+                          }}
+                        >
+                          {completando?.id === erp.id && completando?.campo === "valor" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Completar Valor"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-[10px] px-1"
+                          disabled={completando?.id === erp.id && completando?.campo === "data"}
+                          onClick={async () => {
+                            try {
+                              setCompletando({ id: erp.id, campo: "data" })
+                              await completarCampoERP(erp.id, "data", dia.data, undefined)
+                            } catch (e: any) {
+                              showToast('error', e.message || 'Falha ao completar data')
+                            } finally {
+                              setCompletando(null)
+                            }
+                          }}
+                        >
+                          {completando?.id === erp.id && completando?.campo === "data" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Completar Data"}
+                        </Button>
+                      </div>
+                    )
+                  })()}
+                </td>
               </tr>
             ))}
             {erpsSobrandoDetalhes.map((e) => (
@@ -128,6 +202,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
   const [justificativa, setJustificativa] = React.useState("")
   const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar'>(null)
   const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
+  const [completando, setCompletando] = React.useState<null | { id: string; campo: string }>(null)
 
   React.useEffect(() => {
     let ignore = false
@@ -148,6 +223,43 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
     setTimeout(() => setToast(null), 2200)
   }
 
+  async function completarCampoERP(
+    erpId: string,
+    campo: "descricao" | "valor" | "data",
+    valorExtrato: string | number,
+    valorErpAtual: string | number | null | undefined
+  ) {
+    const isVazio = campo === "descricao"
+      ? !valorErpAtual || String(valorErpAtual).trim() === ""
+      : valorErpAtual === null || valorErpAtual === undefined
+
+    if (!isVazio) {
+      const confirma = window.confirm(
+        `O campo ${campo} do ERP já possui um valor. Deseja sobrescrever com o valor do extrato?`
+      )
+      if (!confirma) return
+    }
+
+    const payload: Record<string, unknown> = {}
+    if (campo === "data") {
+      payload.data = valorExtrato
+    } else {
+      payload[campo] = valorExtrato
+    }
+
+    const res = await fetch(`/api/erp/lancamentos/${erpId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || `Falha ao completar ${campo}`)
+    }
+    showToast('success', `${campo === 'data' ? 'Data' : campo === 'valor' ? 'Valor' : 'Descrição'} completado(a)`)
+    onAfterAction?.()
+  }
+
   async function aprovarReprovar(tipo: 'aprovar' | 'reprovar') {
     try {
       setAcaoLoading(tipo)
@@ -159,6 +271,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
       showToast('success', tipo === 'aprovar' ? 'Dia aprovado' : 'Dia reprovado')
+      setAprovStatus(tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO')
       setConfirmando(null)
       setJustificativa("")
       onAfterAction?.()
@@ -277,7 +390,19 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   </div>
                 </div>
 
-                <TabelaComparativaDia dia={dia} />
+                <TabelaComparativaDia
+                  dia={dia}
+                  completando={completando}
+                  setCompletando={setCompletando}
+                  completarCampoERP={completarCampoERP}
+                  showToast={showToast}
+                />
+
+                <MatchesDetalhe
+                  matches={dia.matches}
+                  diaData={dia.data}
+                  onAfterAction={onAfterAction}
+                />
 
                 <div className="flex items-center justify-end gap-2">
                   <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
