@@ -28,17 +28,20 @@ export async function POST(req: Request) {
     const userId = session.user.id
 
     const result = await prisma.$transaction(async (tx) => {
-      const p: any = tx as any
-      const existente = await p.aprovacaoDia.findUnique({ where: { empresaId_dataDia: { empresaId, dataDia: dia } } }).catch(() => null)
+      const existente = await tx.aprovacaoDia.findUnique({
+        where: { empresaId_dataDia: { empresaId, dataDia: dia } }
+      }).catch(() => null)
       const deStatus = existente?.status || null
 
-      const atual = await p.aprovacaoDia.upsert({
+      const atual = await tx.aprovacaoDia.upsert({
         where: { empresaId_dataDia: { empresaId, dataDia: dia } },
         update: { status: "REPROVADO", justificativa, userId },
         create: { empresaId, dataDia: dia, status: "REPROVADO", justificativa, userId },
       })
 
-      await p.aprovacaoDiaLog.create({ data: { aprovacaoDiaId: atual.id, deStatus, paraStatus: "REPROVADO", justificativa, userId } })
+      await tx.aprovacaoDiaLog.create({
+        data: { aprovacaoDiaId: atual.id, deStatus, paraStatus: "REPROVADO", justificativa, userId }
+      })
       return atual
     })
 

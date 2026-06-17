@@ -3,27 +3,36 @@ generator client {
 }
 
 model AprovacaoDia {
-  id           String   @id @default(cuid())
-  empresaId    String
-  dataDia      DateTime
-  status       String   // AGUARDANDO | APROVADO | REPROVADO
+  id            String   @id @default(cuid())
+  empresaId     String
+  dataDia       DateTime
+  status        String   // AGUARDANDO | APROVADO | REPROVADO
   justificativa String?
-  userId       String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  userId        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  empresa       Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs          AprovacaoDiaLog[]
 
   @@unique([empresaId, dataDia])
   @@index([empresaId, dataDia])
 }
 
 model AprovacaoDiaLog {
-  id            String   @id @default(cuid())
+  id             String       @id @default(cuid())
   aprovacaoDiaId String
-  deStatus      String?
-  paraStatus    String
-  justificativa String?
-  userId        String
-  createdAt     DateTime @default(now())
+  deStatus       String?
+  paraStatus     String
+  justificativa  String?
+  userId         String
+  createdAt      DateTime     @default(now())
+
+  aprovacaoDia   AprovacaoDia @relation(fields: [aprovacaoDiaId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([aprovacaoDiaId])
 }
 
 datasource db {
@@ -32,13 +41,15 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  name         String?
-  password     String
-  createdAt    DateTime      @default(now())
-  conciliacoes Conciliacao[]
-  empresas     Empresa[]
+  id             String            @id @default(cuid())
+  email          String            @unique
+  name           String?
+  password       String
+  createdAt      DateTime          @default(now())
+  conciliacoes   Conciliacao[]
+  empresas       Empresa[]
+  aprovacoesDia  AprovacaoDia[]
+  aprovacoesLog  AprovacaoDiaLog[]
 }
 
 model Empresa {
@@ -52,6 +63,7 @@ model Empresa {
   user                User                @relation(fields: [userId], references: [id])
   uploadErps          UploadErp[]
   importacoesExtrato  ImportacaoExtrato[]
+  aprovacoesDia       AprovacaoDia[]
 }
 
 model ContaBancaria {
@@ -70,6 +82,7 @@ model ContaBancaria {
   extratos          ExtratoLancamento[]
 }
 
+/// @deprecated Será unificado com ExtratoImportado em futura migração. Use fetchExtratos() para acessar extratos de todas as fontes.
 model ExtratoLancamento {
   id            String            @id @default(cuid())
   contaId       String

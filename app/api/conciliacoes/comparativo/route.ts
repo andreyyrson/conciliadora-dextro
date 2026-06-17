@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { fetchExtratos } from "@/lib/extrato/fetch-unificado"
 import type { LinhaComparativa, ErpLancamento, ExtratoLancamento } from "@/lib/conciliacao/comparativo-types"
 import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 
@@ -35,28 +36,20 @@ export async function GET(req: Request) {
     fim.setHours(23, 59, 59, 999)
 
     const uploads = await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })
-    const contas = await prisma.contaBancaria.findMany({ where: { empresaId }, select: { id: true } })
-    const importacoes = await prisma.importacaoExtrato.findMany({ where: { empresaId }, select: { id: true } })
-
     const uploadIds = uploads.map(u => u.id)
-    const contaIds = contas.map(c => c.id)
-    const importacaoIds = importacoes.map(i => i.id)
 
-    const [erpLanc, extLanc, impLanc] = await Promise.all([
+    const [erpLanc, extratos] = await Promise.all([
       prisma.erpLancamento.findMany({ where: { uploadId: { in: uploadIds }, data: { gte: inicio, lte: fim } } }),
-      prisma.extratoLancamento.findMany({ where: { contaId: { in: contaIds }, data: { gte: inicio, lte: fim } } }),
-      prisma.extratoImportado.findMany({ where: { importacaoId: { in: importacaoIds }, data: { gte: inicio, lte: fim } } }),
+      fetchExtratos(empresaId, inicio, fim),
     ])
 
     // Preparar dias e rodar matching diário com regra 2-de-3 (implementada em gerarSugestoes)
     const diasSet = new Set<string>()
     erpLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
-    extLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
-    impLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
+    extratos.forEach(e => diasSet.add(e.data.toISOString().split('T')[0]))
     const datasOrdenadas = Array.from(diasSet).sort()
 
     const toErpTx = (l: typeof erpLanc[number]) => ({ id: l.id, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, documento: l.documento, fornecedor: l.fornecedor, banco: l.banco, categoria: l.categoria })
-    const toExtTx = (l: typeof extLanc[number] | typeof impLanc[number]) => ({ id: l.id, origem: "EXTRATO" as const, data: l.data, descricao: l.descricao, valor: Number(l.valor), tipo: l.tipo, saldoApos: (l as any).saldoApos != null ? Number((l as any).saldoApos) : null, identificador: (l as any).identificador || null, banco: (l as any).banco || null })
 
     // Indexar extratos por dia para permitir D+1 útil
     const dayOf = (d: Date) => d.toISOString().split('T')[0]
@@ -69,16 +62,11 @@ export async function GET(req: Request) {
       else if (wd === 0) nb.setUTCDate(nb.getUTCDate() + 1)
       return nb.toISOString().split('T')[0]
     }
-    const extratosByDay = new Map<string, ReturnType<typeof toExtTx>[]>()
-    for (const l of extLanc) {
-      const k = dayOf(l.data)
+    const extratosByDay = new Map<string, typeof extratos>()
+    for (const e of extratos) {
+      const k = dayOf(e.data)
       if (!extratosByDay.has(k)) extratosByDay.set(k, [])
-      extratosByDay.get(k)!.push(toExtTx(l))
-    }
-    for (const l of impLanc) {
-      const k = dayOf(l.data)
-      if (!extratosByDay.has(k)) extratosByDay.set(k, [])
-      extratosByDay.get(k)!.push(toExtTx(l))
+      extratosByDay.get(k)!.push(e)
     }
 
     const linhas: LinhaComparativa[] = []

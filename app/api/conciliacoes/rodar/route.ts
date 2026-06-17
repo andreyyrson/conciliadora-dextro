@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { fetchExtratos } from "@/lib/extrato/fetch-unificado"
 import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 import { calculateStatus } from "@/lib/conciliacao/calculate-status"
 import type { ErpTransaction, ExtratoTransaction, DiaConciliacao } from "@/lib/conciliacao/types"
@@ -38,18 +39,12 @@ export async function POST(req: Request) {
 
     // Coletar fontes
     const uploads = await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })
-    const contas = await prisma.contaBancaria.findMany({ where: { empresaId }, select: { id: true } })
-    const importacoes = await prisma.importacaoExtrato.findMany({ where: { empresaId }, select: { id: true } })
-
     const uploadIds = uploads.map(u => u.id)
-    const contaIds = contas.map(c => c.id)
-    const importacaoIds = importacoes.map(i => i.id)
 
     // Buscar lançamentos do período
-    const [erpLanc, extLanc, impLanc] = await Promise.all([
+    const [erpLanc, extTxs] = await Promise.all([
       prisma.erpLancamento.findMany({ where: { uploadId: { in: uploadIds }, data: { gte: inicio, lte: fim } } }),
-      prisma.extratoLancamento.findMany({ where: { contaId: { in: contaIds }, data: { gte: inicio, lte: fim } } }),
-      prisma.extratoImportado.findMany({ where: { importacaoId: { in: importacaoIds }, data: { gte: inicio, lte: fim } } }),
+      fetchExtratos(empresaId, inicio, fim),
     ])
 
     // Mapear para tipos do motor
@@ -64,30 +59,6 @@ export async function POST(req: Request) {
       banco: l.banco,
       categoria: l.categoria,
     }))
-    const extTxs: ExtratoTransaction[] = [
-      ...extLanc.map(l => ({
-        id: l.id,
-        origem: "EXTRATO" as const,
-        data: l.data,
-        descricao: l.descricao,
-        valor: Number(l.valor),
-        tipo: l.tipo,
-        saldoApos: l.saldoApos != null ? Number(l.saldoApos) : null,
-        identificador: l.identificador,
-        banco: l.banco,
-      })),
-      ...impLanc.map(l => ({
-        id: l.id,
-        origem: "EXTRATO_IMPORTADO" as const,
-        data: l.data,
-        descricao: l.descricao,
-        valor: Number(l.valor),
-        tipo: l.tipo,
-        saldoApos: null,
-        identificador: l.identificador,
-        banco: l.banco,
-      })),
-    ]
 
     // Agrupar por dia (YYYY-MM-DD)
     const diasSet = new Set<string>()
@@ -157,8 +128,8 @@ export async function POST(req: Request) {
       periodo: { inicio: dataInicio, fim: dataFim },
       totais: {
         erp: erpLanc.length,
-        extrato_open_finance: extLanc.length,
-        extrato_importado: impLanc.length,
+        extrato_open_finance: extTxs.filter(e => e.origem === "EXTRATO").length,
+        extrato_importado: extTxs.filter(e => e.origem === "EXTRATO_IMPORTADO").length,
       },
       dias,
     }
