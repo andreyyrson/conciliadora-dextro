@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { gerarSugestoes, EntradaConciliacao } from "@/lib/matching/engine"
+import { gerarSugestoesDetalhado, EntradaConciliacao } from "@/lib/matching/engine"
 
 export async function POST(req: Request) {
   try {
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     }))
 
     // Executar engine de sugestões (stateless, pura)
-    const resultado = gerarSugestoes(erpEntradas, extratoEntradas)
+    const resultado = gerarSugestoesDetalhado(erpEntradas, extratoEntradas)
 
     return NextResponse.json({
       success: true,

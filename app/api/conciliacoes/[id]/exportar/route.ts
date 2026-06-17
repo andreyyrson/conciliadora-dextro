@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { gerarSugestoes, EntradaConciliacao, ResultadoExtrato } from "@/lib/matching/engine"
+import { gerarSugestoesDetalhado, EntradaConciliacao, ResultadoExtrato } from "@/lib/matching/engine"
 import * as XLSX from "xlsx"
 
 interface DecisaoExtra {
@@ -81,7 +81,7 @@ export async function POST(
     }))
 
     // Gerar sugestões
-    const resultado = gerarSugestoes(erpEntradas, extratoEntradas)
+    const resultado = gerarSugestoesDetalhado(erpEntradas, extratoEntradas)
 
     // Buscar itens da conciliação para obter status final e quem aprovou
     const conciliacaoItens = await prisma.conciliacaoItem.findMany({

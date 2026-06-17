@@ -311,7 +311,7 @@ export function calcularConfianca(score: number): "HIGH" | "MEDIUM" | "LOW" {
 
 // ========== ALGORITMO PRINCIPAL ==========
 
-export function gerarSugestoes(
+export function gerarSugestoesDetalhado(
   erpEntradas: EntradaConciliacao[],
   extratoEntradas: EntradaConciliacao[]
 ): ResultadoMatching {

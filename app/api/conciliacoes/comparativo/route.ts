@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       fetchExtratos(empresaId, inicio, fim),
     ])
 
-    // Preparar dias e rodar matching diário com regra 2-de-3 (implementada em gerarSugestoes)
+    // Preparar dias e rodar matching diário com regra 2-de-3 (implementada em gerarSugestoesComparativo)
     const diasSet = new Set<string>()
     erpLanc.forEach(l => diasSet.add(l.data.toISOString().split('T')[0]))
     extratos.forEach(e => diasSet.add(e.data.toISOString().split('T')[0]))
