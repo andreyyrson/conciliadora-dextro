@@ -68,13 +68,19 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
         if (filtros.tipo) params.set("tipo", filtros.tipo)
         if (filtros.status) params.set("status", filtros.status)
         if (filtros.search) params.set("search", filtros.search)
+        params.set("page", String(pagination.page))
+        params.set("limit", String(pagination.limit))
 
         const res = await fetch(`/api/conciliacoes/comparativo?${params.toString()}`)
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || "Erro ao buscar comparativo")
         const linhasApi: LinhaComparativa[] = data.linhas || []
         setLinhas(linhasApi)
-        setPagination({ page: 1, limit: 50, total: linhasApi.length, totalPages: Math.ceil(linhasApi.length / 50) })
+        if (data.pagination) {
+          setPagination(data.pagination)
+        } else {
+          setPagination({ page: 1, limit: 50, total: linhasApi.length, totalPages: Math.ceil(linhasApi.length / 50) })
+        }
       } else {
         const [erpRes, extRes] = await Promise.all([
           fetch(buildParams("/api/erp/lancamentos")),
@@ -128,11 +134,11 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
     } finally {
       setLoading(false)
     }
-  }, [empresaId, filtros])
+  }, [empresaId, filtros, pagination.page, pagination.limit])
 
   useEffect(() => {
     if (empresaId) fetchDados()
-  }, [empresaId, filtros.search, filtros.tipo, filtros.dataInicio, filtros.dataFim, filtros.status, fetchDados])
+  }, [empresaId, filtros.search, filtros.tipo, filtros.dataInicio, filtros.dataFim, filtros.status, pagination.page, pagination.limit, fetchDados])
 
   const onPageChange = useCallback(
     (page: number) => {
@@ -193,29 +199,47 @@ export function useComparativo({ empresaId }: UseComparativoOptions) {
     []
   )
 
-  const onAceitarDivergentes = useCallback((ids: string[]) => {
+  const onAceitarDivergentes = useCallback(async (ids: string[]) => {
+    if (!empresaId) return
     const idSet = new Set(ids)
-    setLinhas(prev => prev.map(l => {
-      if (l.status !== "divergente") return l
-      const lineId = l.erp?.id || l.extrato?.id || ""
-      if (idSet.has(lineId)) return { ...l, status: "match" as const }
-      return l
-    }))
-  }, [])
+    const selecionados = linhas.filter(l => l.status === "divergente" && idSet.has(l.erp?.id || l.extrato?.id || ""))
+    if (selecionados.length === 0) return
+
+    try {
+      const itens = selecionados.map(l => ({
+        erpId: l.erp?.id,
+        extratoId: l.extrato?.id,
+        extratoImportadoId: (l.extrato as any)?.importacao ? l.extrato?.id : undefined,
+      }))
+
+      const res = await fetch("/api/conciliacoes/aceitar-divergentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresaId, itens }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro ao aceitar divergências")
+
+      setLinhas(prev => prev.map(l => {
+        if (l.status !== "divergente") return l
+        const lineId = l.erp?.id || l.extrato?.id || ""
+        if (idSet.has(lineId)) return { ...l, status: "match" as const }
+        return l
+      }))
+    } catch (err: any) {
+      setError(err.message || "Erro ao aceitar divergências")
+      throw err
+    }
+  }, [empresaId, linhas])
 
   const onAplicarFiltros = useCallback(() => {
     fetchDados()
   }, [fetchDados])
 
-  const paginatedLinhas = linhas.slice(
-    (pagination.page - 1) * pagination.limit,
-    pagination.page * pagination.limit
-  )
-
   return {
     erpLancamentos,
     extratoLancamentos,
-    linhas: paginatedLinhas,
+    linhas,
     allLinhas: linhas,
     pagination,
     filtros,

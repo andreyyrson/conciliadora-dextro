@@ -17,6 +17,9 @@ export async function GET(req: Request) {
     const tipo = searchParams.get("tipo") || ""
     const statusFiltro = searchParams.get("status") || ""
     const search = searchParams.get("search")?.toLowerCase() || ""
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
+    const skip = (page - 1) * limit
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json({ error: "empresaId, dataInicio e dataFim são obrigatórios" }, { status: 400 })
@@ -66,7 +69,6 @@ export async function GET(req: Request) {
       else if (wd === 0) nb.setUTCDate(nb.getUTCDate() + 1)
       return nb.toISOString().split('T')[0]
     }
-
     const extratosByDay = new Map<string, ReturnType<typeof toExtTx>[]>()
     for (const l of extLanc) {
       const k = dayOf(l.data)
@@ -119,7 +121,18 @@ export async function GET(req: Request) {
       return okTipo && okStatus && okSearch
     })
 
-    return NextResponse.json({ linhas: filtradas }, { status: 200 })
+    const total = filtradas.length
+    const paginated = filtradas.slice(skip, skip + limit)
+
+    return NextResponse.json({
+      linhas: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Erro no comparativo" }, { status: 500 })
   }

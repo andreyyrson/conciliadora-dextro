@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import { runDailyMatching } from "@/lib/conciliacao/daily-matching"
 import { calculateStatus } from "@/lib/conciliacao/calculate-status"
 import type { ErpTransaction, ExtratoTransaction, DiaConciliacao } from "@/lib/conciliacao/types"
+import { rodarBody } from "@/lib/api-schemas"
 
 export async function POST(req: Request) {
   try {
@@ -14,14 +15,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const { empresaId, dataInicio, dataFim } = body || {}
-
-    if (!empresaId || !dataInicio || !dataFim) {
+    const parsed = rodarBody.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "empresaId, dataInicio e dataFim são obrigatórios" },
+        { error: "Dados inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { empresaId, dataInicio, dataFim } = parsed.data
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } })
     if (!empresa || empresa.userId !== session.user.id) {

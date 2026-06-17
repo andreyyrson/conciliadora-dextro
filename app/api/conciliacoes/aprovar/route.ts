@@ -2,16 +2,22 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { aprovarBody } from "@/lib/api-schemas"
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
-    const { empresaId, dataDia, justificativa } = await req.json().catch(() => ({}))
-    if (!empresaId || !dataDia) {
-      return NextResponse.json({ error: "empresaId e dataDia são obrigatórios" }, { status: 400 })
+    const body = await req.json().catch(() => ({}))
+    const parsed = aprovarBody.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      )
     }
+    const { empresaId, dataDia, justificativa } = parsed.data
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } })
     if (!empresa || empresa.userId !== session.user.id) {

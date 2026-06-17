@@ -566,9 +566,13 @@ export function TabelaComparativaConciliacao({
           open={modalAceitar}
           onOpenChange={setModalAceitar}
           divergentes={divergentes}
-          onConfirmar={(ids) => {
-            onAceitarDivergentes(ids)
-            showToast('success', `${ids.length} item(ns) aceito(s) como conciliado(s)`)
+          onConfirmar={async (ids) => {
+            try {
+              await onAceitarDivergentes(ids)
+              showToast('success', `${ids.length} item(ns) aceito(s) como conciliado(s)`)
+            } catch (e: any) {
+              showToast('error', e.message || 'Erro ao aceitar divergências')
+            }
           }}
         />
       )}
