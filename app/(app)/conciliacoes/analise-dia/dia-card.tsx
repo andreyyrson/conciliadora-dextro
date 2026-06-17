@@ -270,6 +270,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
       showToast('success', tipo === 'aprovar' ? 'Dia aprovado' : 'Dia reprovado')
+      setAprovStatus(tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO')
       setConfirmando(null)
       setJustificativa("")
       onAfterAction?.()
