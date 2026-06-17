@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { contaBody } from "@/lib/api-schemas"
 
 export async function GET(req: Request) {
   try {
@@ -63,14 +64,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { empresaId, banco, agencia, conta } = body
-
-    if (!empresaId || !banco || !conta) {
+    const parsed = contaBody.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "empresaId, banco e conta são obrigatórios" },
+        { error: "Dados inválidos", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       )
     }
+    const { empresaId, banco, agencia, conta } = parsed.data
 
     // Verificar se a empresa pertence ao usuário
     const empresa = await prisma.empresa.findUnique({

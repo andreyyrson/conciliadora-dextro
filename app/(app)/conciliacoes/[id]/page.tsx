@@ -254,11 +254,11 @@ export default function ConciliacaoDetalhesPage() {
             >
               <option value="">Todos</option>
               <option value="AUTO_CONFIRMADO,CONFIRMADO_MANUAL">Conciliados</option>
-              <option value="REJEITADO,SEM_MATCH,SUGERIDO,AMBIGUO">Desconciliados</option>
+              <option value="REJEITADO,SEM_MATCH">Desconciliados</option>
               <option value="REJEITADO">Rejeitados</option>
               <option value="SEM_MATCH">Sem Match</option>
-              <option value="SUGERIDO">Sugeridos</option>
-              <option value="AMBIGUO">Ambíguos</option>
+              <option value="AUTO_CONFIRMADO">Auto Confirmado</option>
+              <option value="CONFIRMADO_MANUAL">Confirmado Manual</option>
             </select>
           </div>
           {itens.length === 0 ? (

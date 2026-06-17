@@ -223,3 +223,18 @@ model ConciliacaoItem {
 
   @@index([conciliacaoId, status])
 }
+
+model DivergenciaAceita {
+  id                 String   @id @default(cuid())
+  empresaId          String
+  erpId              String?
+  extratoId          String?
+  extratoImportadoId String?
+  userId             String
+  createdAt          DateTime @default(now())
+
+  @@index([empresaId])
+  @@index([erpId])
+  @@index([extratoId])
+  @@index([extratoImportadoId])
+}
