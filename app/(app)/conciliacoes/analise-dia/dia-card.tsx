@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
+import { MatchesDetalhe } from "./matches-detalhe"
 import { useEmpresa } from "@/lib/use-empresa"
 
 export const statusConfig: Record<StatusDia, {
@@ -395,6 +396,12 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   setCompletando={setCompletando}
                   completarCampoERP={completarCampoERP}
                   showToast={showToast}
+                />
+
+                <MatchesDetalhe
+                  matches={dia.matches}
+                  diaData={dia.data}
+                  onAfterAction={onAfterAction}
                 />
 
                 <div className="flex items-center justify-end gap-2">
