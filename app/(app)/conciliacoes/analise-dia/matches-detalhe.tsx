@@ -72,8 +72,6 @@ export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetal
       )}
       <div className="space-y-2">
         {matches.detalhes.map((m) => {
-          const confColor = m.confianca === "HIGH" ? "text-green-500" : m.confianca === "MEDIUM" ? "text-yellow-500" : "text-red-500"
-          const statusLabel = m.status === "CONCILIADO" ? "Conciliado" : m.status === "A_REVISAR" ? "A revisar" : "Não conciliado"
           const statusBg = m.status === "CONCILIADO" ? "bg-green-500/10" : m.status === "A_REVISAR" ? "bg-yellow-500/10" : "bg-gray-500/10"
 
           return (
@@ -93,17 +91,8 @@ export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetal
                       Diferença: R$ {formatarValor(m.diferencaValor)}
                     </div>
                   )}
-                  {m.explicacoes.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {m.explicacoes.join(" • ")}
-                    </div>
-                  )}
                 </div>
                 <div className="text-right ml-4 min-w-[220px]">
-                  <div className={`font-semibold ${confColor}`}>{statusLabel}</div>
-                  {m.score > 0 && (
-                    <div className="text-xs text-muted-foreground">Score: {m.score}</div>
-                  )}
                   {m.erpPareado && (
                     <div className="mt-2 grid grid-cols-1 gap-1">
                       <Button
