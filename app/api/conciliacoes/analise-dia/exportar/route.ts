@@ -339,6 +339,76 @@ export async function GET(req: Request) {
       XLSX.utils.book_append_sheet(workbook, wsErpSob, "ERP Sobrando")
     }
 
+    // === ABA 6: Conciliados (ERP pareados com extrato, inclui se o extrato foi aprovado individualmente) ===
+    const conciliadosRows = diasOrdenados.flatMap(dataKey => {
+      const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+
+      const erpTxs = erpDia.map(e => ({
+        id: e.id,
+        data: e.data,
+        descricao: e.descricao,
+        valor: Number(e.valor),
+        tipo: e.tipo,
+        documento: e.documento,
+        fornecedor: e.fornecedor,
+        banco: e.banco,
+        categoria: e.categoria,
+      }))
+
+      const extTxs = [
+        ...extBancarioDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco || contaMap.get(e.contaId) || null,
+        })),
+        ...extImportadoDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO_IMPORTADO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco,
+        })),
+      ]
+
+      const { matching } = runDailyMatching(erpTxs, extTxs)
+
+      return matching.itens
+        .filter(item => item.extrato && mapaLancamentoStatus[item.extrato.id] === "APROVADO")
+        .map(item => ({
+          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+          Descricao: item.erp?.descricao || "",
+          Valor: item.erp?.valor ?? 0,
+          Tipo: item.erp?.tipo === "CREDITO" ? "Entrada" : "Saída",
+          Documento: item.erp?.documento || "",
+          Fornecedor: item.erp?.fornecedor || "",
+          Banco: item.erp?.banco || "",
+          Categoria: item.erp?.categoria || "",
+          "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
+          "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
+        }))
+    })
+
+    // Aba Conciliados
+    if (conciliadosRows.length > 0) {
+      const wsConc = XLSX.utils.json_to_sheet(conciliadosRows)
+      wsConc["!cols"] = [
+        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 16 }, { wch: 14 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsConc, "Conciliados")
+    }
+
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
 
     return new NextResponse(buffer as ArrayBuffer, {

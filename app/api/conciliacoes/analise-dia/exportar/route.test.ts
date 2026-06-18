@@ -171,9 +171,16 @@ describe("Exportacao Analise Dia — mocked", () => {
     ]
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(erpSobrandoRows), "ERP Sobrando")
 
+    // Validar nova aba Conciliados (dados do ERP de itens pareados, dia aprovado)
+    const conciliadosRows = [
+      { Data: "01/06/2026", Descricao: "ERP 1", Valor: 500, Tipo: "Entrada", Documento: "DOC001", Fornecedor: "Forn A", Banco: "Banco A", Categoria: "Cat A", "Status Matching": "Conciliado", "Status Dia": "APROVADO" }
+    ]
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(conciliadosRows), "Conciliados")
+
     const buffer2 = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
     const wbRead2 = XLSX.read(buffer2, { type: "buffer" })
     expect(wbRead2.SheetNames).toContain("ERP Sobrando")
+    expect(wbRead2.SheetNames).toContain("Conciliados")
   })
 })
 

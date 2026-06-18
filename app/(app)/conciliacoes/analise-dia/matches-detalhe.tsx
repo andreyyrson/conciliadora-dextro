@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { CheckCircle, Check, X as XIcon, Loader2 } from "lucide-react"
+import { CheckCircle, Check, X as XIcon, Loader2, Square, CheckSquare } from "lucide-react"
 import { formatarValor, type MatchDia } from "./types"
 import { Button } from "@/components/ui/button"
 
@@ -23,6 +23,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
   if (!matches || matches.detalhes.length === 0) return null
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [loadingId, setLoadingId] = React.useState<string | null>(null)
+  const [loadingBatch, setLoadingBatch] = React.useState<'aprovar' | 'reprovar' | null>(null)
   const [localStatus, setLocalStatus] = React.useState<Record<string, string>>(() => {
     const map: Record<string, string> = {}
     if (lancamentosAprovados) {
@@ -32,6 +33,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
     }
     return map
   })
+  const [selecionados, setSelecionados] = React.useState<Set<string>>(new Set())
 
   React.useEffect(() => {
     if (!toast) return
@@ -109,6 +111,56 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
     }
   }
 
+  function toggleSelecionado(extratoId: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(extratoId)) next.delete(extratoId)
+      else next.add(extratoId)
+      return next
+    })
+  }
+
+  function selecionarTodos() {
+    const ids = matches.detalhes.map(m => m.extratoId)
+    setSelecionados(new Set(ids))
+  }
+
+  function limparSelecao() {
+    setSelecionados(new Set())
+  }
+
+  async function executarBatch(tipo: 'aprovar' | 'reprovar') {
+    if (!empresaId || !diaData || selecionados.size === 0) return
+    setLoadingBatch(tipo)
+    let sucessos = 0
+    let erros = 0
+    const ids = Array.from(selecionados)
+    await Promise.all(ids.map(async (extratoId) => {
+      try {
+        const res = await fetch(`/api/conciliacoes/${tipo}-lancamento`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId })
+        })
+        if (res.ok) {
+          sucessos++
+          setLocalStatus(prev => ({ ...prev, [extratoId]: tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO' }))
+        } else {
+          erros++
+        }
+      } catch {
+        erros++
+      }
+    }))
+    setLoadingBatch(null)
+    setSelecionados(new Set())
+    const msg = tipo === 'aprovar'
+      ? `${sucessos} aprovado(s)${erros > 0 ? `, ${erros} erro(s)` : ''}`
+      : `${sucessos} reprovado(s)${erros > 0 ? `, ${erros} erro(s)` : ''}`
+    setToast({ type: erros === 0 ? 'success' : 'error', message: msg })
+    onAfterAction?.()
+  }
+
   async function aprovarTodos() {
     if (!empresaId || !diaData) return
     const pendentes = matches.detalhes.filter(m => m.status === 'A_REVISAR' && localStatus[m.extratoId] !== 'APROVADO')
@@ -152,22 +204,67 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
           <CheckCircle className="w-4 h-4" />
           Matching ({matches.conciliados} conciliados, {matches.aRevisar} a revisar, {matches.naoConciliados} não conciliados)
         </h4>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs"
-          disabled={loadingId === '__all__'}
-          onClick={aprovarTodos}
-        >
-          {loadingId === '__all__' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
-          Aprovar Todos
-        </Button>
+        <div className="flex items-center gap-2">
+          {selecionados.size > 0 && (
+            <>
+              <span className="text-xs text-muted-foreground">{selecionados.size} selecionado(s)</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={loadingBatch !== null}
+                onClick={() => executarBatch('aprovar')}
+              >
+                {loadingBatch === 'aprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+                Aprovar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={loadingBatch !== null}
+                onClick={() => executarBatch('reprovar')}
+              >
+                {loadingBatch === 'reprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <XIcon className="w-3 h-3 mr-1" />}
+                Reprovar
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={limparSelecao}>
+                Limpar
+              </Button>
+            </>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            disabled={loadingId === '__all__'}
+            onClick={aprovarTodos}
+          >
+            {loadingId === '__all__' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+            Aprovar Todos
+          </Button>
+        </div>
       </div>
       {toast && (
         <div className={`mb-2 text-xs px-2 py-1 rounded inline-block ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
           {toast.message}
         </div>
       )}
+      <div className="flex items-center gap-2 mb-1">
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground underline"
+          onClick={selecionarTodos}
+        >
+          Selecionar todos
+        </button>
+        <span className="text-xs text-muted-foreground">·</span>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground underline"
+          onClick={limparSelecao}
+        >
+          Limpar seleção
+        </button>
+      </div>
       <div className="space-y-2">
         {matches.detalhes.map((m) => {
           const statusBg = m.status === "CONCILIADO" ? "bg-green-500/10" : m.status === "A_REVISAR" ? "bg-yellow-500/10" : "bg-gray-500/10"
@@ -176,8 +273,17 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
             <div key={m.extratoId} className={`p-3 rounded text-sm ${statusBg}`}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="font-medium">
-                    Extrato: {m.extratoDescricao} — R$ {formatarValor(m.extratoValor)}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleSelecionado(m.extratoId)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title={selecionados.has(m.extratoId) ? 'Desselecionar' : 'Selecionar'}
+                    >
+                      {selecionados.has(m.extratoId) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                    </button>
+                    <div className="font-medium">
+                      Extrato: {m.extratoDescricao} — R$ {formatarValor(m.extratoValor)}
+                    </div>
                   </div>
                   {m.erpPareado && (
                     <div className="text-muted-foreground mt-1">
