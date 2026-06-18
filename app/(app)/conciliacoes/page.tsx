@@ -4,7 +4,6 @@ import { useState } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ConciliacoesListaScreen } from "./conciliacoes-lista-screen"
-import { ProcessamentoLoteScreen } from "./processamento-lote-screen"
 import { AnaliseDiaScreen } from "./analise-dia-screen"
 
 export default function ConciliacoesPage() {
@@ -14,22 +13,17 @@ export default function ConciliacoesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Conciliações"
-        description="Gerencie, processe em lote e analise conciliações bancárias"
+        description="Gerencie e analise conciliações bancárias"
       />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="lista">Lista</TabsTrigger>
-          <TabsTrigger value="lote">Em Lote</TabsTrigger>
           <TabsTrigger value="analise">Análise por Dia</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista" className="mt-6">
           <ConciliacoesListaScreen />
-        </TabsContent>
-
-        <TabsContent value="lote" className="mt-6">
-          <ProcessamentoLoteScreen />
         </TabsContent>
 
         <TabsContent value="analise" className="mt-6">
