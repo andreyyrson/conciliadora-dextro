@@ -202,6 +202,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
   const [justificativa, setJustificativa] = React.useState("")
   const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar'>(null)
   const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
+  const [lancamentosAprovados, setLancamentosAprovados] = React.useState<Record<string, { status: string; updatedAt: string; userId: string }>>({})
   const [completando, setCompletando] = React.useState<null | { id: string; campo: string }>(null)
 
   React.useEffect(() => {
@@ -212,7 +213,10 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       const res = await fetch(url)
       if (!res.ok) return
       const data = await res.json().catch(() => ({}))
-      if (!ignore) setAprovStatus(data.aprovacoes?.[dia.data]?.status || 'AGUARDANDO')
+      if (!ignore) {
+        setAprovStatus(data.aprovacoes?.[dia.data]?.status || 'AGUARDANDO')
+        setLancamentosAprovados(data.lancamentos?.[dia.data] || {})
+      }
     }
     load()
     return () => { ignore = true }
@@ -401,6 +405,8 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                 <MatchesDetalhe
                   matches={dia.matches}
                   diaData={dia.data}
+                  empresaId={empresaId || undefined}
+                  lancamentosAprovados={lancamentosAprovados}
                   onAfterAction={onAfterAction}
                 />
 

@@ -1,24 +1,53 @@
 "use client"
 
 import React from "react"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle, Check, X as XIcon, Loader2 } from "lucide-react"
 import { formatarValor, type MatchDia } from "./types"
 import { Button } from "@/components/ui/button"
+
+interface LancamentoStatus {
+  status: string
+  updatedAt: string
+  userId: string
+}
 
 interface MatchesDetalheProps {
   matches: MatchDia
   diaData?: string // yyyy-mm-dd
+  empresaId?: string
+  lancamentosAprovados?: Record<string, LancamentoStatus>
   onAfterAction?: () => void
 }
 
-export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetalheProps) {
+export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovados, onAfterAction }: MatchesDetalheProps) {
   if (!matches || matches.detalhes.length === 0) return null
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [loadingId, setLoadingId] = React.useState<string | null>(null)
+  const [localStatus, setLocalStatus] = React.useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    if (lancamentosAprovados) {
+      for (const [extratoId, info] of Object.entries(lancamentosAprovados)) {
+        map[extratoId] = info.status
+      }
+    }
+    return map
+  })
+
   React.useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 2000)
     return () => clearTimeout(t)
   }, [toast])
+
+  React.useEffect(() => {
+    const map: Record<string, string> = {}
+    if (lancamentosAprovados) {
+      for (const [extratoId, info] of Object.entries(lancamentosAprovados)) {
+        map[extratoId] = info.status
+      }
+    }
+    setLocalStatus(map)
+  }, [lancamentosAprovados])
 
   async function completarCampoERP(
     erpId: string,
@@ -59,6 +88,27 @@ export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetal
     onAfterAction?.()
   }
 
+  async function aprovarReprovarLancamento(extratoId: string, tipo: 'aprovar' | 'reprovar') {
+    if (!empresaId || !diaData) return
+    setLoadingId(extratoId)
+    try {
+      const res = await fetch(`/api/conciliacoes/${tipo}-lancamento`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, dataDia: diaData, extratoId })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Falha na ação')
+      setLocalStatus(prev => ({ ...prev, [extratoId]: tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO' }))
+      setToast({ type: 'success', message: tipo === 'aprovar' ? 'Lançamento aprovado' : 'Lançamento reprovado' })
+      onAfterAction?.()
+    } catch (e: any) {
+      setToast({ type: 'error', message: e.message || 'Falha na ação' })
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   return (
     <div className="mt-4">
       <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
@@ -93,8 +143,39 @@ export function MatchesDetalhe({ matches, diaData, onAfterAction }: MatchesDetal
                   )}
                 </div>
                 <div className="text-right ml-4 min-w-[220px]">
+                  {localStatus[m.extratoId] && (
+                    <div className={`text-xs font-medium mb-1 px-2 py-0.5 rounded inline-block ${
+                      localStatus[m.extratoId] === 'APROVADO' ? 'bg-green-500/10 text-green-600' :
+                      localStatus[m.extratoId] === 'REPROVADO' ? 'bg-red-500/10 text-red-600' :
+                      'bg-gray-500/10 text-gray-500'
+                    }`}>
+                      {localStatus[m.extratoId]}
+                    </div>
+                  )}
+                  <div className="flex gap-1 mb-1">
+                    <Button
+                      size="sm"
+                      variant={localStatus[m.extratoId] === 'APROVADO' ? 'default' : 'outline'}
+                      className="h-6 text-[10px] px-2"
+                      disabled={loadingId === m.extratoId}
+                      onClick={() => aprovarReprovarLancamento(m.extratoId, 'aprovar')}
+                    >
+                      {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      Aprovar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={localStatus[m.extratoId] === 'REPROVADO' ? 'destructive' : 'outline'}
+                      className="h-6 text-[10px] px-2"
+                      disabled={loadingId === m.extratoId}
+                      onClick={() => aprovarReprovarLancamento(m.extratoId, 'reprovar')}
+                    >
+                      {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <XIcon className="w-3 h-3" />}
+                      Reprovar
+                    </Button>
+                  </div>
                   {m.erpPareado && (
-                    <div className="mt-2 grid grid-cols-1 gap-1">
+                    <div className="mt-1 grid grid-cols-1 gap-1">
                       <Button
                         size="sm"
                         variant="outline"
