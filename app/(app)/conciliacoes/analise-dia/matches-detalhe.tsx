@@ -111,9 +111,9 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
 
   async function aprovarTodos() {
     if (!empresaId || !diaData) return
-    const pendentes = matches.detalhes.filter(m => localStatus[m.extratoId] !== 'APROVADO')
+    const pendentes = matches.detalhes.filter(m => m.status === 'A_REVISAR' && localStatus[m.extratoId] !== 'APROVADO')
     if (pendentes.length === 0) {
-      setToast({ type: 'success', message: 'Todos os lançamentos já estão aprovados' })
+      setToast({ type: 'success', message: 'Nenhum lançamento à revisar para aprovar' })
       return
     }
     setLoadingId('__all__')
