@@ -352,7 +352,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="px-4 pb-4 space-y-4">
+              <div className="px-4 pb-16 space-y-4 relative">
                 <div className="grid grid-cols-2 gap-4">
                   <div className={`p-3 rounded ${status.bg}`}>
                     <div className="text-xs font-medium text-muted-foreground mb-1">ERP</div>
@@ -413,16 +413,16 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   onAfterAction={onAfterAction}
                 />
 
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  >
-                    <ArrowUp className="w-3 h-3 mr-1" />
-                    Voltar ao topo
-                  </Button>
+                {/* Botão flutuante voltar ao topo */}
+                <button
+                  className="absolute bottom-4 right-4 z-10 bg-primary text-primary-foreground rounded-full p-2.5 shadow-md hover:bg-primary/90 transition-colors"
+                  onClick={() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  title="Voltar ao topo"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
                       {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
