@@ -13,7 +13,8 @@ import {
   Check,
   X as XIcon,
   Loader2,
-  ArrowUp
+  ArrowUp,
+  Eye
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
 import { MatchesDetalhe } from "./matches-detalhe"
@@ -199,10 +200,10 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
   const status = statusConfig[dia.statusDia]
   const StatusIcon = status.icon
   const { empresaId } = useEmpresa()
-  const [acaoLoading, setAcaoLoading] = React.useState<null | 'aprovar' | 'reprovar'>(null)
+  const [acaoLoading, setAcaoLoading] = React.useState<null | 'aprovar' | 'reprovar' | 'revisar'>(null)
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [justificativa, setJustificativa] = React.useState("")
-  const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar'>(null)
+  const [confirmando, setConfirmando] = React.useState<null | 'aprovar' | 'reprovar' | 'revisar'>(null)
   const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
   const [lancamentosAprovados, setLancamentosAprovados] = React.useState<Record<string, { status: string; updatedAt: string; userId: string }>>({})
   const [completando, setCompletando] = React.useState<null | { id: string; campo: string }>(null)
@@ -266,18 +267,21 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
     onAfterAction?.()
   }
 
-  async function aprovarReprovar(tipo: 'aprovar' | 'reprovar') {
+  async function executarAcao(tipo: 'aprovar' | 'reprovar' | 'revisar') {
     try {
       setAcaoLoading(tipo)
-      const res = await fetch(`/api/conciliacoes/${tipo}`, {
+      const endpoint = tipo === 'revisar' ? '/api/conciliacoes/revisar' : `/api/conciliacoes/${tipo}`
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresaId, dataDia: dia.data, justificativa: justificativa || undefined })
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
-      showToast('success', tipo === 'aprovar' ? 'Dia aprovado' : 'Dia reprovado')
-      setAprovStatus(tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO')
+      const msg = tipo === 'aprovar' ? 'Dia aprovado' : tipo === 'reprovar' ? 'Dia reprovado' : 'Dia marcado para revisão'
+      const status = tipo === 'aprovar' ? 'APROVADO' : tipo === 'reprovar' ? 'REPROVADO' : 'A_REVISAR'
+      showToast('success', msg)
+      setAprovStatus(status)
       setConfirmando(null)
       setJustificativa("")
       onAfterAction?.()
@@ -314,8 +318,13 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
               <div className={`text-sm font-medium ${status.color}`}>{status.label}</div>
               {aprovStatus && (
                 <div className="text-xs mt-0.5">
-                  <span className={`px-2 py-0.5 rounded ${aprovStatus === 'APROVADO' ? 'bg-green-500/10 text-green-600' : aprovStatus === 'REPROVADO' ? 'bg-red-500/10 text-red-600' : 'bg-gray-500/10 text-gray-500'}`}>
-                    {aprovStatus}
+                  <span className={`px-2 py-0.5 rounded ${
+                    aprovStatus === 'APROVADO' ? 'bg-green-500/10 text-green-600' :
+                    aprovStatus === 'REPROVADO' ? 'bg-red-500/10 text-red-600' :
+                    aprovStatus === 'A_REVISAR' ? 'bg-yellow-500/10 text-yellow-600' :
+                    'bg-gray-500/10 text-gray-500'
+                  }`}>
+                    {aprovStatus === 'A_REVISAR' ? 'A REVISAR' : aprovStatus}
                   </span>
                 </div>
               )}
@@ -426,11 +435,15 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
                       {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                      Aprovar Dia
+                      Aprovar
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setConfirmando('revisar')} disabled={acaoLoading !== null}>
+                      {acaoLoading === 'revisar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
+                      Revisar
                     </Button>
                     <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
                       {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
-                      Reprovar Dia
+                      Reprovar
                     </Button>
                   </div>
                 </div>
@@ -442,7 +455,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       {confirmando && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-background border border-border rounded-md p-4 w-full max-w-md">
-            <h4 className="font-semibold mb-2">{confirmando === 'aprovar' ? 'Aprovar dia' : 'Reprovar dia'}</h4>
+            <h4 className="font-semibold mb-2">{confirmando === 'aprovar' ? 'Aprovar dia' : confirmando === 'revisar' ? 'Marcar dia para revisão' : 'Reprovar dia'}</h4>
             <p className="text-sm text-muted-foreground mb-2">Data: {new Date(dia.data + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
             <textarea
               className="w-full border border-border rounded p-2 text-sm bg-background text-foreground"
@@ -453,7 +466,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
             />
             <div className="mt-3 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setConfirmando(null)}>Cancelar</Button>
-              <Button size="sm" onClick={() => aprovarReprovar(confirmando)} disabled={acaoLoading !== null}>
+              <Button size="sm" onClick={() => executarAcao(confirmando)} disabled={acaoLoading !== null}>
                 {acaoLoading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
                 Confirmar
               </Button>
