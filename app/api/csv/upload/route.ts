@@ -11,12 +11,12 @@ import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 export async function POST(req: Request) {
   try {
     const ip = req.headers.get("x-forwarded-for") || "unknown"
-    const { success, remaining, resetAt } = rateLimit(`csv-upload:${ip}`, 5, 60 * 1000)
+    const { success, remaining, resetAt } = rateLimit(`csv-upload:${ip}`, 20, 60 * 1000)
 
     if (!success) {
       return NextResponse.json(
         { error: "Muitas tentativas. Tente novamente em alguns minutos." },
-        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+        { status: 429, headers: getRateLimitHeaders(20, remaining, resetAt) }
       )
     }
 
@@ -91,9 +91,12 @@ export async function POST(req: Request) {
     }
 
     // Verificar campos obrigatórios
-    if (!mapeamento.data || !mapeamento.valor) {
+    const camposFaltando = []
+    if (!mapeamento.data) camposFaltando.push("data")
+    if (!mapeamento.valor) camposFaltando.push("valor")
+    if (camposFaltando.length > 0) {
       return NextResponse.json(
-        { error: "Mapeamento deve incluir pelo menos 'data' e 'valor'" },
+        { error: `Mapeamento incompleto. Campos obrigatórios faltando: ${camposFaltando.join(", ")}` },
         { status: 400 }
       )
     }
