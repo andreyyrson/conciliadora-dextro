@@ -12,6 +12,8 @@ vi.mock("@/lib/db", () => ({
     erpLancamento: { findMany: mockFindMany },
     extratoLancamento: { findMany: mockFindMany },
     extratoImportado: { findMany: mockFindMany },
+    aprovacaoDia: { findMany: vi.fn().mockResolvedValue([{ dataDia: new Date("2026-06-01T00:00:00Z"), status: "APROVADO" }]) },
+    aprovacaoLancamento: { findMany: vi.fn().mockResolvedValue([{ dataDia: new Date("2026-06-01T00:00:00Z"), extratoId: "ex1", status: "APROVADO" }]) },
   }
 }))
 
@@ -96,6 +98,7 @@ describe("Exportacao Analise Dia — mocked", () => {
       const entradasExtrato = [...extDia, ...impDia].filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
       const saidasExtrato = [...extDia, ...impDia].filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
 
+      const mapaDiaStatus: Record<string, string> = { "2026-06-01": "APROVADO" }
       return {
         Data: fmt(new Date(dataKey + "T12:00:00Z")),
         "Entradas Extrato": entradasExtrato,
@@ -105,6 +108,7 @@ describe("Exportacao Analise Dia — mocked", () => {
         "Saídas ERP": saidasErp,
         "Saldo ERP": entradasErp - saidasErp,
         "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp),
+        "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO",
       }
     })
 
@@ -119,6 +123,7 @@ describe("Exportacao Analise Dia — mocked", () => {
         return !erpDia.some(erp => erp.tipo === ext.tipo && Math.abs(Number(erp.valor) - Number(ext.valor)) < 0.01)
       })
 
+      const mapaLancamentoStatus: Record<string, string> = { ex1: "APROVADO" }
       return sobras.map(ex => ({
         Data: fmt(new Date(dataKey + "T12:00:00Z")),
         Descricao: ex.descricao,
@@ -127,6 +132,7 @@ describe("Exportacao Analise Dia — mocked", () => {
         Origem: ("contaId" in ex) ? "Extrato Bancário" : "Extrato Importado",
         Banco: ex.banco || ("contaId" in ex ? "Banco Teste" : ""),
         Identificador: ex.identificador || "",
+        "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO",
       }))
     })
 
@@ -158,6 +164,16 @@ describe("Exportacao Analise Dia — mocked", () => {
     expect(wbRead.SheetNames).toContain("ERP (Relatório)")
     expect(wbRead.SheetNames).toContain("Resumo Diário")
     expect(wbRead.SheetNames).toContain("Não Conciliados")
+
+    // Validar nova aba ERP Sobrando
+    const erpSobrandoRows = [
+      { Data: "03/06/2026", Descricao: "ERP 3", Valor: 300, Tipo: "Entrada", Documento: "", Fornecedor: "", Banco: "", Categoria: "" }
+    ]
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(erpSobrandoRows), "ERP Sobrando")
+
+    const buffer2 = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
+    const wbRead2 = XLSX.read(buffer2, { type: "buffer" })
+    expect(wbRead2.SheetNames).toContain("ERP Sobrando")
   })
 })
 

@@ -89,6 +89,25 @@ export async function GET(req: Request) {
       orderBy: { data: "asc" }
     })
 
+    // Buscar aprovações por dia no período
+    const aprovacoesDia = await (prisma as any).aprovacaoDia.findMany({
+      where: { empresaId, dataDia: { gte: inicio, lte: fim } }
+    })
+    const mapaDiaStatus: Record<string, string> = {}
+    for (const a of aprovacoesDia as any[]) {
+      const key = (a.dataDia as Date).toISOString().split("T")[0]
+      mapaDiaStatus[key] = a.status
+    }
+
+    // Buscar aprovações por lançamento no período
+    const aprovacoesLancamento = await (prisma as any).aprovacaoLancamento.findMany({
+      where: { empresaId, dataDia: { gte: inicio, lte: fim } }
+    })
+    const mapaLancamentoStatus: Record<string, string> = {}
+    for (const a of aprovacoesLancamento as any[]) {
+      mapaLancamentoStatus[a.extratoId] = a.status
+    }
+
     // === ABA 1: Extrato Bancário ===
     const extratoRows = [
       ...extratoLancamentos.map(l => ({
@@ -149,7 +168,8 @@ export async function GET(req: Request) {
         "Entradas ERP": entradasErp,
         "Saídas ERP": saidasErp,
         "Saldo ERP": entradasErp - saidasErp,
-        "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp)
+        "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp),
+        "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
       }
     })
 
@@ -206,6 +226,64 @@ export async function GET(req: Request) {
         Origem: ex.origem === "EXTRATO" ? "Extrato Bancário" : "Extrato Importado",
         Banco: ex.banco || "",
         Identificador: ex.identificador || "",
+        "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO"
+      }))
+    })
+
+    // === ABA 5: ERP Sobrando (ERP sem correspondência no extrato) ===
+    const erpSobrandoRows = diasOrdenados.flatMap(dataKey => {
+      const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+
+      const erpTxs = erpDia.map(e => ({
+        id: e.id,
+        data: e.data,
+        descricao: e.descricao,
+        valor: Number(e.valor),
+        tipo: e.tipo,
+        documento: e.documento,
+        fornecedor: e.fornecedor,
+        banco: e.banco,
+        categoria: e.categoria,
+      }))
+
+      const extTxs = [
+        ...extBancarioDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco || contaMap.get(e.contaId) || null,
+        })),
+        ...extImportadoDia.map(e => ({
+          id: e.id,
+          origem: "EXTRATO_IMPORTADO" as const,
+          data: e.data,
+          descricao: e.descricao,
+          valor: Number(e.valor),
+          tipo: e.tipo,
+          saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
+          identificador: e.identificador,
+          banco: e.banco,
+        })),
+      ]
+
+      const { matching } = runDailyMatching(erpTxs, extTxs)
+
+      return matching.erpsSobrando.map(erp => ({
+        Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+        Descricao: erp.descricao,
+        Valor: erp.valor,
+        Tipo: erp.tipo === "CREDITO" ? "Entrada" : "Saída",
+        Documento: erp.documento || "",
+        Fornecedor: erp.fornecedor || "",
+        Banco: erp.banco || "",
+        Categoria: erp.categoria || "",
       }))
     })
 
@@ -233,7 +311,7 @@ export async function GET(req: Request) {
     if (resumoRows.length > 0) {
       const wsResumo = XLSX.utils.json_to_sheet(resumoRows)
       wsResumo["!cols"] = [
-        { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }
+        { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }
       ]
       XLSX.utils.book_append_sheet(workbook, wsResumo, "Resumo Diário")
     }
@@ -242,9 +320,18 @@ export async function GET(req: Request) {
     if (naoConciliadosRows.length > 0) {
       const wsNao = XLSX.utils.json_to_sheet(naoConciliadosRows)
       wsNao["!cols"] = [
-        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 25 }
+        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 16 }
       ]
       XLSX.utils.book_append_sheet(workbook, wsNao, "Não Conciliados")
+    }
+
+    // Aba ERP Sobrando
+    if (erpSobrandoRows.length > 0) {
+      const wsErpSob = XLSX.utils.json_to_sheet(erpSobrandoRows)
+      wsErpSob["!cols"] = [
+        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsErpSob, "ERP Sobrando")
     }
 
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
