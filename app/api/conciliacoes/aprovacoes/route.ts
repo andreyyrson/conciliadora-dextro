@@ -38,7 +38,19 @@ export async function GET(req: Request) {
       mapa[key] = { status: it.status, updatedAt: (it.updatedAt as Date).toISOString(), userId: it.userId }
     }
 
-    return NextResponse.json({ aprovacoes: mapa }, { status: 200 })
+    const lancamentos = await (prisma as any).aprovacaoLancamento.findMany({
+      where: { empresaId, dataDia: { gte: inicio, lte: fim } },
+      orderBy: { createdAt: "asc" },
+    })
+
+    const mapaLancamentos: Record<string, Record<string, { status: string; updatedAt: string; userId: string }>> = {}
+    for (const l of lancamentos as any[]) {
+      const key = (l.dataDia as Date).toISOString().split("T")[0]
+      if (!mapaLancamentos[key]) mapaLancamentos[key] = {}
+      mapaLancamentos[key][l.extratoId] = { status: l.status, updatedAt: (l.updatedAt as Date).toISOString(), userId: l.userId }
+    }
+
+    return NextResponse.json({ aprovacoes: mapa, lancamentos: mapaLancamentos }, { status: 200 })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Erro ao consultar aprovações" }, { status: 500 })
   }
