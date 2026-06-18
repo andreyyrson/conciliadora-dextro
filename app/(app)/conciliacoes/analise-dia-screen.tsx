@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
-import { FiltrosPeriodo } from "./analise-dia/filtros-periodo"
+import { FiltrosPeriodo, type FiltroStatusExportacao } from "./analise-dia/filtros-periodo"
 import { DiaCard } from "./analise-dia/dia-card"
 import type { DiaAnalise } from "./analise-dia/types"
 
@@ -23,6 +23,7 @@ export function AnaliseDiaScreen() {
   const [diasExpandidos, setDiasExpandidos] = useState<Set<string>>(new Set())
   const [exportando, setExportando] = useState(false)
   const [tipo, setTipo] = useState<"TODAS" | "RECEITAS" | "DESPESAS">("TODAS")
+  const [filtroStatus, setFiltroStatus] = useState<FiltroStatusExportacao>("TODOS")
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -62,8 +63,9 @@ export function AnaliseDiaScreen() {
     if (!empresaId || !dataInicio || !dataFim) return
     setExportando(true)
     try {
+      const statusParam = filtroStatus !== "TODOS" ? `&status=${filtroStatus}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+        `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${statusParam}`
       )
       if (!res.ok) throw new Error("Erro ao exportar")
       const blob = await res.blob()
@@ -106,12 +108,14 @@ export function AnaliseDiaScreen() {
         dataInicio={dataInicio}
         dataFim={dataFim}
         tipo={tipo}
+        filtroStatus={filtroStatus}
         loading={loading}
         exportando={exportando}
         podeExportar={dias.length > 0}
         onChangeInicio={setDataInicio}
         onChangeFim={setDataFim}
         onChangeTipo={setTipo}
+        onChangeFiltroStatus={setFiltroStatus}
         onAnalisar={buscarAnalise}
         onExportar={downloadExcel}
       />

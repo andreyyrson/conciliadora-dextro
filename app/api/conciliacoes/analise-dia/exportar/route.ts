@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     const empresaId = searchParams.get("empresaId")
     const dataInicio = searchParams.get("dataInicio")
     const dataFim = searchParams.get("dataFim")
+    const filtroStatus = searchParams.get("status")
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json(
@@ -150,6 +151,9 @@ export async function GET(req: Request) {
 
     const diasOrdenados = Array.from(dias).sort()
 
+    // Helper: se filtroStatus definido, verifica se o valor do item bate
+    const passaFiltro = (valor: string) => !filtroStatus || valor === filtroStatus
+
     const resumoRows = diasOrdenados.map(dataKey => {
       const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
@@ -171,7 +175,7 @@ export async function GET(req: Request) {
         "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp),
         "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
       }
-    })
+    }).filter(row => passaFiltro(row["Status Dia"]))
 
     // === ABA 4: Não Conciliados (extratos sem correspondência no ERP) ===
     const naoConciliadosRows = diasOrdenados.flatMap(dataKey => {
@@ -227,7 +231,7 @@ export async function GET(req: Request) {
         Banco: ex.banco || "",
         Identificador: ex.identificador || "",
         "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO"
-      }))
+      })).filter(row => passaFiltro(row["Status Lançamento"]))
     })
 
     // === ABA 5: ERP Sobrando (ERP sem correspondência no extrato) ===
@@ -284,7 +288,8 @@ export async function GET(req: Request) {
         Fornecedor: erp.fornecedor || "",
         Banco: erp.banco || "",
         Categoria: erp.categoria || "",
-      }))
+        "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
+      })).filter(row => passaFiltro(row["Status Dia"]))
     })
 
     const workbook = XLSX.utils.book_new()
@@ -329,7 +334,7 @@ export async function GET(req: Request) {
     if (erpSobrandoRows.length > 0) {
       const wsErpSob = XLSX.utils.json_to_sheet(erpSobrandoRows)
       wsErpSob["!cols"] = [
-        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }
+        { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 14 }
       ]
       XLSX.utils.book_append_sheet(workbook, wsErpSob, "ERP Sobrando")
     }
