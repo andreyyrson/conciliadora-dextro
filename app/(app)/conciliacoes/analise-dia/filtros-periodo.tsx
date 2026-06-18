@@ -7,16 +7,20 @@ import { Calendar as CalendarIcon, Download, Loader2 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 
+export type FiltroStatusExportacao = "TODOS" | "APROVADO" | "REPROVADO" | "AGUARDANDO"
+
 interface FiltrosPeriodoProps {
   dataInicio: string
   dataFim: string
   tipo: "TODAS" | "RECEITAS" | "DESPESAS"
+  filtroStatus: FiltroStatusExportacao
   loading: boolean
   exportando: boolean
   podeExportar: boolean
   onChangeInicio: (v: string) => void
   onChangeFim: (v: string) => void
   onChangeTipo: (v: "TODAS" | "RECEITAS" | "DESPESAS") => void
+  onChangeFiltroStatus: (v: FiltroStatusExportacao) => void
   onAnalisar: () => void
   onExportar: () => void
 }
@@ -25,12 +29,14 @@ export function FiltrosPeriodo({
   dataInicio,
   dataFim,
   tipo,
+  filtroStatus,
   loading,
   exportando,
   podeExportar,
   onChangeInicio,
   onChangeFim,
   onChangeTipo,
+  onChangeFiltroStatus,
   onAnalisar,
   onExportar
 }: FiltrosPeriodoProps) {
@@ -102,6 +108,19 @@ export function FiltrosPeriodo({
               {t === "TODAS" ? "Todas" : t === "RECEITAS" ? "Receitas" : "Despesas"}
             </button>
           ))}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Status</label>
+          <select
+            value={filtroStatus}
+            onChange={(e) => onChangeFiltroStatus(e.target.value as FiltroStatusExportacao)}
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="TODOS">Todos</option>
+            <option value="AGUARDANDO">Apenas pendentes</option>
+            <option value="APROVADO">Apenas aprovados</option>
+            <option value="REPROVADO">Apenas reprovados</option>
+          </select>
         </div>
         <Button onClick={onAnalisar} disabled={loading}>
           {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarIcon className="w-4 h-4 mr-2" />}
