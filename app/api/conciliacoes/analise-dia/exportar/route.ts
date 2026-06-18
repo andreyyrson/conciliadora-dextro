@@ -339,11 +339,8 @@ export async function GET(req: Request) {
       XLSX.utils.book_append_sheet(workbook, wsErpSob, "ERP Sobrando")
     }
 
-    // === ABA 6: Conciliados (ERP pareados com extrato, apenas dias APROVADOS) ===
+    // === ABA 6: Conciliados (ERP pareados com extrato, inclui se o extrato foi aprovado individualmente) ===
     const conciliadosRows = diasOrdenados.flatMap(dataKey => {
-      const diaStatus = mapaDiaStatus[dataKey] || "AGUARDANDO"
-      if (diaStatus !== "APROVADO") return []
-
       const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
@@ -387,18 +384,20 @@ export async function GET(req: Request) {
 
       const { matching } = runDailyMatching(erpTxs, extTxs)
 
-      return matching.itens.map(item => ({
-        Data: new Date(dataKey).toLocaleDateString("pt-BR"),
-        Descricao: item.erp?.descricao || "",
-        Valor: item.erp?.valor ?? 0,
-        Tipo: item.erp?.tipo === "CREDITO" ? "Entrada" : "Saída",
-        Documento: item.erp?.documento || "",
-        Fornecedor: item.erp?.fornecedor || "",
-        Banco: item.erp?.banco || "",
-        Categoria: item.erp?.categoria || "",
-        "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
-        "Status Dia": "APROVADO"
-      }))
+      return matching.itens
+        .filter(item => item.extrato && mapaLancamentoStatus[item.extrato.id] === "APROVADO")
+        .map(item => ({
+          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+          Descricao: item.erp?.descricao || "",
+          Valor: item.erp?.valor ?? 0,
+          Tipo: item.erp?.tipo === "CREDITO" ? "Entrada" : "Saída",
+          Documento: item.erp?.documento || "",
+          Fornecedor: item.erp?.fornecedor || "",
+          Banco: item.erp?.banco || "",
+          Categoria: item.erp?.categoria || "",
+          "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
+          "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
+        }))
     })
 
     // Aba Conciliados
