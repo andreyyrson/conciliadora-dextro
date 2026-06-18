@@ -14,12 +14,12 @@ import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 export async function POST(req: Request) {
   try {
     const ip = req.headers.get("x-forwarded-for") || "unknown"
-    const { success, remaining, resetAt } = rateLimit(`csv-analisar:${ip}`, 5, 60 * 1000)
+    const { success, remaining, resetAt } = rateLimit(`csv-analisar:${ip}`, 20, 60 * 1000)
 
     if (!success) {
       return NextResponse.json(
         { error: "Muitas tentativas. Tente novamente em alguns minutos." },
-        { status: 429, headers: getRateLimitHeaders(5, remaining, resetAt) }
+        { status: 429, headers: getRateLimitHeaders(20, remaining, resetAt) }
       )
     }
 

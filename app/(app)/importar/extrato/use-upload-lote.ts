@@ -110,12 +110,10 @@ export function useUploadLote(empresaId: string | null | undefined, onConcluido:
     return data as AnaliseCsvResult
   }, [empresaId, atualizarItem])
 
-  // Considera o mapeamento "confiável" se já existe salvo ou se todos os campos
-  // essenciais (data, valor, descricao) foram detectados.
+  // Considera o mapeamento "confiável" se os campos essenciais (data, valor) foram detectados.
+  // Nunca confia cegamente em mapeamentoSalvo — sempre valida os campos obrigatórios.
   const mapeamentoConfiavel = (a: AnaliseCsvResult): boolean => {
-    if (a.mapeamentoSalvo) return true
-    const essenciais = ["data", "valor", "descricao"]
-    return essenciais.every(campo => !!a.mapeamento[campo])
+    return !!(a.mapeamento.data && a.mapeamento.valor)
   }
 
   const confirmarMapeamento = useCallback(async (mapeamento: { [campo: string]: string | null }) => {
