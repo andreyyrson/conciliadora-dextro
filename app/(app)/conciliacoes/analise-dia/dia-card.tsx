@@ -12,7 +12,8 @@ import {
   MinusCircle,
   Check,
   X as XIcon,
-  Loader2
+  Loader2,
+  ArrowUp
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
 import { MatchesDetalhe } from "./matches-detalhe"
@@ -194,6 +195,7 @@ interface DiaCardProps {
 }
 
 export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProps) {
+  const cardRef = React.useRef<HTMLDivElement>(null)
   const status = statusConfig[dia.statusDia]
   const StatusIcon = status.icon
   const { empresaId } = useEmpresa()
@@ -288,6 +290,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
@@ -349,7 +352,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="px-4 pb-4 space-y-4">
+              <div className="px-4 pb-16 space-y-4 relative">
                 <div className="grid grid-cols-2 gap-4">
                   <div className={`p-3 rounded ${status.bg}`}>
                     <div className="text-xs font-medium text-muted-foreground mb-1">ERP</div>
@@ -410,15 +413,26 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                   onAfterAction={onAfterAction}
                 />
 
-                <div className="flex items-center justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
-                    {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                    Aprovar Dia
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
-                    {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
-                    Reprovar Dia
-                  </Button>
+                {/* Botão flutuante voltar ao topo */}
+                <button
+                  className="absolute bottom-4 right-4 z-10 bg-primary text-primary-foreground rounded-full p-2.5 shadow-md hover:bg-primary/90 transition-colors"
+                  onClick={() => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  title="Voltar ao topo"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
+                      {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                      Aprovar Dia
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
+                      {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
+                      Reprovar Dia
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
