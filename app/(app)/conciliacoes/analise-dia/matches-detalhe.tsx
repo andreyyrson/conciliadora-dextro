@@ -109,12 +109,60 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
     }
   }
 
+  async function aprovarTodos() {
+    if (!empresaId || !diaData) return
+    const pendentes = matches.detalhes.filter(m => localStatus[m.extratoId] !== 'APROVADO')
+    if (pendentes.length === 0) {
+      setToast({ type: 'success', message: 'Todos os lançamentos já estão aprovados' })
+      return
+    }
+    setLoadingId('__all__')
+    let sucessos = 0
+    let erros = 0
+    await Promise.all(pendentes.map(async (m) => {
+      try {
+        const res = await fetch(`/api/conciliacoes/aprovar-lancamento`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId: m.extratoId })
+        })
+        if (res.ok) {
+          sucessos++
+          setLocalStatus(prev => ({ ...prev, [m.extratoId]: 'APROVADO' }))
+        } else {
+          erros++
+        }
+      } catch {
+        erros++
+      }
+    }))
+    setLoadingId(null)
+    if (erros === 0) {
+      setToast({ type: 'success', message: `${sucessos} lançamento(s) aprovado(s)` })
+    } else {
+      setToast({ type: 'error', message: `${sucessos} aprovado(s), ${erros} erro(s)` })
+    }
+    onAfterAction?.()
+  }
+
   return (
     <div className="mt-4">
-      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-        <CheckCircle className="w-4 h-4" />
-        Matching ({matches.conciliados} conciliados, {matches.aRevisar} a revisar, {matches.naoConciliados} não conciliados)
-      </h4>
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-semibold flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          Matching ({matches.conciliados} conciliados, {matches.aRevisar} a revisar, {matches.naoConciliados} não conciliados)
+        </h4>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          disabled={loadingId === '__all__'}
+          onClick={aprovarTodos}
+        >
+          {loadingId === '__all__' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+          Aprovar Todos
+        </Button>
+      </div>
       {toast && (
         <div className={`mb-2 text-xs px-2 py-1 rounded inline-block ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
           {toast.message}
