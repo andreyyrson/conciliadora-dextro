@@ -63,6 +63,7 @@ export function buildDia(
       extratoId: ex.id,
       extratoDescricao: ex.descricao,
       extratoValor: ex.valor,
+      banco: ex.banco,
       status: "NAO_CONCILIADO",
       confianca: "LOW",
       score: 0,

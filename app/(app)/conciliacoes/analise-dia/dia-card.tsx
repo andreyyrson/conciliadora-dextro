@@ -171,17 +171,21 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
             ))}
             {erpsSobrandoDetalhes.map((e) => (
               <tr key={e.id} className="border-b border-border bg-red-500/5">
-                <td className="p-2 border-r border-border">
+                <td className="p-2 border-r border-border w-[25%]">
                   <span className="text-foreground">{e.descricao}</span>
                 </td>
-                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${e.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
+                <td className="p-2 border-r border-border w-[80px] text-xs text-muted-foreground">
+                  {e.banco || "—"}
+                </td>
+                <td className={`p-2 border-r border-border w-[80px] text-right font-medium tabular-nums ${e.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
                   R$ {formatarValor(e.valor)}
                 </td>
-                <td className="p-2 border-r border-border">
+                <td className="p-2 border-r border-border w-[25%]">
                   <span className="text-xs italic text-muted-foreground">—</span>
                 </td>
-                <td className="p-2 border-r border-border text-right text-muted-foreground">—</td>
-                <td className="p-2 text-center">{statusBadge("NAO_CONCILIADO")}</td>
+                <td className="p-2 border-r border-border w-[80px] text-xs text-muted-foreground">—</td>
+                <td className="p-2 border-r border-border w-[80px] text-right text-muted-foreground">—</td>
+                <td className="p-2 text-center w-[80px]">{statusBadge("NAO_CONCILIADO")}</td>
               </tr>
             ))}
           </tbody>
