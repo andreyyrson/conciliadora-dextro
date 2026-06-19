@@ -106,6 +106,10 @@ function normalizarNomeArquivo(nome: string): string {
   return removerAcentos(comEspacos).toLowerCase().replace(/\s+/g, " ").trim()
 }
 
+export function listarBancos(): string[] {
+  return Object.keys(BANCOS_CONHECIDOS).sort()
+}
+
 export function detectarBanco(nomeArquivo: string): string | null {
   const normalizado = normalizarNomeArquivo(nomeArquivo)
   if (!normalizado) return null

@@ -9,6 +9,7 @@ import { motion } from "framer-motion"
 import { useUploadLote } from "./extrato/use-upload-lote"
 import { UploadFila } from "./extrato/upload-fila"
 import { MapeamentoCsvModal } from "./extrato/mapeamento-csv-modal"
+import { SelecionarBancoModal } from "./extrato/selecionar-banco-modal"
 import { ListaImportacoesResumida, type ImportacaoResumo } from "./extrato/lista-importacoes-resumida"
 
 export function ExtratoScreen() {
@@ -36,12 +37,15 @@ export function ExtratoScreen() {
     processando,
     error: uploadError,
     mapeamentoPendente,
+    bancoPendente,
     adicionarArquivos,
     removerArquivo,
     limparFila,
     confirmarTodos,
     confirmarMapeamento,
-    pularMapeamento
+    pularMapeamento,
+    confirmarBanco,
+    pularBanco
   } = useUploadLote(empresaId, fetchImportacoes)
 
   useEffect(() => {
@@ -131,6 +135,13 @@ export function ExtratoScreen() {
         item={mapeamentoPendente}
         onConfirmar={confirmarMapeamento}
         onCancelar={pularMapeamento}
+      />
+
+      <SelecionarBancoModal
+        importacaoId={bancoPendente?.importacaoId || null}
+        fileName={bancoPendente?.fileName || null}
+        onConfirmar={confirmarBanco}
+        onCancelar={pularBanco}
       />
 
       <ConfirmDialog
