@@ -19,7 +19,7 @@ import { prisma } from "@/lib/db"
 describe("Prisma DB Connection (mocked)", () => {
   it("should execute raw query", async () => {
     mockQueryRaw.mockResolvedValueOnce([{ result: 1 }])
-    const result = await prisma.$queryRaw`SELECT 1 as result`
+    const result = await prisma.$queryRaw`SELECT 1 as result` as any
     expect(result[0].result).toBe(1)
   })
 
