@@ -5,8 +5,25 @@ import { calculateStatus } from "./calculate-status"
 export function buildDia(
   dataKey: string,
   erpsDoDia: ErpTransaction[],
-  extratosDoDia: ExtratoTransaction[]
+  extratosDoDia: ExtratoTransaction[],
+  banco?: string
 ): DiaConciliacao {
+  function normalizarBanco(str?: string | null): string {
+    if (!str) return ""
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  }
+
+  // Filtrar por banco se fornecido
+  if (banco && banco.trim()) {
+    const bancoNormalizado = normalizarBanco(banco)
+    erpsDoDia = erpsDoDia.filter(e =>
+      e.banco && normalizarBanco(e.banco).includes(bancoNormalizado)
+    )
+    extratosDoDia = extratosDoDia.filter(ex =>
+      ex.banco && normalizarBanco(ex.banco).includes(bancoNormalizado)
+    )
+  }
+
   const totalDebitoErp = erpsDoDia
     .filter(e => e.tipo === "DEBITO")
     .reduce((s, e) => s + e.valor, 0)
