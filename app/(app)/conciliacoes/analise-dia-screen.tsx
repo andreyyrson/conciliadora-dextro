@@ -25,8 +25,9 @@ export function AnaliseDiaScreen() {
   const [tipo, setTipo] = useState<"TODAS" | "RECEITAS" | "DESPESAS">("TODAS")
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusExportacao>("TODOS")
   const [banco, setBanco] = useState("")
+  const [bancosDisponiveis, setBancosDisponiveis] = useState<string[]>([])
 
-  const bancosDisponiveis = useMemo(() => {
+  const bancosDisponiveisAtuais = useMemo(() => {
     const set = new Set<string>()
     for (const dia of dias) {
       for (const tx of dia.transacoesErp) {
@@ -58,12 +59,15 @@ export function AnaliseDiaScreen() {
         return
       }
       setDias(data.dias || [])
+      if (!banco) {
+        setBancosDisponiveis(bancosDisponiveisAtuais)
+      }
     } catch {
       setError("Erro ao buscar análise por dia")
     } finally {
       setLoading(false)
     }
-  }, [empresaId, dataInicio, dataFim, tipo, banco])
+  }, [empresaId, dataInicio, dataFim, tipo, banco, bancosDisponiveisAtuais])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {
