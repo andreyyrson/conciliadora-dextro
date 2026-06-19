@@ -63,9 +63,13 @@ export async function fetchConciliationData(
   // Aplicar filtro de banco (case-insensitive, sem acentos)
   if (banco && banco.trim()) {
     const bancoNormalizado = normalizarBanco(banco)
+    console.log("[fetch-data] Filtro banco:", banco, "normalizado:", bancoNormalizado)
+    console.log("[fetch-data] Extratos antes:", extratoLancamentos.length)
     extratoLancamentos = extratoLancamentos.filter(ex =>
       normalizarBanco(ex.banco).includes(bancoNormalizado)
     )
+    console.log("[fetch-data] Extratos depois:", extratoLancamentos.length)
+    console.log("[fetch-data] ERPs antes:", erpLancamentos.length)
 
     // Fazer matching por dia para descobrir quais ERPs pareiam com extratos filtrados
     const { erpPorDia, extratoPorDia, dias } = groupByDay(
@@ -82,12 +86,15 @@ export async function fetchConciliationData(
       if (erpsDoDia.length === 0 || extratosDoDia.length === 0) continue
 
       const { matching } = runDailyMatching(erpsDoDia, extratosDoDia)
+      console.log("[fetch-data] Dia", dataKey, "ERPs:", erpsDoDia.length, "Extratos:", extratosDoDia.length, "Matching itens:", matching.itens.length)
       for (const item of matching.itens) {
         if (item.erp) erpsPareados.add(item.erp.id)
       }
     }
 
+    console.log("[fetch-data] ERPs pareados:", erpsPareados.size)
     erpLancamentos = erpLancamentos.filter(e => erpsPareados.has(e.id))
+    console.log("[fetch-data] ERPs depois:", erpLancamentos.length)
   }
 
   return { erpLancamentos, extratoLancamentos }
