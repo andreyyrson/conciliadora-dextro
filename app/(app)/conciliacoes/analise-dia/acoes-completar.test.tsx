@@ -25,6 +25,7 @@ function buildMatches(): MatchDia {
         explicacoes: ["Valor similar"],
       },
     ],
+    erpsSobrandoDetalhes: [],
   }
 }
 

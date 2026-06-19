@@ -27,18 +27,29 @@ export function AnaliseDiaScreen() {
   const [banco, setBanco] = useState("")
   const [bancosDisponiveis, setBancosDisponiveis] = useState<string[]>([])
 
-  const bancosDisponiveisAtuais = useMemo(() => {
-    const set = new Set<string>()
-    for (const dia of dias) {
-      for (const tx of dia.transacoesErp) {
-        if (tx.banco) set.add(tx.banco)
+  const buscarBancosDisponiveis = useCallback(async () => {
+    if (!empresaId || !dataInicio || !dataFim) return
+    try {
+      const res = await fetch(
+        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}`
+      )
+      const data = await res.json()
+      if (res.ok && data.dias) {
+        const set = new Set<string>()
+        for (const dia of data.dias) {
+          for (const tx of dia.transacoesErp) {
+            if (tx.banco) set.add(tx.banco)
+          }
+          for (const tx of dia.transacoesExtrato) {
+            if (tx.banco) set.add(tx.banco)
+          }
+        }
+        setBancosDisponiveis(Array.from(set).sort())
       }
-      for (const tx of dia.transacoesExtrato) {
-        if (tx.banco) set.add(tx.banco)
-      }
+    } catch {
+      // Silencioso: se falhar, mantém lista vazia
     }
-    return Array.from(set).sort()
-  }, [dias])
+  }, [empresaId, dataInicio, dataFim])
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -59,15 +70,12 @@ export function AnaliseDiaScreen() {
         return
       }
       setDias(data.dias || [])
-      if (!banco) {
-        setBancosDisponiveis(bancosDisponiveisAtuais)
-      }
     } catch {
       setError("Erro ao buscar análise por dia")
     } finally {
       setLoading(false)
     }
-  }, [empresaId, dataInicio, dataFim, tipo, banco, bancosDisponiveisAtuais])
+  }, [empresaId, dataInicio, dataFim, tipo, banco])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {
@@ -106,6 +114,7 @@ export function AnaliseDiaScreen() {
   useEffect(() => {
     if (empresaId && dataInicio && dataFim) {
       buscarAnalise()
+      buscarBancosDisponiveis()
     }
   }, [empresaId, dataInicio, dataFim, tipo, banco])
 
