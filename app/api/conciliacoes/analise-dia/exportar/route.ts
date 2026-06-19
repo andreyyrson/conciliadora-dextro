@@ -154,6 +154,9 @@ export async function GET(req: Request) {
     // Helper: se filtroStatus definido, verifica se o valor do item bate
     const passaFiltro = (valor: string) => !filtroStatus || valor === filtroStatus
 
+    // Helper: exclui itens reprovados
+    const naoReprovado = (valor: string) => valor !== "REPROVADO"
+
     const resumoRows = diasOrdenados.map(dataKey => {
       const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
@@ -175,7 +178,7 @@ export async function GET(req: Request) {
         "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp),
         "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
       }
-    }).filter(row => passaFiltro(row["Status Dia"]))
+    }).filter(row => passaFiltro(row["Status Dia"]) && naoReprovado(row["Status Dia"]))
 
     // === ABA 4: Não Conciliados (extratos sem correspondência no ERP) ===
     const naoConciliadosRows = diasOrdenados.flatMap(dataKey => {
@@ -231,7 +234,7 @@ export async function GET(req: Request) {
         Banco: ex.banco || "",
         Identificador: ex.identificador || "",
         "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO"
-      })).filter(row => passaFiltro(row["Status Lançamento"]))
+      })).filter(row => passaFiltro(row["Status Lançamento"]) && naoReprovado(row["Status Lançamento"]))
     })
 
     // === ABA 5: ERP Sobrando (ERP sem correspondência no extrato) ===
@@ -289,7 +292,7 @@ export async function GET(req: Request) {
         Banco: erp.banco || "",
         Categoria: erp.categoria || "",
         "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
-      })).filter(row => passaFiltro(row["Status Dia"]))
+      })).filter(row => passaFiltro(row["Status Dia"]) && naoReprovado(row["Status Dia"]))
     })
 
     const workbook = XLSX.utils.book_new()
@@ -397,7 +400,7 @@ export async function GET(req: Request) {
           Categoria: item.erp?.categoria || "",
           "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
           "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
-        }))
+        })).filter(row => naoReprovado(row["Status Dia"]))
     })
 
     // Aba Conciliados
@@ -407,6 +410,52 @@ export async function GET(req: Request) {
         { wch: 12 }, { wch: 45 }, { wch: 12 }, { wch: 10 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 16 }, { wch: 14 }
       ]
       XLSX.utils.book_append_sheet(workbook, wsConc, "Conciliados")
+    }
+
+    // === ABA 7: Resumo por Banco ===
+    const resumoPorBancoRows = diasOrdenados.flatMap(dataKey => {
+      const erpDia = erpLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+      const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
+
+      // Coletar todos os bancos únicos do dia
+      const bancosDoDia = new Set<string>()
+      erpDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
+      extBancarioDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
+      extImportadoDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
+
+      // Para cada banco, calcular totais
+      return Array.from(bancosDoDia).map(banco => {
+        const erpBanco = erpDia.filter(l => l.banco === banco)
+        const extBanco = [...extBancarioDia, ...extImportadoDia].filter(l => l.banco === banco)
+
+        const entradasErp = erpBanco.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
+        const saidasErp = erpBanco.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
+        const entradasExtrato = extBanco.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
+        const saidasExtrato = extBanco.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
+
+        return {
+          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+          Banco: banco,
+          "Entradas Extrato": entradasExtrato,
+          "Saídas Extrato": saidasExtrato,
+          "Saldo Extrato": entradasExtrato - saidasExtrato,
+          "Entradas ERP": entradasErp,
+          "Saídas ERP": saidasErp,
+          "Saldo ERP": entradasErp - saidasErp,
+          "Diferença Saldo": (entradasExtrato - saidasExtrato) - (entradasErp - saidasErp),
+          "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
+        }
+      }).filter(row => passaFiltro(row["Status Dia"]) && naoReprovado(row["Status Dia"]))
+    })
+
+    // Aba Resumo por Banco
+    if (resumoPorBancoRows.length > 0) {
+      const wsResumoBanco = XLSX.utils.json_to_sheet(resumoPorBancoRows)
+      wsResumoBanco["!cols"] = [
+        { wch: 12 }, { wch: 25 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }
+      ]
+      XLSX.utils.book_append_sheet(workbook, wsResumoBanco, "Resumo por Banco")
     }
 
     const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
