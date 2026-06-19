@@ -61,4 +61,40 @@ describe("fetchConciliationData", () => {
     expect(result.erpLancamentos).toHaveLength(0)
     expect(result.extratoLancamentos).toHaveLength(0)
   })
+
+  it("filtra por banco case-insensitive sem acentos", async () => {
+    mocks.erpFind.mockResolvedValue([
+      { id: "e1", data: new Date("2024-01-01"), descricao: "ERP Itaú", valor: 100, tipo: "DEBITO", documento: "D1", fornecedor: "F1", banco: "Itaú", categoria: "Cat" },
+      { id: "e2", data: new Date("2024-01-01"), descricao: "ERP Bradesco", valor: 200, tipo: "DEBITO", documento: "D2", fornecedor: "F2", banco: "Bradesco", categoria: "Cat" }
+    ])
+    mocks.extratoFind.mockResolvedValue([
+      { id: "x1", data: new Date("2024-01-01"), descricao: "Ext Itaú", valor: 100, tipo: "DEBITO", saldoApos: 500, identificador: "ID1", banco: "Itaú" },
+      { id: "x2", data: new Date("2024-01-01"), descricao: "Ext Bradesco", valor: 200, tipo: "DEBITO", saldoApos: 600, identificador: "ID2", banco: "Bradesco" }
+    ])
+    mocks.importadoFind.mockResolvedValue([
+      { id: "im1", data: new Date("2024-01-02"), descricao: "Imp Itaú", valor: 50, tipo: "CREDITO", saldoApos: null, identificador: null, banco: "Itaú" }
+    ])
+
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "itau")
+
+    expect(result.erpLancamentos).toHaveLength(1)
+    expect(result.erpLancamentos[0].id).toBe("e1")
+    expect(result.extratoLancamentos).toHaveLength(2)
+    expect(result.extratoLancamentos.every(ex => ex.banco === "Itaú")).toBe(true)
+  })
+
+  it("retorna arrays vazios quando banco não existe", async () => {
+    mocks.erpFind.mockResolvedValue([
+      { id: "e1", data: new Date("2024-01-01"), descricao: "ERP 1", valor: 100, tipo: "DEBITO", documento: "D1", fornecedor: "F1", banco: "Itaú", categoria: "Cat" }
+    ])
+    mocks.extratoFind.mockResolvedValue([
+      { id: "x1", data: new Date("2024-01-01"), descricao: "Ext 1", valor: 100, tipo: "DEBITO", saldoApos: 500, identificador: "ID1", banco: "Itaú" }
+    ])
+    mocks.importadoFind.mockResolvedValue([])
+
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "Banco Inexistente")
+
+    expect(result.erpLancamentos).toHaveLength(0)
+    expect(result.extratoLancamentos).toHaveLength(0)
+  })
 })

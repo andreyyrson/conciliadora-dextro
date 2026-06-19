@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { calculateStatus } from "./calculate-status"
 
-const emptyMatching = { itens: [], erpsSobrando: [] }
+const emptyMatching = { itens: [], erpsSobrando: [], extratosSobrando: [] }
 
 describe("calculateStatus — bordas e prioridades", () => {
   it("retorna SEM_DADOS quando nao ha ERP nem Extrato", () => {
@@ -26,6 +26,7 @@ describe("calculateStatus — bordas e prioridades", () => {
         { status: "CONCILIADO" },
       ],
       erpsSobrando: [],
+      extratosSobrando: [],
     }
     const status = calculateStatus({
       qtdErp: 1,
@@ -45,6 +46,7 @@ describe("calculateStatus — bordas e prioridades", () => {
     const matching = {
       itens: [],
       erpsSobrando: [{ id: "e1" }],
+      extratosSobrando: [],
     }
     const status = calculateStatus({
       qtdErp: 1,
@@ -64,6 +66,7 @@ describe("calculateStatus — bordas e prioridades", () => {
     const matching = {
       itens: [{ status: "CONCILIADO" }],
       erpsSobrando: [],
+      extratosSobrando: [],
     }
     const status = calculateStatus({
       qtdErp: 1,

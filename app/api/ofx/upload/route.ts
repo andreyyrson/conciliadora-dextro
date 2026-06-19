@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { prisma } from "@/lib/db"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import { detectarBanco } from "@/lib/bancos/detectar-banco"
 
 export async function POST(req: Request) {
   try {
@@ -70,6 +71,9 @@ export async function POST(req: Request) {
     // Parse OFX
     const ofxData = parseOFX(content)
 
+    // Detectar banco do nome do arquivo como fallback
+    const bancoDetectado = detectarBanco(file.name)
+
     if (ofxData.accounts.length === 0) {
       return NextResponse.json(
         { error: "Nenhuma conta encontrada no arquivo OFX" },
@@ -100,7 +104,7 @@ export async function POST(req: Request) {
           valor: transaction.amount,
           tipo: transaction.type === 'CREDIT' ? 'CREDITO' : 'DEBITO',
           identificador: transaction.id,
-          banco: account.bankId || null,
+          banco: account.bankId || bancoDetectado || null,
           saldoApos: null
         })
       }
@@ -119,6 +123,7 @@ export async function POST(req: Request) {
         tipo: importacao.tipo,
         nomeArquivo: importacao.nomeArquivo
       },
+      bancoDetectado,
       transactionsImported: result.count
     })
   } catch (error) {

@@ -14,6 +14,8 @@ interface FiltrosPeriodoProps {
   dataFim: string
   tipo: "TODAS" | "RECEITAS" | "DESPESAS"
   filtroStatus: FiltroStatusExportacao
+  banco: string
+  bancosDisponiveis: string[]
   loading: boolean
   exportando: boolean
   podeExportar: boolean
@@ -21,6 +23,7 @@ interface FiltrosPeriodoProps {
   onChangeFim: (v: string) => void
   onChangeTipo: (v: "TODAS" | "RECEITAS" | "DESPESAS") => void
   onChangeFiltroStatus: (v: FiltroStatusExportacao) => void
+  onChangeBanco: (v: string) => void
   onAnalisar: () => void
   onExportar: () => void
 }
@@ -30,6 +33,8 @@ export function FiltrosPeriodo({
   dataFim,
   tipo,
   filtroStatus,
+  banco,
+  bancosDisponiveis,
   loading,
   exportando,
   podeExportar,
@@ -37,6 +42,7 @@ export function FiltrosPeriodo({
   onChangeFim,
   onChangeTipo,
   onChangeFiltroStatus,
+  onChangeBanco,
   onAnalisar,
   onExportar
 }: FiltrosPeriodoProps) {
@@ -120,6 +126,19 @@ export function FiltrosPeriodo({
             <option value="AGUARDANDO">Apenas pendentes</option>
             <option value="APROVADO">Apenas aprovados</option>
             <option value="REPROVADO">Apenas reprovados</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Banco</label>
+          <select
+            value={banco}
+            onChange={(e) => onChangeBanco(e.target.value)}
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Todos os Bancos</option>
+            {bancosDisponiveis.map(b => (
+              <option key={b} value={b}>{b}</option>
+            ))}
           </select>
         </div>
         <Button onClick={onAnalisar} disabled={loading}>

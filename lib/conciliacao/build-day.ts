@@ -51,10 +51,11 @@ export function buildDia(
       extratoId: item.extrato?.id ?? "",
       extratoDescricao: item.extrato?.descricao ?? "",
       extratoValor: item.extrato?.valor ?? 0,
+      banco: item.extrato?.banco,
       status: item.status,
       confianca: item.status === "CONCILIADO" ? "HIGH" : "MEDIUM",
       score: item.status === "CONCILIADO" ? 3 : 2,
-      erpPareado: item.erp ? { id: item.erp.id, descricao: item.erp.descricao, valor: item.erp.valor } : null,
+      erpPareado: item.erp ? { id: item.erp.id, descricao: item.erp.descricao, valor: item.erp.valor, banco: item.erp.banco } : null,
       diferencaValor: item.erp && item.extrato ? Math.abs(item.erp.valor - item.extrato.valor) : undefined,
       explicacoes: [],
     })),
@@ -82,6 +83,7 @@ export function buildDia(
       descricao: e.descricao,
       valor: e.valor,
       tipo: e.tipo,
+      banco: e.banco,
     })),
   }
 

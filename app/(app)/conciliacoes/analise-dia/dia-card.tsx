@@ -68,11 +68,13 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
         <table className="w-full text-sm">
           <thead className="bg-muted">
             <tr>
-              <th className="p-2 text-left border-r border-border w-[30%]">ERP — Descrição</th>
-              <th className="p-2 text-right border-r border-border w-[90px]">Valor</th>
-              <th className="p-2 text-left border-r border-border w-[30%]">Extrato — Descrição</th>
-              <th className="p-2 text-right border-r border-border w-[90px]">Valor</th>
-              <th className="p-2 text-center w-[100px]">Status</th>
+              <th className="p-2 text-left border-r border-border w-[25%]">ERP — Descrição</th>
+              <th className="p-2 text-left border-r border-border w-[80px]">Banco</th>
+              <th className="p-2 text-right border-r border-border w-[80px]">Valor</th>
+              <th className="p-2 text-left border-r border-border w-[25%]">Extrato — Descrição</th>
+              <th className="p-2 text-left border-r border-border w-[80px]">Banco</th>
+              <th className="p-2 text-right border-r border-border w-[80px]">Valor</th>
+              <th className="p-2 text-center w-[80px]">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -85,11 +87,17 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                     <span className="text-xs italic text-muted-foreground">—</span>
                   )}
                 </td>
+                <td className="p-2 border-r border-border text-xs text-muted-foreground">
+                  {m.erpPareado?.banco || "—"}
+                </td>
                 <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? (m.erpPareado.valor < 0 ? "text-red-500" : "text-foreground") : ""}`}>
                   {m.erpPareado ? `R$ ${formatarValor(m.erpPareado.valor)}` : "—"}
                 </td>
                 <td className="p-2 border-r border-border">
                   <span className="text-foreground">{m.extratoDescricao}</span>
+                </td>
+                <td className="p-2 border-r border-border text-xs text-muted-foreground">
+                  {m.banco || "—"}
                 </td>
                 <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.extratoValor < 0 ? "text-red-500" : "text-foreground"}`}>
                   R$ {formatarValor(m.extratoValor)}

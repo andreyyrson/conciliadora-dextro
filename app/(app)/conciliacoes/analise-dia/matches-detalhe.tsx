@@ -284,10 +284,16 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
                     <div className="font-medium">
                       Extrato: {m.extratoDescricao} — R$ {formatarValor(m.extratoValor)}
                     </div>
+                    {m.banco && (
+                      <span className="text-xs text-muted-foreground">({m.banco})</span>
+                    )}
                   </div>
                   {m.erpPareado && (
                     <div className="text-muted-foreground mt-1">
                       ERP: {m.erpPareado.descricao} — R$ {formatarValor(m.erpPareado.valor)}
+                      {m.erpPareado.banco && (
+                        <span className="text-xs text-muted-foreground ml-1">({m.erpPareado.banco})</span>
+                      )}
                     </div>
                   )}
                   {m.diferencaValor !== undefined && m.diferencaValor > 0.01 && (

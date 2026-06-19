@@ -6,20 +6,16 @@ function makeMatching(overrides: Partial<ResultadoMatching> = {}): ResultadoMatc
   return {
     itens: [],
     erpsSobrando: [],
-    totalErp: 0,
-    totalExtrato: 0,
-    hashConciliacao: "x",
+    extratosSobrando: [],
     ...overrides
   }
 }
 
-function item(status: string) {
+function item(status: "CONCILIADO" | "A_REVISAR") {
   return {
+    erp: null,
     extrato: { id: "e", origem: "EXTRATO" as const, data: new Date(), valor: 1, tipo: "DEBITO" as const, descricao: "x" },
-    status: status as "CONCILIADO" | "A_REVISAR" | "NAO_CONCILIADO",
-    confianca: "HIGH" as const,
-    sugestoes: [],
-    autoConfirmado: status === "CONCILIADO"
+    status
   }
 }
 
@@ -51,31 +47,24 @@ describe("calculateStatus", () => {
     expect(status).toBe("A_REVISAR")
   })
 
-  it("retorna NAO_CONCILIADO quando há itens não conciliados", () => {
+  it("retorna NAO_CONCILIADO quando há extratos sobrando", () => {
     const status = calculateStatus({
-      qtdErp: 2, qtdExtrato: 2, matching: makeMatching({ itens: [item("CONCILIADO"), item("NAO_CONCILIADO")] }),
+      qtdErp: 1, qtdExtrato: 2, matching: makeMatching({
+        itens: [item("CONCILIADO")],
+        extratosSobrando: [{ id: "s1", origem: "EXTRATO" as const, data: new Date(), valor: 1, tipo: "DEBITO" as const, descricao: "sobra" }]
+      }),
       totalDebitoErp: 100, totalCreditoErp: 0, totalDebitoExtrato: 80, totalCreditoExtrato: 0,
       diferencaDebito: 20, diferencaCredito: 0
     })
     expect(status).toBe("NAO_CONCILIADO")
   })
 
-  it("retorna NAO_CONCILIADO quando há itens não conciliados e só existe extrato", () => {
+  it("retorna NAO_CONCILIADO quando há erps sobrando", () => {
     const status = calculateStatus({
-      qtdErp: 0, qtdExtrato: 2, matching: makeMatching({ itens: [item("NAO_CONCILIADO")] }),
-      totalDebitoErp: 0, totalCreditoErp: 0, totalDebitoExtrato: 80, totalCreditoExtrato: 0,
-      diferencaDebito: 80, diferencaCredito: 0
-    })
-    expect(status).toBe("NAO_CONCILIADO")
-  })
-
-  it("retorna NAO_CONCILIADO quando há ERPs sobrando", () => {
-    const matching = makeMatching({
-      itens: [item("CONCILIADO")],
-      erpsSobrando: [{ erp: { id: "x", origem: "ERP", data: new Date(), valor: 1, tipo: "DEBITO", descricao: "y" }, status: "FALTANDO_BANCO" }]
-    })
-    const status = calculateStatus({
-      qtdErp: 2, qtdExtrato: 1, matching,
+      qtdErp: 2, qtdExtrato: 1, matching: makeMatching({
+        itens: [item("CONCILIADO")],
+        erpsSobrando: [{ id: "s1", origem: "ERP" as const, data: new Date(), valor: 1, tipo: "DEBITO" as const, descricao: "sobra" }]
+      }),
       totalDebitoErp: 100, totalCreditoErp: 0, totalDebitoExtrato: 50, totalCreditoExtrato: 0,
       diferencaDebito: 50, diferencaCredito: 0
     })

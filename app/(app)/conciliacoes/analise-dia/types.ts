@@ -5,6 +5,7 @@ export interface TransacaoErp {
   tipo: string
   documento?: string | null
   fornecedor?: string | null
+  banco?: string | null
 }
 
 export interface TransacaoExtrato {
@@ -23,7 +24,8 @@ export interface MatchDetalhe {
   status: "CONCILIADO" | "A_REVISAR" | "NAO_CONCILIADO"
   confianca: "HIGH" | "MEDIUM" | "LOW"
   score: number
-  erpPareado: { id: string; descricao: string; valor: number } | null
+  erpPareado: { id: string; descricao: string; valor: number; banco?: string | null } | null
+  banco?: string | null
   diferencaValor?: number
   explicacoes: string[]
   requerDecisaoManual?: boolean
