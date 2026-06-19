@@ -5,6 +5,7 @@ import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { prisma } from "@/lib/db"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 import { detectarBanco } from "@/lib/bancos/detectar-banco"
+import { resolverBancoParaImportacao } from "@/lib/bancos/matching-conta-erp"
 
 export async function POST(req: Request) {
   try {
@@ -71,8 +72,16 @@ export async function POST(req: Request) {
     // Parse OFX
     const ofxData = parseOFX(content)
 
-    // Detectar banco do nome do arquivo como fallback
+    // Detectar banco do nome do arquivo e cruzar com contas do ERP
     const bancoDetectado = detectarBanco(file.name)
+
+    // Buscar contas do ERP para fuzzy matching
+    const erpLancamentos = await prisma.erpLancamento.findMany({
+      where: { uploadId: { in: (await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })).map(u => u.id) } },
+      select: { banco: true },
+      distinct: ["banco"]
+    })
+    const bancoParaImportacao = resolverBancoParaImportacao(file.name, erpLancamentos)
 
     if (ofxData.accounts.length === 0) {
       return NextResponse.json(
@@ -104,7 +113,7 @@ export async function POST(req: Request) {
           valor: transaction.amount,
           tipo: transaction.type === 'CREDIT' ? 'CREDITO' : 'DEBITO',
           identificador: transaction.id,
-          banco: account.bankId || bancoDetectado || null,
+          banco: account.bankId || bancoParaImportacao || bancoDetectado || null,
           saldoApos: null
         })
       }

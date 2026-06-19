@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { parseOFX, validateOFX } from "@/lib/ofx/parser"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import { detectarBanco } from "@/lib/bancos/detectar-banco"
+import { resolverBancoParaImportacao } from "@/lib/bancos/matching-conta-erp"
 
 export async function POST(req: Request) {
   try {
@@ -67,6 +69,17 @@ export async function POST(req: Request) {
 
     const ofxData = parseOFX(content)
 
+    // Detectar banco do nome do arquivo e sugerir conta do ERP
+    const bancoDetectado = detectarBanco(file.name)
+
+    // Buscar contas do ERP para sugerir
+    const erpLancamentos = await prisma.erpLancamento.findMany({
+      where: { uploadId: { in: (await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })).map(u => u.id) } },
+      select: { banco: true },
+      distinct: ["banco"]
+    })
+    const contaSugerida = resolverBancoParaImportacao(file.name, erpLancamentos)
+
     if (ofxData.accounts.length === 0) {
       return NextResponse.json(
         { error: "Nenhuma conta encontrada no arquivo OFX" },
@@ -111,13 +124,15 @@ export async function POST(req: Request) {
       totalTransacoes,
       preview,
       contas: ofxData.accounts.map(a => ({
-        banco: a.bankId || "Não Informado",
+        banco: a.bankId || contaSugerida || bancoDetectado || "Não Informado",
         conta: a.accountId,
         tipo: a.accountType,
         saldo: a.balance,
         transacoes: a.transactions.length,
         moeda: a.currency,
       })),
+      bancoDetectado,
+      contaSugerida,
     })
   } catch (error) {
     console.error("Erro ao analisar arquivo OFX:", error)
