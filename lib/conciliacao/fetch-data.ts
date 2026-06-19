@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db"
 import { fetchExtratos } from "@/lib/extrato/fetch-unificado"
+import { groupByDay } from "./group-by-day"
+import { runDailyMatching } from "./daily-matching"
 import type { ErpTransaction, ExtratoTransaction } from "./types"
 
 export interface FetchDataResult {
@@ -61,12 +63,31 @@ export async function fetchConciliationData(
   // Aplicar filtro de banco (case-insensitive, sem acentos)
   if (banco && banco.trim()) {
     const bancoNormalizado = normalizarBanco(banco)
-    erpLancamentos = erpLancamentos.filter(e =>
-      normalizarBanco(e.banco).includes(bancoNormalizado)
-    )
     extratoLancamentos = extratoLancamentos.filter(ex =>
       normalizarBanco(ex.banco).includes(bancoNormalizado)
     )
+
+    // Fazer matching por dia para descobrir quais ERPs pareiam com extratos filtrados
+    const { erpPorDia, extratoPorDia, dias } = groupByDay(
+      erpLancamentos,
+      extratoLancamentos,
+      inicio,
+      fim
+    )
+    const erpsPareados = new Set<string>()
+
+    for (const dataKey of dias) {
+      const erpsDoDia = erpPorDia.get(dataKey) || []
+      const extratosDoDia = extratoPorDia.get(dataKey) || []
+      if (erpsDoDia.length === 0 || extratosDoDia.length === 0) continue
+
+      const { matching } = runDailyMatching(erpsDoDia, extratosDoDia)
+      for (const item of matching.itens) {
+        if (item.erp) erpsPareados.add(item.erp.id)
+      }
+    }
+
+    erpLancamentos = erpLancamentos.filter(e => erpsPareados.has(e.id))
   }
 
   return { erpLancamentos, extratoLancamentos }

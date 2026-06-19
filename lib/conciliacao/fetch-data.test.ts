@@ -83,6 +83,23 @@ describe("fetchConciliationData", () => {
     expect(result.extratoLancamentos.every(ex => ex.banco === "Itaú")).toBe(true)
   })
 
+  it("mantém ERPs pareados com extratos do banco filtrado mesmo sem banco no ERP", async () => {
+    mocks.erpFind.mockResolvedValue([
+      { id: "e1", data: new Date("2024-01-01"), descricao: "ERP Pagamento", valor: 100, tipo: "DEBITO", documento: "D1", fornecedor: "F1", banco: null, categoria: "Cat" }
+    ])
+    mocks.extratoFind.mockResolvedValue([
+      { id: "x1", data: new Date("2024-01-01"), descricao: "Ext Itaú", valor: 100, tipo: "DEBITO", saldoApos: 500, identificador: "ID1", banco: "Itaú" }
+    ])
+    mocks.importadoFind.mockResolvedValue([])
+
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "itau")
+
+    expect(result.erpLancamentos).toHaveLength(1)
+    expect(result.erpLancamentos[0].id).toBe("e1")
+    expect(result.extratoLancamentos).toHaveLength(1)
+    expect(result.extratoLancamentos[0].banco).toBe("Itaú")
+  })
+
   it("retorna arrays vazios quando banco não existe", async () => {
     mocks.erpFind.mockResolvedValue([
       { id: "e1", data: new Date("2024-01-01"), descricao: "ERP 1", valor: 100, tipo: "DEBITO", documento: "D1", fornecedor: "F1", banco: "Itaú", categoria: "Cat" }
