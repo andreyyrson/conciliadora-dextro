@@ -7,6 +7,7 @@ import Papa from "papaparse"
 import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import { detectarBanco } from "@/lib/bancos/detectar-banco"
 
 export async function POST(req: Request) {
   try {
@@ -112,10 +113,15 @@ export async function POST(req: Request) {
       }
     })
 
+    // Detectar banco do nome do arquivo
+    const bancoDetectado = detectarBanco(file.name)
+
     // Aplicar pipeline de normalização
     const dadosNormalizados = executarPipeline(rows, mapeamento)
 
     // Preparar lançamentos para inserção
+    // Se CSV tiver coluna "banco" mapeada, usa ela; senão, usa banco detectado do nome do arquivo
+    const csvTemColunaBanco = !!mapeamento.banco
     const transactions = dadosNormalizados.map((dado) => ({
       importacaoId: importacao.id,
       data: dado.data,
@@ -123,7 +129,7 @@ export async function POST(req: Request) {
       valor: dado.valor,
       tipo: dado.tipo,
       identificador: dado.identificador || dado.documento || dado.numero || null,
-      banco: dado.banco || null,
+      banco: dado.banco || (!csvTemColunaBanco ? bancoDetectado : null),
       saldoApos: dado.saldoApos || null
     }))
 
@@ -140,6 +146,7 @@ export async function POST(req: Request) {
         tipo: importacao.tipo,
         nomeArquivo: importacao.nomeArquivo
       },
+      bancoDetectado,
       transactionsImported: result.count
     })
   } catch (error) {

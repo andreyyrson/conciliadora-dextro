@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
@@ -24,6 +24,20 @@ export function AnaliseDiaScreen() {
   const [exportando, setExportando] = useState(false)
   const [tipo, setTipo] = useState<"TODAS" | "RECEITAS" | "DESPESAS">("TODAS")
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusExportacao>("TODOS")
+  const [banco, setBanco] = useState("")
+
+  const bancosDisponiveis = useMemo(() => {
+    const set = new Set<string>()
+    for (const dia of dias) {
+      for (const tx of dia.transacoesErp) {
+        if (tx.banco) set.add(tx.banco)
+      }
+      for (const tx of dia.transacoesExtrato) {
+        if (tx.banco) set.add(tx.banco)
+      }
+    }
+    return Array.from(set).sort()
+  }, [dias])
 
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
@@ -34,8 +48,9 @@ export function AnaliseDiaScreen() {
     setError("")
     try {
       const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
+      const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}`
+        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}`
       )
       const data = await res.json()
       if (!res.ok) {
@@ -48,7 +63,7 @@ export function AnaliseDiaScreen() {
     } finally {
       setLoading(false)
     }
-  }, [empresaId, dataInicio, dataFim, tipo])
+  }, [empresaId, dataInicio, dataFim, tipo, banco])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {
@@ -88,7 +103,7 @@ export function AnaliseDiaScreen() {
     if (empresaId && dataInicio && dataFim) {
       buscarAnalise()
     }
-  }, [empresaId, dataInicio, dataFim, tipo, buscarAnalise])
+  }, [empresaId, dataInicio, dataFim, tipo, banco, buscarAnalise])
 
   if (!session) return null
 
@@ -109,6 +124,8 @@ export function AnaliseDiaScreen() {
         dataFim={dataFim}
         tipo={tipo}
         filtroStatus={filtroStatus}
+        banco={banco}
+        bancosDisponiveis={bancosDisponiveis}
         loading={loading}
         exportando={exportando}
         podeExportar={dias.length > 0}
@@ -116,6 +133,7 @@ export function AnaliseDiaScreen() {
         onChangeFim={setDataFim}
         onChangeTipo={setTipo}
         onChangeFiltroStatus={setFiltroStatus}
+        onChangeBanco={setBanco}
         onAnalisar={buscarAnalise}
         onExportar={downloadExcel}
       />

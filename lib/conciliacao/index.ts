@@ -18,9 +18,10 @@ export async function analisarPorDia(
   empresaId: string,
   inicio: Date,
   fim: Date,
-  tipo?: "RECEITAS" | "DESPESAS"
+  tipo?: "RECEITAS" | "DESPESAS",
+  banco?: string
 ): Promise<DiaConciliacao[]> {
-  const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim, tipo)
+  const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim, tipo, banco)
 
   const { erpPorDia, extratoPorDia, dias } = groupByDay(
     erpLancamentos,

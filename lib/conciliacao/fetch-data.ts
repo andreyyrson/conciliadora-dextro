@@ -7,11 +7,17 @@ export interface FetchDataResult {
   extratoLancamentos: ExtratoTransaction[]
 }
 
+function normalizarBanco(str?: string | null): string {
+  if (!str) return ""
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+}
+
 export async function fetchConciliationData(
   empresaId: string,
   inicio: Date,
   fim: Date,
-  tipo?: "RECEITAS" | "DESPESAS"
+  tipo?: "RECEITAS" | "DESPESAS",
+  banco?: string
 ): Promise<FetchDataResult> {
   const filtroTipo = tipo === "RECEITAS" ? "CREDITO" : tipo === "DESPESAS" ? "DEBITO" : undefined
 
@@ -45,12 +51,23 @@ export async function fetchConciliationData(
   if (filtroTipo) erpLancamentos = erpLancamentos.filter(e => e.tipo === filtroTipo)
 
   // Buscar extratos de todas as fontes (unificado)
-  const extratoLancamentos = await fetchExtratos(
+  let extratoLancamentos = await fetchExtratos(
     empresaId,
     inicio,
     fim,
     filtroTipo
   )
+
+  // Aplicar filtro de banco (case-insensitive, sem acentos)
+  if (banco && banco.trim()) {
+    const bancoNormalizado = normalizarBanco(banco)
+    erpLancamentos = erpLancamentos.filter(e =>
+      normalizarBanco(e.banco).includes(bancoNormalizado)
+    )
+    extratoLancamentos = extratoLancamentos.filter(ex =>
+      normalizarBanco(ex.banco).includes(bancoNormalizado)
+    )
+  }
 
   return { erpLancamentos, extratoLancamentos }
 }

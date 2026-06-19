@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const dataInicio = searchParams.get("dataInicio")
     const dataFim = searchParams.get("dataFim")
     const tipo = searchParams.get("tipo") || undefined
+    const banco = searchParams.get("banco") || undefined
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json(
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     const fim = new Date(dataFim)
     fim.setHours(23, 59, 59, 999)
 
-    const dias = await analisarPorDia(empresaId, inicio, fim, tipo as "RECEITAS" | "DESPESAS" | undefined)
+    const dias = await analisarPorDia(empresaId, inicio, fim, tipo as "RECEITAS" | "DESPESAS" | undefined, banco)
 
     return NextResponse.json({ dias })
   } catch (error) {
