@@ -61,12 +61,10 @@ export function AnaliseDiaScreen() {
     try {
       const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
-      console.log("[analise-dia] Buscando com banco:", banco, "param:", bancoParam)
       const res = await fetch(
         `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}`
       )
       const data = await res.json()
-      console.log("[analise-dia] Resposta dias:", data.dias?.length, "primeiro dia:", data.dias?.[0])
       if (!res.ok) {
         setError(data.error || "Erro ao buscar análise")
         return
