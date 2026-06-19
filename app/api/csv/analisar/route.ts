@@ -10,6 +10,8 @@ import { prisma } from "@/lib/db"
 import { detectarColunas } from "@/lib/normalizacao/detector-colunas"
 import Papa from "papaparse"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
+import { detectarBanco } from "@/lib/bancos/detectar-banco"
+import { resolverBancoParaImportacao } from "@/lib/bancos/matching-conta-erp"
 
 export async function POST(req: Request) {
   try {
@@ -76,6 +78,17 @@ export async function POST(req: Request) {
     const colunas = Object.keys(rows[0])
     const resultado = detectarColunas(colunas, rows)
 
+    // Detectar banco do nome do arquivo e sugerir conta do ERP
+    const bancoDetectado = detectarBanco(file.name)
+
+    // Buscar contas do ERP para sugerir
+    const erpLancamentos = await prisma.erpLancamento.findMany({
+      where: { uploadId: { in: (await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })).map(u => u.id) } },
+      select: { banco: true },
+      distinct: ["banco"]
+    })
+    const contaSugerida = resolverBancoParaImportacao(file.name, erpLancamentos)
+
     // Buscar mapeamento salvo (se existir)
     const importacaoRecente = await prisma.importacaoExtrato.findFirst({
       where: { empresaId },
@@ -101,7 +114,9 @@ export async function POST(req: Request) {
       colunasNaoMapeadas: resultado.colunasNaoMapeadas,
       confianca: resultado.confianca,
       totalLinhas: rows.length,
-      mapeamentoSalvo: !!importacaoRecente?.mapeamentoColunas
+      mapeamentoSalvo: !!importacaoRecente?.mapeamentoColunas,
+      bancoDetectado,
+      contaSugerida
     })
 
   } catch (error) {

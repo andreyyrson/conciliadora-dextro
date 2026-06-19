@@ -8,6 +8,7 @@ import { executarPipeline } from "@/lib/normalizacao/pipeline"
 import { MapeamentoColunas } from "@/lib/normalizacao/detector-colunas"
 import { rateLimit, getRateLimitHeaders } from "@/lib/rate-limit"
 import { detectarBanco } from "@/lib/bancos/detectar-banco"
+import { resolverBancoParaImportacao } from "@/lib/bancos/matching-conta-erp"
 
 export async function POST(req: Request) {
   try {
@@ -113,14 +114,22 @@ export async function POST(req: Request) {
       }
     })
 
-    // Detectar banco do nome do arquivo
+    // Detectar banco do nome do arquivo e cruzar com contas do ERP
     const bancoDetectado = detectarBanco(file.name)
+
+    // Buscar contas do ERP para fuzzy matching
+    const erpLancamentos = await prisma.erpLancamento.findMany({
+      where: { uploadId: { in: (await prisma.uploadErp.findMany({ where: { empresaId }, select: { id: true } })).map(u => u.id) } },
+      select: { banco: true },
+      distinct: ["banco"]
+    })
+    const bancoParaImportacao = resolverBancoParaImportacao(file.name, erpLancamentos)
 
     // Aplicar pipeline de normalização
     const dadosNormalizados = executarPipeline(rows, mapeamento)
 
     // Preparar lançamentos para inserção
-    // Se CSV tiver coluna "banco" mapeada, usa ela; senão, usa banco detectado do nome do arquivo
+    // Prioridade: 1) coluna banco do CSV, 2) conta encontrada no ERP, 3) banco detectado do nome
     const csvTemColunaBanco = !!mapeamento.banco
     const transactions = dadosNormalizados.map((dado) => ({
       importacaoId: importacao.id,
@@ -129,7 +138,7 @@ export async function POST(req: Request) {
       valor: dado.valor,
       tipo: dado.tipo,
       identificador: dado.identificador || dado.documento || dado.numero || null,
-      banco: dado.banco || (!csvTemColunaBanco ? bancoDetectado : null),
+      banco: dado.banco || bancoParaImportacao || (!csvTemColunaBanco ? bancoDetectado : null),
       saldoApos: dado.saldoApos || null
     }))
 
