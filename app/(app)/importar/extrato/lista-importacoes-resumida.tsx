@@ -11,6 +11,7 @@ export interface ImportacaoResumo {
   nomeArquivo: string
   totalLinhas: number
   createdAt: string
+  extratos?: { banco: string | null }[]
 }
 
 interface ListaImportacoesResumidaProps {
@@ -52,6 +53,11 @@ export function ListaImportacoesResumida({ importacoes, loading, onDelete }: Lis
                   {new Date(importacao.createdAt).toLocaleDateString("pt-BR")}
                 </div>
                 <div>{importacao.totalLinhas} lançamentos</div>
+                {importacao.extratos?.[0]?.banco && (
+                  <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">
+                    {importacao.extratos[0].banco}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1 ml-2">
