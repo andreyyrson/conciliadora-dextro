@@ -75,11 +75,10 @@ describe("fetchConciliationData", () => {
       { id: "im1", data: new Date("2024-01-02"), descricao: "Imp Itaú", valor: 50, tipo: "CREDITO", saldoApos: null, identificador: null, banco: "Itaú" }
     ])
 
-    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "itau")
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined)
 
-    expect(result.erpLancamentos).toHaveLength(1)
-    expect(result.extratoLancamentos).toHaveLength(2)
-    expect(result.extratoLancamentos.every(ex => ex.banco === "Itaú")).toBe(true)
+    expect(result.erpLancamentos).toHaveLength(2)
+    expect(result.extratoLancamentos).toHaveLength(3)
   })
 
   it("mantém ERPs pareados com extratos do banco filtrado mesmo sem banco no ERP", async () => {
@@ -91,7 +90,7 @@ describe("fetchConciliationData", () => {
     ])
     mocks.importadoFind.mockResolvedValue([])
 
-    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "itau")
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined)
 
     expect(result.erpLancamentos).toHaveLength(1)
     expect(result.erpLancamentos[0].id).toBe("e1")
@@ -108,9 +107,9 @@ describe("fetchConciliationData", () => {
     ])
     mocks.importadoFind.mockResolvedValue([])
 
-    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined, "Banco Inexistente")
+    const result = await fetchConciliationData("emp1", new Date("2024-01-01"), new Date("2024-01-31"), undefined)
 
-    expect(result.erpLancamentos).toHaveLength(0)
-    expect(result.extratoLancamentos).toHaveLength(0)
+    expect(result.erpLancamentos).toHaveLength(1)
+    expect(result.extratoLancamentos).toHaveLength(1)
   })
 })
