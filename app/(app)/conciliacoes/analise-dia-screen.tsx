@@ -107,7 +107,7 @@ export function AnaliseDiaScreen() {
     if (empresaId && dataInicio && dataFim) {
       buscarAnalise()
     }
-  }, [empresaId, dataInicio, dataFim, tipo, banco, buscarAnalise])
+  }, [empresaId, dataInicio, dataFim, tipo, banco])
 
   if (!session) return null
 
