@@ -26,12 +26,22 @@ export function buildDia(
   // Filtrar por banco se fornecido
   if (banco && banco.trim()) {
     const bancoNormalizado = normalizarBanco(banco)
-    erpsDoDia = erpsDoDia.filter(e =>
-      e.banco && normalizarBanco(e.banco).includes(bancoNormalizado)
-    )
-    extratosDoDia = extratosDoDia.filter(ex =>
-      ex.banco && normalizarBanco(ex.banco).includes(bancoNormalizado)
-    )
+    const temArquivo = !!(options?.arquivoQuery && options.arquivoQuery.trim())
+    // Regra: se há Arquivo selecionado, priorizar Arquivo no lado EXTRATO e aplicar Banco só no ERP
+    if (temArquivo) {
+      erpsDoDia = erpsDoDia.filter(e =>
+        e.banco && normalizarBanco(e.banco).includes(bancoNormalizado)
+      )
+      // Não filtrar extratos por banco quando arquivo foi especificado
+    } else {
+      // Sem arquivo: manter filtro de banco em ambos
+      erpsDoDia = erpsDoDia.filter(e =>
+        e.banco && normalizarBanco(e.banco).includes(bancoNormalizado)
+      )
+      extratosDoDia = extratosDoDia.filter(ex =>
+        ex.banco && normalizarBanco(ex.banco).includes(bancoNormalizado)
+      )
+    }
   }
 
   const totalDebitoErp = erpsDoDia
