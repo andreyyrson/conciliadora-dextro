@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
@@ -57,6 +57,9 @@ export function AnaliseDiaScreen() {
     }
   }, [empresaId, dataInicio, dataFim])
 
+  const controllerRef = React.useRef<AbortController | null>(null)
+  const inFlightRef = React.useRef<Map<string, Promise<any>>>(new Map())
+
   const buscarAnalise = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) {
       setError("Selecione empresa e período")
@@ -68,15 +71,35 @@ export function AnaliseDiaScreen() {
       const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
       const arquivoParam = arquivo ? `&arquivo=${encodeURIComponent(arquivo)}` : ""
-      const res = await fetch(
-        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}${arquivoParam}`
-      )
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || "Erro ao buscar análise")
+      const url = `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}${arquivoParam}`
+      const key = `${empresaId}|${dataInicio}|${dataFim}|${tipo}|${banco}|${arquivo}`
+
+      // Dedupe: se já existe uma request idêntica em voo, aguardar a mesma
+      const existing = inFlightRef.current.get(key)
+      if (existing) {
+        const data = await existing
+        setDias(data.dias || [])
         return
       }
+
+      // Cancelar requisição anterior (diferente) se existir
+      if (controllerRef.current) {
+        try { controllerRef.current.abort() } catch {}
+      }
+      const controller = new AbortController()
+      controllerRef.current = controller
+
+      const promise = fetch(url, { signal: controller.signal }).then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(data.error || "Erro ao buscar análise")
+        }
+        return data
+      })
+      inFlightRef.current.set(key, promise)
+      const data = await promise
       setDias(data.dias || [])
+      inFlightRef.current.delete(key)
     } catch {
       setError("Erro ao buscar análise por dia")
     } finally {
@@ -95,6 +118,7 @@ export function AnaliseDiaScreen() {
 
   const downloadExcel = async () => {
     if (!empresaId || !dataInicio || !dataFim) return
+    if (exportando) return
     setExportando(true)
     try {
       const statusParam = filtroStatus !== "TODOS" ? `&status=${filtroStatus}` : ""
@@ -120,10 +144,13 @@ export function AnaliseDiaScreen() {
 
   useEffect(() => {
     if (empresaId && dataInicio && dataFim) {
-      buscarAnalise()
-      buscarBancosDisponiveis()
+      const t = setTimeout(() => {
+        buscarAnalise()
+        buscarBancosDisponiveis()
+      }, 400)
+      return () => clearTimeout(t)
     }
-  }, [empresaId, dataInicio, dataFim, tipo, banco])
+  }, [empresaId, dataInicio, dataFim, tipo, banco, arquivo])
 
   if (!session) return null
 
@@ -139,6 +166,11 @@ export function AnaliseDiaScreen() {
 
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="h-1 w-full bg-accent rounded overflow-hidden">
+          <div className="h-full w-1/3 bg-primary animate-pulse" />
+        </div>
+      )}
       <FiltrosPeriodo
         dataInicio={dataInicio}
         dataFim={dataFim}
@@ -164,6 +196,14 @@ export function AnaliseDiaScreen() {
       {error && (
         <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
           {error}
+        </div>
+      )}
+
+      {loading && dias.length === 0 && (
+        <div className="space-y-3">
+          {[0,1,2].map(i => (
+            <div key={i} className="h-24 rounded border border-border bg-accent animate-pulse" />
+          ))}
         </div>
       )}
 

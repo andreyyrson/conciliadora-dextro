@@ -86,6 +86,11 @@ export function ExtratoScreen() {
 
   return (
     <div className="space-y-6">
+      {(processando || deleting) && (
+        <div className="h-1 w-full bg-accent rounded overflow-hidden">
+          <div className="h-full w-1/3 bg-primary animate-pulse" />
+        </div>
+      )}
       {/* Upload */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
