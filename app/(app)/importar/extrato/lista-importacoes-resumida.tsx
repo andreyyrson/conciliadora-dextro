@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
-import { Trash2, FileText, Calendar, ExternalLink } from "lucide-react"
+import { Trash2, FileText, Calendar, ExternalLink, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export interface ImportacaoResumo {
@@ -21,6 +21,15 @@ interface ListaImportacoesResumidaProps {
 }
 
 export function ListaImportacoesResumida({ importacoes, loading, onDelete }: ListaImportacoesResumidaProps) {
+  if (loading && importacoes.length === 0) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {[0,1,2].map(i => (
+          <div key={i} className="h-24 rounded border border-border bg-accent animate-pulse" />
+        ))}
+      </div>
+    )
+  }
   if (importacoes.length === 0) {
     return <p className="text-muted-foreground text-sm">Nenhuma importação realizada</p>
   }
@@ -75,7 +84,7 @@ export function ListaImportacoesResumida({ importacoes, loading, onDelete }: Lis
                 disabled={loading}
                 className="h-7 w-7 p-0"
               >
-                <Trash2 className="w-4 h-4 text-destructive" />
+                {loading ? <Loader2 className="w-4 h-4 animate-spin text-destructive" /> : <Trash2 className="w-4 h-4 text-destructive" />}
               </Button>
             </div>
           </div>
