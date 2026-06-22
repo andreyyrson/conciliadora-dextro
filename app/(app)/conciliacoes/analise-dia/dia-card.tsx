@@ -15,7 +15,8 @@ import {
   Loader2,
   ArrowUp,
   Eye,
-  Download
+  Download,
+  Pencil
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
 import { MatchesDetalhe } from "./matches-detalhe"
@@ -472,23 +473,32 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                     Topo
                   </Button>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={downloadExcelDia} disabled={exportandoDia || acaoLoading !== null}>
-                      {exportandoDia ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
-                      Exportar Dia
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
-                      {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
-                      Aprovar
-                    </Button>
+                  <Button size="sm" variant="outline" onClick={downloadExcelDia} disabled={exportandoDia || acaoLoading !== null}>
+                    {exportandoDia ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                    Exportar Dia
+                  </Button>
+                  {aprovStatus === 'APROVADO' || aprovStatus === 'REPROVADO' ? (
                     <Button size="sm" variant="secondary" onClick={() => setConfirmando('revisar')} disabled={acaoLoading !== null}>
-                      {acaoLoading === 'revisar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
-                      Revisar
+                      {acaoLoading === 'revisar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Pencil className="w-4 h-4 mr-1" />}
+                      Editar
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
-                      {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
-                      Reprovar
-                    </Button>
-                  </div>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
+                        {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                        Aprovar
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setConfirmando('revisar')} disabled={acaoLoading !== null}>
+                        {acaoLoading === 'revisar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
+                        Revisar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setConfirmando('reprovar')} disabled={acaoLoading !== null}>
+                        {acaoLoading === 'reprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XIcon className="w-4 h-4 mr-1" />}
+                        Reprovar
+                      </Button>
+                    </>
+                  )}
+                </div>
                 </div>
               </div>
             </motion.div>
