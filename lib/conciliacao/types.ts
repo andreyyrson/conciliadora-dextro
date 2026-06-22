@@ -28,16 +28,49 @@ export interface ResultadoMatching {
 function normalizeDescricao(s?: string | null): string {
   if (!s) return ""
   const noAccents = s.normalize("NFD").replace(/\p{Diacritic}+/gu, "")
-  return noAccents.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
+  // manter letras/dígitos e espaços, colapsar múltiplos espaços
+  const base = noAccents.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim()
+  // remover sufixos muito comuns que pouco diferenciam
+  return base
+}
+
+const STOPWORDS = new Set<string>([
+  "pagamento","pgt","compra","loja","mercado","supermercado","nfe","nf",
+  "cpf","cnpj","ag","agencia","conta","cc","banco","tarifa","cobranca",
+  "ref","refe","mes","ano","nr","num","numero","id","doc","historico"
+])
+
+const BANK_TERMS_WEIGHT: Record<string, number> = {
+  pix: 1.0,
+  ted: 0.9,
+  doc: 0.9,
+  boleto: 0.7,
+  cartao: 0.7,
+  credito: 0.5,
+  debito: 0.5,
+  transferencia: 0.7,
+  transf: 0.7,
+  pixqr: 1.0,
+  qrcode: 0.6,
 }
 
 function tokenSet(str: string): Set<string> {
-  return new Set(str.split(" ").filter(t => t.length >= 3))
+  return new Set(
+    str
+      .split(" ")
+      .map(t => t.trim())
+      .filter(t => t.length >= 3 && !STOPWORDS.has(t))
+  )
 }
 
-function jaccardSimilarity(a: string, b: string): number {
-  const A = tokenSet(a)
-  const B = tokenSet(b)
+function trigrams(str: string): Set<string> {
+  const s = str.replace(/\s+/g, "")
+  const out: string[] = []
+  for (let i = 0; i < s.length - 2; i++) out.push(s.slice(i, i + 3))
+  return new Set(out)
+}
+
+function jaccardFromSets(A: Set<string>, B: Set<string>): number {
   if (A.size === 0 && B.size === 0) return 1
   let inter = 0
   for (const t of A) if (B.has(t)) inter++
@@ -45,13 +78,56 @@ function jaccardSimilarity(a: string, b: string): number {
   return uni === 0 ? 0 : inter / uni
 }
 
+function jaccardSimilarity(a: string, b: string): number {
+  const A = tokenSet(a)
+  const B = tokenSet(b)
+  return jaccardFromSets(A, B)
+}
+
+function trigramSimilarity(a: string, b: string): number {
+  const A = trigrams(a)
+  const B = trigrams(b)
+  return jaccardFromSets(A, B)
+}
+
+function bankTermsWeightedSimilarity(a: string, b: string): number {
+  // calcula Jaccard ponderado apenas sobre termos bancários conhecidos
+  const extractTerms = (s: string): Map<string, number> => {
+    const tokens = s.split(" ")
+    const map = new Map<string, number>()
+    for (const t of tokens) {
+      const w = BANK_TERMS_WEIGHT[t]
+      if (w) map.set(t, w)
+    }
+    return map
+  }
+  const A = extractTerms(a)
+  const B = extractTerms(b)
+  if (A.size === 0 && B.size === 0) return 0
+  let inter = 0
+  let uni = 0
+  const keys = new Set<string>([...A.keys(), ...B.keys()])
+  for (const k of keys) {
+    const wa = A.get(k) || 0
+    const wb = B.get(k) || 0
+    inter += Math.min(wa, wb)
+    uni += Math.max(wa, wb)
+  }
+  return uni === 0 ? 0 : inter / uni // 0..1
+}
+
 function descricaoParecida(a: string, b: string): boolean {
   if (!a || !b) return false
-  // match se inclusão direta com comprimento mínimo
+  // inclusão direta (exige tamanho para evitar falsos positivos curtos)
   if (a.length >= 8 && b.includes(a)) return true
   if (b.length >= 8 && a.includes(b)) return true
-  // ou similaridade de Jaccard por tokens
-  return jaccardSimilarity(a, b) >= 0.6
+  // híbrido: Jaccard por tokens sem stopwords, Jaccard por trigramas e boost por termos bancários
+  const jt = jaccardSimilarity(a, b)
+  const tg = trigramSimilarity(a, b)
+  const bankBoost = bankTermsWeightedSimilarity(a, b) * 0.2 // até +0.2
+  const base = Math.max(jt, tg)
+  const sim = Math.min(1, base + bankBoost)
+  return sim >= 0.65
 }
 
 function isSameDay(d1: Date, d2: Date): boolean {
