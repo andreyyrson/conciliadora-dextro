@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     const dataFim = searchParams.get("dataFim")
     const tipo = searchParams.get("tipo") || undefined
     const banco = searchParams.get("banco") || undefined
+    const arquivoQuery = searchParams.get("arquivo") || undefined
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json(
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
     const fim = new Date(dataFim)
     fim.setHours(23, 59, 59, 999)
 
-    const dias = await analisarPorDia(empresaId, inicio, fim, tipo as "RECEITAS" | "DESPESAS" | undefined, banco)
+    const dias = await analisarPorDia(empresaId, inicio, fim, tipo as "RECEITAS" | "DESPESAS" | undefined, banco, arquivoQuery || undefined)
 
     return NextResponse.json({ dias })
   } catch (error) {

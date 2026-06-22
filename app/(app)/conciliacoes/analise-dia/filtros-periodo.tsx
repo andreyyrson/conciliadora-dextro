@@ -16,6 +16,8 @@ interface FiltrosPeriodoProps {
   filtroStatus: FiltroStatusExportacao
   banco: string
   bancosDisponiveis: string[]
+  arquivo: string
+  arquivosDisponiveis: string[]
   loading: boolean
   exportando: boolean
   podeExportar: boolean
@@ -24,6 +26,7 @@ interface FiltrosPeriodoProps {
   onChangeTipo: (v: "TODAS" | "RECEITAS" | "DESPESAS") => void
   onChangeFiltroStatus: (v: FiltroStatusExportacao) => void
   onChangeBanco: (v: string) => void
+  onChangeArquivo: (v: string) => void
   onAnalisar: () => void
   onExportar: () => void
 }
@@ -35,6 +38,8 @@ export function FiltrosPeriodo({
   filtroStatus,
   banco,
   bancosDisponiveis,
+  arquivo,
+  arquivosDisponiveis,
   loading,
   exportando,
   podeExportar,
@@ -43,6 +48,7 @@ export function FiltrosPeriodo({
   onChangeTipo,
   onChangeFiltroStatus,
   onChangeBanco,
+  onChangeArquivo,
   onAnalisar,
   onExportar
 }: FiltrosPeriodoProps) {
@@ -140,6 +146,22 @@ export function FiltrosPeriodo({
               <option key={b} value={b}>{b}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Extrato (arquivo contém)</label>
+          <input
+            type="text"
+            value={arquivo}
+            onChange={(e) => onChangeArquivo(e.target.value)}
+            list="arquivos-importados"
+            placeholder="Digite parte do nome do arquivo"
+            className="h-10 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring w-[260px]"
+          />
+          <datalist id="arquivos-importados">
+            {arquivosDisponiveis.map(a => (
+              <option key={a} value={a} />
+            ))}
+          </datalist>
         </div>
         <Button onClick={onAnalisar} disabled={loading}>
           {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarIcon className="w-4 h-4 mr-2" />}

@@ -6,11 +6,21 @@ export function buildDia(
   dataKey: string,
   erpsDoDia: ErpTransaction[],
   extratosDoDia: ExtratoTransaction[],
-  banco?: string
+  banco?: string,
+  options?: { arquivoQuery?: string }
 ): DiaConciliacao {
   function normalizarBanco(str?: string | null): string {
     if (!str) return ""
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  }
+
+  // Filtrar por nome de arquivo (parcial) se fornecido
+  if (options?.arquivoQuery && options.arquivoQuery.trim()) {
+    const query = options.arquivoQuery
+    extratosDoDia = extratosDoDia.filter(ex => {
+      const name = (ex as any).arquivoUpload as string | undefined
+      return !!name && (name.includes(query) || name.startsWith(query))
+    })
   }
 
   // Filtrar por banco se fornecido
@@ -46,7 +56,7 @@ export function buildDia(
     ? extratosDoDia[extratosDoDia.length - 1].saldoApos
     : null
 
-  const { matching } = runDailyMatching(erpsDoDia, extratosDoDia)
+  const { matching } = runDailyMatching(erpsDoDia, extratosDoDia, { arquivoQuery: options?.arquivoQuery })
 
   const diferencaDebito = Math.abs(totalDebitoErp - totalDebitoExtrato)
   const diferencaCredito = Math.abs(totalCreditoErp - totalCreditoExtrato)

@@ -22,9 +22,10 @@ export async function fetchExtratos(
 
   const importacoes = await prisma.importacaoExtrato.findMany({
     where: { empresaId },
-    select: { id: true }
+    select: { id: true, nomeArquivo: true }
   })
   const importacaoIds = importacoes.map(i => i.id)
+  const importNomeMap = new Map(importacoes.map(i => [i.id, i.nomeArquivo]))
 
   const [extratoRows, importadoRows] = await Promise.all([
     // Extrato de contas cadastradas (legado / Open Finance teórico)
@@ -55,7 +56,8 @@ export async function fetchExtratos(
       tipo: e.tipo,
       saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
       identificador: e.identificador,
-      banco: e.banco
+      banco: e.banco,
+      arquivoUpload: null
     })),
     ...importadoRows.map(e => ({
       id: e.id,
@@ -66,7 +68,8 @@ export async function fetchExtratos(
       tipo: e.tipo,
       saldoApos: e.saldoApos ? Number(e.saldoApos) : null,
       identificador: e.identificador,
-      banco: e.banco
+      banco: e.banco,
+      arquivoUpload: importNomeMap.get(e.importacaoId) || null
     }))
   ]
 

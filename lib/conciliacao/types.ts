@@ -10,6 +10,7 @@ export interface EntradaConciliacao {
   categoria?: string
   banco?: string
   identificador?: string
+  arquivoUpload?: string
 }
 
 export interface ResultadoMatchingItem {
@@ -71,7 +72,11 @@ function valorIgual(a: number, b: number, tol = 0.01): boolean {
   return Math.abs(a - b) <= tol
 }
 
-export function gerarSugestoesComparativo(erps: EntradaConciliacao[], extratos: EntradaConciliacao[]): ResultadoMatching {
+export function gerarSugestoesComparativo(
+  erps: EntradaConciliacao[],
+  extratos: EntradaConciliacao[],
+  options?: { arquivoQuery?: string }
+): ResultadoMatching {
   const usadosExtrato = new Set<string>()
   const itens: ResultadoMatchingItem[] = []
 
@@ -107,10 +112,15 @@ export function gerarSugestoesComparativo(erps: EntradaConciliacao[], extratos: 
       const mValor = valorIgual(erp.valor, ex.valor) ? 1 : 0
       const mData = isSameDay(erp.data, ex.data) || isNextBusinessDay(erp.data, ex.data) ? 1 : 0
       const mDesc = normErp.length > 0 && descricaoParecida(normErp, normEx) ? 1 : 0
-      const score = mValor + mData + mDesc
-      if (score < 2) continue
-      const three = score === 3
-      if (!best || (three && !best.three) || (three === best.three && Math.abs(erp.valor - ex.valor) < Math.abs(erp.valor - best.ex.valor))) {
+      const baseScore = mValor + mData + mDesc
+      if (baseScore < 2) continue
+      const three = baseScore === 3
+      // bônus pequeno de desempate se arquivoUpload corresponder parcialmente ao filtro informado
+      const arquivoBonus = options?.arquivoQuery && ex.arquivoUpload && (
+        ex.arquivoUpload.includes(options.arquivoQuery) || ex.arquivoUpload.startsWith(options.arquivoQuery)
+      ) ? 0.2 : 0
+      const score = baseScore + arquivoBonus
+      if (!best || (three && !best.three) || (three === best.three && (score > best.score || (score === best.score && Math.abs(erp.valor - ex.valor) < Math.abs(erp.valor - best.ex.valor))))) {
         best = { ex, score, three }
       }
     }
@@ -151,6 +161,7 @@ export interface ExtratoTransaction {
   saldoApos: number | null
   identificador: string | null
   banco: string | null
+  arquivoUpload: string | null
 }
 
 export interface DiaConciliacao {
