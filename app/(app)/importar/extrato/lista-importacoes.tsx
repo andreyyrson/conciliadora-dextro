@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
-import { Trash2, FileText, Calendar } from "lucide-react"
+import { Trash2, FileText, Calendar, Loader2 } from "lucide-react"
 
 export interface Importacao {
   id: string
@@ -19,6 +19,15 @@ interface ListaImportacoesProps {
 }
 
 export function ListaImportacoes({ importacoes, loading, onDelete }: ListaImportacoesProps) {
+  if (loading && importacoes.length === 0) {
+    return (
+      <div className="space-y-4">
+        {[0,1,2,3].map(i => (
+          <div key={i} className="h-20 rounded border border-border bg-accent animate-pulse" />
+        ))}
+      </div>
+    )
+  }
   if (importacoes.length === 0) {
     return <p className="text-muted-foreground">Nenhuma importação encontrada</p>
   }
@@ -57,7 +66,7 @@ export function ListaImportacoes({ importacoes, loading, onDelete }: ListaImport
               onClick={() => onDelete(importacao.id)}
               disabled={loading}
             >
-              <Trash2 className="w-4 h-4" />
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             </Button>
           </div>
         </motion.div>

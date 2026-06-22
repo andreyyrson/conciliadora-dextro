@@ -14,6 +14,7 @@ interface SelecionarBancoModalProps {
 
 export function SelecionarBancoModal({ importacaoId, fileName, onConfirmar, onCancelar }: SelecionarBancoModalProps) {
   const [bancoSelecionado, setBancoSelecionado] = useState("")
+  const [submitting, setSubmitting] = useState(false)
   const bancos = listarBancos()
 
   const aberto = !!importacaoId && !!fileName
@@ -55,19 +56,30 @@ export function SelecionarBancoModal({ importacaoId, fileName, onConfirmar, onCa
               </div>
 
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={onCancelar}>
+                <Button variant="outline" onClick={onCancelar} disabled={submitting}>
                   Cancelar
                 </Button>
                 <Button
-                  disabled={!bancoSelecionado}
-                  onClick={() => {
-                    if (bancoSelecionado) {
-                      onConfirmar(bancoSelecionado)
+                  disabled={!bancoSelecionado || submitting}
+                  onClick={async () => {
+                    if (!bancoSelecionado || submitting) return
+                    try {
+                      setSubmitting(true)
+                      await Promise.resolve(onConfirmar(bancoSelecionado))
                       setBancoSelecionado("")
+                    } catch (e) {
+                      // feedback simples; ideal: toast centralizado
+                      window.alert("Falha ao confirmar banco")
+                    } finally {
+                      setSubmitting(false)
                     }
                   }}
                 >
-                  Confirmar
+                  {submitting ? (
+                    <span className="inline-flex items-center"><svg className="w-4 h-4 mr-1 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a12 12 0 00-12 12h4z"></path></svg>Processando...</span>
+                  ) : (
+                    "Confirmar"
+                  )}
                 </Button>
               </div>
             </div>
