@@ -14,7 +14,8 @@ import {
   X as XIcon,
   Loader2,
   ArrowUp,
-  Eye
+  Eye,
+  Download
 } from "lucide-react"
 import { formatarData, formatarValor, type DiaAnalise, type StatusDia } from "./types"
 import { MatchesDetalhe } from "./matches-detalhe"
@@ -219,6 +220,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
   const [aprovStatus, setAprovStatus] = React.useState<string | null>(null)
   const [lancamentosAprovados, setLancamentosAprovados] = React.useState<Record<string, { status: string; updatedAt: string; userId: string }>>({})
   const [completando, setCompletando] = React.useState<null | { id: string; campo: string }>(null)
+  const [exportandoDia, setExportandoDia] = React.useState(false)
 
   React.useEffect(() => {
     let ignore = false
@@ -301,6 +303,31 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       showToast('error', e.message || 'Falha na ação')
     } finally {
       setAcaoLoading(null)
+    }
+  }
+
+  async function downloadExcelDia() {
+    if (!empresaId) return
+    if (exportandoDia) return
+    setExportandoDia(true)
+    try {
+      const res = await fetch(
+        `/api/conciliacoes/analise-dia/exportar?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}`
+      )
+      if (!res.ok) throw new Error("Erro ao exportar dia")
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `analise-dia-${dia.data}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (e: any) {
+      showToast('error', e.message || 'Erro ao exportar dia')
+    } finally {
+      setExportandoDia(false)
     }
   }
 
@@ -445,6 +472,10 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                     Topo
                   </Button>
                   <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={downloadExcelDia} disabled={exportandoDia || acaoLoading !== null}>
+                      {exportandoDia ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+                      Exportar Dia
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => setConfirmando('aprovar')} disabled={acaoLoading !== null}>
                       {acaoLoading === 'aprovar' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
                       Aprovar
