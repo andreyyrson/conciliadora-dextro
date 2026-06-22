@@ -161,7 +161,7 @@ export interface ExtratoTransaction {
   saldoApos: number | null
   identificador: string | null
   banco: string | null
-  arquivoUpload: string | null
+  arquivoUpload?: string | null
 }
 
 export interface DiaConciliacao {
