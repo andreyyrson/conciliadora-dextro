@@ -10,7 +10,8 @@ export interface DailyMatchingResult {
 
 export function runDailyMatching(
   erpsDoDia: ErpTransaction[],
-  extratosDoDia: ExtratoTransaction[]
+  extratosDoDia: ExtratoTransaction[],
+  options?: { arquivoQuery?: string }
 ): DailyMatchingResult {
   const erpEntradas: EntradaConciliacao[] = erpsDoDia.map(e => ({
     id: e.id,
@@ -33,10 +34,11 @@ export function runDailyMatching(
     tipo: e.tipo as "CREDITO" | "DEBITO",
     descricao: e.descricao,
     identificador: e.identificador || undefined,
-    banco: e.banco || undefined
+    banco: e.banco || undefined,
+    arquivoUpload: (e as any).arquivoUpload || undefined
   }))
 
-  const matching = gerarSugestoesComparativo(erpEntradas, extratoEntradas)
+  const matching = gerarSugestoesComparativo(erpEntradas, extratoEntradas, options)
 
   return { matching, erpEntradas, extratoEntradas }
 }

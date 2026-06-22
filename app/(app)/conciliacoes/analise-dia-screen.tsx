@@ -26,6 +26,8 @@ export function AnaliseDiaScreen() {
   const [filtroStatus, setFiltroStatus] = useState<FiltroStatusExportacao>("TODOS")
   const [banco, setBanco] = useState("")
   const [bancosDisponiveis, setBancosDisponiveis] = useState<string[]>([])
+  const [arquivo, setArquivo] = useState("")
+  const [arquivosDisponiveis, setArquivosDisponiveis] = useState<string[]>([])
 
   const buscarBancosDisponiveis = useCallback(async () => {
     if (!empresaId || !dataInicio || !dataFim) return
@@ -36,15 +38,19 @@ export function AnaliseDiaScreen() {
       const data = await res.json()
       if (res.ok && data.dias) {
         const set = new Set<string>()
+        const setArq = new Set<string>()
         for (const dia of data.dias) {
           for (const tx of dia.transacoesErp) {
             if (tx.banco) set.add(tx.banco)
           }
           for (const tx of dia.transacoesExtrato) {
             if (tx.banco) set.add(tx.banco)
+            const arq = (tx as any).arquivoUpload as string | undefined
+            if (arq) setArq.add(arq)
           }
         }
         setBancosDisponiveis(Array.from(set).sort())
+        setArquivosDisponiveis(Array.from(setArq).sort())
       }
     } catch {
       // Silencioso: se falhar, mantém lista vazia
@@ -61,8 +67,9 @@ export function AnaliseDiaScreen() {
     try {
       const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
+      const arquivoParam = arquivo ? `&arquivo=${encodeURIComponent(arquivo)}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}`
+        `/api/conciliacoes/analise-dia?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${tipoParam}${bancoParam}${arquivoParam}`
       )
       const data = await res.json()
       if (!res.ok) {
@@ -75,7 +82,7 @@ export function AnaliseDiaScreen() {
     } finally {
       setLoading(false)
     }
-  }, [empresaId, dataInicio, dataFim, tipo, banco])
+  }, [empresaId, dataInicio, dataFim, tipo, banco, arquivo])
 
   const toggleDia = (data: string) => {
     setDiasExpandidos(prev => {
@@ -139,6 +146,8 @@ export function AnaliseDiaScreen() {
         filtroStatus={filtroStatus}
         banco={banco}
         bancosDisponiveis={bancosDisponiveis}
+        arquivo={arquivo}
+        arquivosDisponiveis={arquivosDisponiveis}
         loading={loading}
         exportando={exportando}
         podeExportar={dias.length > 0}
@@ -147,6 +156,7 @@ export function AnaliseDiaScreen() {
         onChangeTipo={setTipo}
         onChangeFiltroStatus={setFiltroStatus}
         onChangeBanco={setBanco}
+        onChangeArquivo={setArquivo}
         onAnalisar={buscarAnalise}
         onExportar={downloadExcel}
       />
