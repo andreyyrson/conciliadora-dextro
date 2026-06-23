@@ -35,6 +35,12 @@ export const statusConfig: Record<StatusDia, {
   SEM_DADOS: { label: "Sem Dados", icon: MinusCircle, color: "text-gray-400", bg: "bg-gray-500/10", border: "border-l-gray-400" }
 }
 
+function formatarValorComSinal(valor: number, tipo?: string): string {
+  const negativo = tipo === "DEBITO" || valor < 0
+  const abs = Math.abs(valor)
+  return `${negativo ? "-" : ""}R$ ${formatarValor(abs)}`
+}
+
 interface TabelaComparativaDiaProps {
   dia: DiaAnalise
   completando: null | { id: string; campo: string }
@@ -92,8 +98,8 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 <td className="p-2 border-r border-border text-xs text-muted-foreground">
                   {m.erpPareado?.banco || "—"}
                 </td>
-                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? (m.erpPareado.valor < 0 ? "text-red-500" : "text-foreground") : ""}`}>
-                  {m.erpPareado ? `R$ ${formatarValor(m.erpPareado.valor)}` : "—"}
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? ((m.erpPareado.tipo === "DEBITO" || m.erpPareado.valor < 0) ? "text-red-500" : "text-foreground") : ""}`}>
+                  {m.erpPareado ? formatarValorComSinal(m.erpPareado.valor, m.erpPareado.tipo) : "—"}
                 </td>
                 <td className="p-2 border-r border-border">
                   <span className="text-foreground">{m.extratoDescricao}</span>
@@ -101,8 +107,8 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 <td className="p-2 border-r border-border text-xs text-muted-foreground">
                   {m.banco || "—"}
                 </td>
-                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.extratoValor < 0 ? "text-red-500" : "text-foreground"}`}>
-                  R$ {formatarValor(m.extratoValor)}
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${(m.tipo === "DEBITO" || m.extratoValor < 0) ? "text-red-500" : "text-foreground"}`}>
+                  {formatarValorComSinal(m.extratoValor, m.tipo)}
                 </td>
                 <td className="p-2 text-center">
                   {statusBadge(m.status)}
@@ -180,7 +186,7 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                   {e.banco || "—"}
                 </td>
                 <td className={`p-2 border-r border-border w-[80px] text-right font-medium tabular-nums ${e.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
-                  R$ {formatarValor(e.valor)}
+                  {formatarValorComSinal(e.valor, e.tipo)}
                 </td>
                 <td className="p-2 border-r border-border w-[25%]">
                   <span className="text-xs italic text-muted-foreground">—</span>
@@ -207,9 +213,12 @@ interface DiaCardProps {
   expandido: boolean
   onToggle: () => void
   onAfterAction?: () => void
+  banco?: string
+  arquivo?: string
+  tipo?: string
 }
 
-export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProps) {
+export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", arquivo = "", tipo = "TODAS" }: DiaCardProps) {
   const cardRef = React.useRef<HTMLDivElement>(null)
   const status = statusConfig[dia.statusDia]
   const StatusIcon = status.icon
@@ -227,7 +236,8 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
     let ignore = false
     async function load() {
       if (!empresaId) return
-      const url = `/api/conciliacoes/aprovacoes?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}`
+      const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
+      const url = `/api/conciliacoes/aprovacoes?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}${bancoParam}`
       const res = await fetch(url)
       if (!res.ok) return
       const data = await res.json().catch(() => ({}))
@@ -238,7 +248,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
     }
     load()
     return () => { ignore = true }
-  }, [empresaId, dia.data])
+  }, [empresaId, dia.data, banco])
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -289,7 +299,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId, dataDia: dia.data, justificativa: justificativa || undefined })
+        body: JSON.stringify({ empresaId, dataDia: dia.data, banco: banco || undefined, justificativa: justificativa || undefined })
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
@@ -312,8 +322,11 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
     if (exportandoDia) return
     setExportandoDia(true)
     try {
+      const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
+      const arquivoParam = arquivo ? `&arquivo=${encodeURIComponent(arquivo)}` : ""
+      const tipoParam = tipo && tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia/exportar?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}`
+        `/api/conciliacoes/analise-dia/exportar?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}${bancoParam}${arquivoParam}${tipoParam}`
       )
       if (!res.ok) throw new Error("Erro ao exportar dia")
       const blob = await res.blob()
@@ -370,7 +383,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
               )}
               <div className="flex gap-3 text-xs text-muted-foreground">
                 <span className="text-green-500">Ent: R$ {formatarValor(dia.totalCreditoExtrato || dia.totalCreditoErp)}</span>
-                <span className="text-red-500">Sai: R$ {formatarValor(dia.totalDebitoExtrato || dia.totalDebitoErp)}</span>
+                <span className="text-red-500">Sai: -R$ {formatarValor(dia.totalDebitoExtrato || dia.totalDebitoErp)}</span>
                 <span>Saldo: R$ {formatarValor(dia.saldoFinalExtrato !== undefined ? dia.saldoFinalExtrato : dia.saldoFinalErp)}</span>
               </div>
               {dia.saldoAposBanco !== null && (
@@ -407,7 +420,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                     <div className="text-xs font-medium text-muted-foreground mb-1">ERP</div>
                     <div className="flex justify-between text-sm">
                       <span>Débito:</span>
-                      <span className="font-medium text-red-500">R$ {formatarValor(dia.totalDebitoErp)}</span>
+                      <span className="font-medium text-red-500">-R$ {formatarValor(dia.totalDebitoErp)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Crédito:</span>
@@ -418,7 +431,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction }: DiaCardProp
                     <div className="text-xs font-medium text-muted-foreground mb-1">Extrato</div>
                     <div className="flex justify-between text-sm">
                       <span>Débito:</span>
-                      <span className="font-medium text-red-500">R$ {formatarValor(dia.totalDebitoExtrato)}</span>
+                      <span className="font-medium text-red-500">-R$ {formatarValor(dia.totalDebitoExtrato)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Crédito:</span>

@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     const empresaId = searchParams.get("empresaId")
     const dataInicio = searchParams.get("dataInicio")
     const dataFim = searchParams.get("dataFim")
+    const banco = searchParams.get("banco") ?? ""
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json({ error: "empresaId, dataInicio e dataFim são obrigatórios" }, { status: 400 })
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
 
     const p: any = prisma as any
     const itens = await p.aprovacaoDia.findMany({
-      where: { empresaId, dataDia: { gte: inicio, lte: fim } },
+      where: { empresaId, dataDia: { gte: inicio, lte: fim }, banco },
       orderBy: { dataDia: "asc" },
     })
 

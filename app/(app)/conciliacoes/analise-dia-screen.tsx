@@ -122,8 +122,11 @@ export function AnaliseDiaScreen() {
     setExportando(true)
     try {
       const statusParam = filtroStatus !== "TODOS" ? `&status=${filtroStatus}` : ""
+      const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
+      const arquivoParam = arquivo ? `&arquivo=${encodeURIComponent(arquivo)}` : ""
+      const tipoParam = tipo !== "TODAS" ? `&tipo=${tipo}` : ""
       const res = await fetch(
-        `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${statusParam}`
+        `/api/conciliacoes/analise-dia/exportar?empresaId=${empresaId}&dataInicio=${dataInicio}&dataFim=${dataFim}${statusParam}${bancoParam}${arquivoParam}${tipoParam}`
       )
       if (!res.ok) throw new Error("Erro ao exportar")
       const blob = await res.blob()
@@ -216,6 +219,9 @@ export function AnaliseDiaScreen() {
               expandido={diasExpandidos.has(dia.data)}
               onToggle={() => toggleDia(dia.data)}
               onAfterAction={() => buscarAnalise()}
+              banco={banco}
+              arquivo={arquivo}
+              tipo={tipo}
             />
           ))}
         </div>

@@ -272,6 +272,8 @@ export interface MatchDetail {
   extratoId: string
   extratoDescricao: string
   extratoValor: number
+  tipo?: string
+  banco?: string | null
   status: string
   confianca: string
   score: number
@@ -279,6 +281,8 @@ export interface MatchDetail {
     id: string
     descricao: string
     valor: number
+    tipo?: string
+    banco?: string | null
   } | null
   diferencaValor: number | undefined
   explicacoes: string[]

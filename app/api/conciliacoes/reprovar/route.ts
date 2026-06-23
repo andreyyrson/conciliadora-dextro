@@ -18,6 +18,7 @@ export async function POST(req: Request) {
       )
     }
     const { empresaId, dataDia, justificativa } = parsed.data
+    const banco = parsed.data.banco ?? ""
 
     const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } })
     if (!empresa || empresa.userId !== session.user.id) {
@@ -29,14 +30,14 @@ export async function POST(req: Request) {
 
     const result = await prisma.$transaction(async (tx) => {
       const existente = await tx.aprovacaoDia.findUnique({
-        where: { empresaId_dataDia: { empresaId, dataDia: dia } }
+        where: { empresaId_dataDia_banco: { empresaId, dataDia: dia, banco } }
       }).catch(() => null)
       const deStatus = existente?.status || null
 
       const atual = await tx.aprovacaoDia.upsert({
-        where: { empresaId_dataDia: { empresaId, dataDia: dia } },
+        where: { empresaId_dataDia_banco: { empresaId, dataDia: dia, banco } },
         update: { status: "REPROVADO", justificativa, userId },
-        create: { empresaId, dataDia: dia, status: "REPROVADO", justificativa, userId },
+        create: { empresaId, dataDia: dia, banco, status: "REPROVADO", justificativa, userId },
       })
 
       await tx.aprovacaoDiaLog.create({

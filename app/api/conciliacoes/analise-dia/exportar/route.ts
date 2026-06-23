@@ -18,6 +18,10 @@ export async function GET(req: Request) {
     const dataInicio = searchParams.get("dataInicio")
     const dataFim = searchParams.get("dataFim")
     const filtroStatus = searchParams.get("status")
+    const filtroBanco = searchParams.get("banco") || ""
+    const filtroArquivo = searchParams.get("arquivo") || ""
+    const filtroTipoParam = searchParams.get("tipo") // RECEITAS | DESPESAS
+    const filtroTipo = filtroTipoParam === "RECEITAS" ? "CREDITO" : filtroTipoParam === "DESPESAS" ? "DEBITO" : undefined
 
     if (!empresaId || !dataInicio || !dataFim) {
       return NextResponse.json(
@@ -59,12 +63,13 @@ export async function GET(req: Request) {
     // Buscar importações
     const importacoes = await prisma.importacaoExtrato.findMany({
       where: { empresaId },
-      select: { id: true }
+      select: { id: true, nomeArquivo: true }
     })
     const importacaoIds = importacoes.map(i => i.id)
+    const importacaoArquivoMap = new Map(importacoes.map(i => [i.id, i.nomeArquivo || ""]))
 
     // Buscar lançamentos ERP
-    const erpLancamentos = await prisma.erpLancamento.findMany({
+    let erpLancamentos = await prisma.erpLancamento.findMany({
       where: {
         uploadId: { in: uploadIds },
         data: { gte: inicio, lte: fim }
@@ -73,7 +78,7 @@ export async function GET(req: Request) {
     })
 
     // Buscar extratos bancários (Open Finance)
-    const extratoLancamentos = await prisma.extratoLancamento.findMany({
+    let extratoLancamentos = await prisma.extratoLancamento.findMany({
       where: {
         contaId: { in: contaIds },
         data: { gte: inicio, lte: fim }
@@ -82,7 +87,7 @@ export async function GET(req: Request) {
     })
 
     // Buscar extratos importados (CSV/OFX)
-    const extratosImportados = await prisma.extratoImportado.findMany({
+    let extratosImportados = await prisma.extratoImportado.findMany({
       where: {
         importacaoId: { in: importacaoIds },
         data: { gte: inicio, lte: fim }
@@ -90,9 +95,44 @@ export async function GET(req: Request) {
       orderBy: { data: "asc" }
     })
 
-    // Buscar aprovações por dia no período
+    // === Aplicar filtros ativos (tipo, banco, arquivo) ===
+    const normalizarBanco = (str?: string | null): string =>
+      !str ? "" : str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    const bancoNorm = normalizarBanco(filtroBanco)
+    const temArquivo = !!filtroArquivo.trim()
+    const arquivoCasa = (nome: string) =>
+      !!nome && (nome.includes(filtroArquivo) || nome.startsWith(filtroArquivo))
+
+    // Filtro por tipo (receitas/despesas)
+    if (filtroTipo) {
+      erpLancamentos = erpLancamentos.filter(l => l.tipo === filtroTipo)
+      extratoLancamentos = extratoLancamentos.filter(l => l.tipo === filtroTipo)
+      extratosImportados = extratosImportados.filter(l => l.tipo === filtroTipo)
+    }
+
+    // Filtro por arquivo: aplica somente no lado extrato (importados); Open Finance não possui arquivo
+    if (temArquivo) {
+      extratosImportados = extratosImportados.filter(l =>
+        arquivoCasa(importacaoArquivoMap.get(l.importacaoId) || "")
+      )
+      extratoLancamentos = []
+    }
+
+    // Filtro por banco
+    if (bancoNorm) {
+      erpLancamentos = erpLancamentos.filter(l => l.banco && normalizarBanco(l.banco).includes(bancoNorm))
+      // Se há arquivo selecionado, priorizar arquivo no extrato e não filtrar extrato por banco
+      if (!temArquivo) {
+        extratoLancamentos = extratoLancamentos.filter(l =>
+          normalizarBanco(l.banco || contaMap.get(l.contaId) || "").includes(bancoNorm)
+        )
+        extratosImportados = extratosImportados.filter(l => l.banco && normalizarBanco(l.banco).includes(bancoNorm))
+      }
+    }
+
+    // Buscar aprovações por dia no período (escopadas pelo banco do filtro)
     const aprovacoesDia = await (prisma as any).aprovacaoDia.findMany({
-      where: { empresaId, dataDia: { gte: inicio, lte: fim } }
+      where: { empresaId, dataDia: { gte: inicio, lte: fim }, banco: filtroBanco }
     })
     const mapaDiaStatus: Record<string, string> = {}
     for (const a of aprovacoesDia as any[]) {
