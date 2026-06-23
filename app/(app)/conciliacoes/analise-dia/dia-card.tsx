@@ -35,6 +35,11 @@ export const statusConfig: Record<StatusDia, {
   SEM_DADOS: { label: "Sem Dados", icon: MinusCircle, color: "text-gray-400", bg: "bg-gray-500/10", border: "border-l-gray-400" }
 }
 
+function inferirTipo(valor: number, tipo?: string): string | undefined {
+  if (tipo) return tipo
+  return valor < 0 ? "DEBITO" : "CREDITO"
+}
+
 function formatarValorComSinal(valor: number, tipo?: string): string {
   const negativo = tipo === "DEBITO" || valor < 0
   const abs = Math.abs(valor)
@@ -98,8 +103,8 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 <td className="p-2 border-r border-border text-xs text-muted-foreground">
                   {m.erpPareado?.banco || "—"}
                 </td>
-                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? ((m.erpPareado.tipo === "DEBITO" || m.erpPareado.valor < 0) ? "text-red-500" : "text-foreground") : ""}`}>
-                  {m.erpPareado ? formatarValorComSinal(m.erpPareado.valor, m.erpPareado.tipo) : "—"}
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${m.erpPareado ? ((inferirTipo(m.erpPareado.valor, m.erpPareado.tipo) === "DEBITO") ? "text-red-500" : "text-foreground") : ""}`}>
+                  {m.erpPareado ? formatarValorComSinal(m.erpPareado.valor, inferirTipo(m.erpPareado.valor, m.erpPareado.tipo)) : "—"}
                 </td>
                 <td className="p-2 border-r border-border">
                   <span className="text-foreground">{m.extratoDescricao}</span>
@@ -107,8 +112,8 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 <td className="p-2 border-r border-border text-xs text-muted-foreground">
                   {m.banco || "—"}
                 </td>
-                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${(m.tipo === "DEBITO" || m.extratoValor < 0) ? "text-red-500" : "text-foreground"}`}>
-                  {formatarValorComSinal(m.extratoValor, m.tipo)}
+                <td className={`p-2 border-r border-border text-right font-medium tabular-nums ${(inferirTipo(m.extratoValor, m.tipo) === "DEBITO") ? "text-red-500" : "text-foreground"}`}>
+                  {formatarValorComSinal(m.extratoValor, inferirTipo(m.extratoValor, m.tipo))}
                 </td>
                 <td className="p-2 text-center">
                   {statusBadge(m.status)}
@@ -185,8 +190,8 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 <td className="p-2 border-r border-border w-[80px] text-xs text-muted-foreground">
                   {e.banco || "—"}
                 </td>
-                <td className={`p-2 border-r border-border w-[80px] text-right font-medium tabular-nums ${e.tipo === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
-                  {formatarValorComSinal(e.valor, e.tipo)}
+                <td className={`p-2 border-r border-border w-[80px] text-right font-medium tabular-nums ${inferirTipo(e.valor, e.tipo) === "DEBITO" ? "text-red-500" : "text-green-500"}`}>
+                  {formatarValorComSinal(e.valor, inferirTipo(e.valor, e.tipo))}
                 </td>
                 <td className="p-2 border-r border-border w-[25%]">
                   <span className="text-xs italic text-muted-foreground">—</span>
@@ -236,9 +241,10 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
     let ignore = false
     async function load() {
       if (!empresaId) return
+      setAprovStatus(null) // resetar enquanto busca status do filtro atual
       const bancoParam = banco ? `&banco=${encodeURIComponent(banco)}` : ""
       const url = `/api/conciliacoes/aprovacoes?empresaId=${encodeURIComponent(empresaId)}&dataInicio=${dia.data}&dataFim=${dia.data}${bancoParam}`
-      const res = await fetch(url)
+      const res = await fetch(url, { cache: 'no-store' })
       if (!res.ok) return
       const data = await res.json().catch(() => ({}))
       if (!ignore) {

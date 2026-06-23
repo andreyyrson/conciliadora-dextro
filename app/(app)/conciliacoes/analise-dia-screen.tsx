@@ -214,7 +214,7 @@ export function AnaliseDiaScreen() {
         <div className="space-y-3">
           {dias.map((dia) => (
             <DiaCard
-              key={dia.data}
+              key={`${dia.data}|${banco || "todos"}|${arquivo || "todos"}|${tipo}`}
               dia={dia}
               expandido={diasExpandidos.has(dia.data)}
               onToggle={() => toggleDia(dia.data)}

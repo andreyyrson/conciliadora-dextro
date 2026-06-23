@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { CheckCircle, Check, X as XIcon, Loader2, Square, CheckSquare } from "lucide-react"
+import { CheckCircle, Check, X as XIcon, Loader2, Square, CheckSquare, Pencil } from "lucide-react"
 import { formatarValor, type MatchDia } from "./types"
 import { Button } from "@/components/ui/button"
 
@@ -24,6 +24,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [loadingId, setLoadingId] = React.useState<string | null>(null)
   const [loadingBatch, setLoadingBatch] = React.useState<'aprovar' | 'reprovar' | null>(null)
+  const [editandoId, setEditandoId] = React.useState<string | null>(null)
   const [localStatus, setLocalStatus] = React.useState<Record<string, string>>(() => {
     const map: Record<string, string> = {}
     if (lancamentosAprovados) {
@@ -102,6 +103,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
       setLocalStatus(prev => ({ ...prev, [extratoId]: tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO' }))
+      setEditandoId(null)
       setToast({ type: 'success', message: tipo === 'aprovar' ? 'Lançamento aprovado' : 'Lançamento reprovado' })
       onAfterAction?.()
     } catch (e: any) {
@@ -313,26 +315,50 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
                     </div>
                   )}
                   <div className="flex gap-1 mb-1">
-                    <Button
-                      size="sm"
-                      variant={localStatus[m.extratoId] === 'APROVADO' ? 'default' : 'outline'}
-                      className="h-6 text-[10px] px-2"
-                      disabled={loadingId === m.extratoId}
-                      onClick={() => aprovarReprovarLancamento(m.extratoId, 'aprovar')}
-                    >
-                      {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                      Aprovar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={localStatus[m.extratoId] === 'REPROVADO' ? 'destructive' : 'outline'}
-                      className="h-6 text-[10px] px-2"
-                      disabled={loadingId === m.extratoId}
-                      onClick={() => aprovarReprovarLancamento(m.extratoId, 'reprovar')}
-                    >
-                      {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <XIcon className="w-3 h-3" />}
-                      Reprovar
-                    </Button>
+                    {editandoId === m.extratoId || !localStatus[m.extratoId] ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant={localStatus[m.extratoId] === 'APROVADO' ? 'default' : 'outline'}
+                          className="h-6 text-[10px] px-2"
+                          disabled={loadingId === m.extratoId}
+                          onClick={() => aprovarReprovarLancamento(m.extratoId, 'aprovar')}
+                        >
+                          {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={localStatus[m.extratoId] === 'REPROVADO' ? 'destructive' : 'outline'}
+                          className="h-6 text-[10px] px-2"
+                          disabled={loadingId === m.extratoId}
+                          onClick={() => aprovarReprovarLancamento(m.extratoId, 'reprovar')}
+                        >
+                          {loadingId === m.extratoId ? <Loader2 className="w-3 h-3 animate-spin" /> : <XIcon className="w-3 h-3" />}
+                          Reprovar
+                        </Button>
+                        {editandoId === m.extratoId && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[10px] px-2"
+                            onClick={() => setEditandoId(null)}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => setEditandoId(m.extratoId)}
+                      >
+                        <Pencil className="w-3 h-3 mr-1" />
+                        Editar
+                      </Button>
+                    )}
                   </div>
                   {m.erpPareado && (
                     <div className="mt-1 grid grid-cols-1 gap-1">
