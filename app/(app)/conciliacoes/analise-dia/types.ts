@@ -21,10 +21,11 @@ export interface MatchDetalhe {
   extratoId: string
   extratoDescricao: string
   extratoValor: number
+  tipo?: string
   status: "CONCILIADO" | "A_REVISAR" | "NAO_CONCILIADO"
   confianca: "HIGH" | "MEDIUM" | "LOW"
   score: number
-  erpPareado: { id: string; descricao: string; valor: number; banco?: string | null } | null
+  erpPareado: { id: string; descricao: string; valor: number; tipo?: string; banco?: string | null } | null
   banco?: string | null
   diferencaValor?: number
   explicacoes: string[]

@@ -6,18 +6,21 @@ export const idParam = z.string().min(1, "id é obrigatório")
 export const aprovarBody = z.object({
   empresaId: z.string().min(1),
   dataDia: z.string().min(1),
+  banco: z.string().optional(),
   justificativa: z.string().optional(),
 })
 
 export const reprovarBody = z.object({
   empresaId: z.string().min(1),
   dataDia: z.string().min(1),
+  banco: z.string().optional(),
   justificativa: z.string().min(1, "Justificativa é obrigatória para reprovação"),
 })
 
 export const revisarBody = z.object({
   empresaId: z.string().min(1),
   dataDia: z.string().min(1),
+  banco: z.string().optional(),
   justificativa: z.string().optional(),
 })
 

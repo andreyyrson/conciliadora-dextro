@@ -6,6 +6,7 @@ model AprovacaoDia {
   id            String   @id @default(cuid())
   empresaId     String
   dataDia       DateTime
+  banco         String   @default("")
   status        String   // AGUARDANDO | APROVADO | REPROVADO | A_REVISAR
   justificativa String?
   userId        String
@@ -16,7 +17,7 @@ model AprovacaoDia {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs          AprovacaoDiaLog[]
 
-  @@unique([empresaId, dataDia])
+  @@unique([empresaId, dataDia, banco])
   @@index([empresaId, dataDia])
 }
 
@@ -55,8 +56,9 @@ model AprovacaoLancamento {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
