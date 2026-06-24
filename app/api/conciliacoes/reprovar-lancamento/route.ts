@@ -29,8 +29,8 @@ export async function POST(req: Request) {
 
     const result = await prisma.aprovacaoLancamento.upsert({
       where: { empresaId_dataDia_extratoId: { empresaId, dataDia: dia, extratoId } },
-      update: { status: "REPROVADO", justificativa, userId },
-      create: { empresaId, dataDia: dia, extratoId, status: "REPROVADO", justificativa, userId },
+      update: { status: "REPROVADO", justificativa: justificativa || null, userId },
+      create: { empresaId, dataDia: dia, extratoId, status: "REPROVADO", justificativa: justificativa || null, userId },
     })
 
     return NextResponse.json({ status: result.status, dataDia, extratoId, updatedAt: result.updatedAt }, { status: 200 })

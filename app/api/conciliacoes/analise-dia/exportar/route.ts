@@ -287,16 +287,18 @@ export async function GET(req: Request) {
 
       const { matching } = runDailyMatching(erpTxs, extTxs)
 
-      return matching.extratosSobrando.map(ex => ({
-        Data: new Date(dataKey).toLocaleDateString("pt-BR"),
-        Descricao: ex.descricao,
-        Valor: ex.valor,
-        Tipo: ex.tipo === "CREDITO" ? "Entrada" : "Saída",
-        Origem: ex.origem === "EXTRATO" ? "Extrato Bancário" : "Extrato Importado",
-        Banco: ex.banco || "",
-        Identificador: ex.identificador || "",
-        "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO"
-      })).filter(row => passaFiltro(row["Status Lançamento"]) && naoReprovado(row["Status Lançamento"]))
+      return matching.extratosSobrando
+        .filter(ex => mapaLancamentoStatus[ex.id] !== "APROVADO")
+        .map(ex => ({
+          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+          Descricao: ex.descricao,
+          Valor: ex.valor,
+          Tipo: ex.tipo === "CREDITO" ? "Entrada" : "Saída",
+          Origem: ex.origem === "EXTRATO" ? "Extrato Bancário" : "Extrato Importado",
+          Banco: ex.banco || "",
+          Identificador: ex.identificador || "",
+          "Status Lançamento": mapaLancamentoStatus[ex.id] || "AGUARDANDO"
+        })).filter(row => passaFiltro(row["Status Lançamento"]) && naoReprovado(row["Status Lançamento"]))
     })
 
     // === ABA 5: ERP Sobrando (ERP sem correspondência no extrato) ===
@@ -449,7 +451,7 @@ export async function GET(req: Request) {
 
       const { matching } = runDailyMatching(erpTxs, extTxs)
 
-      return matching.itens
+      const pareadosAprovados = matching.itens
         .filter(item => item.extrato && mapaLancamentoStatus[item.extrato.id] === "APROVADO")
         .map(item => ({
           Data: new Date(dataKey).toLocaleDateString("pt-BR"),
@@ -463,7 +465,27 @@ export async function GET(req: Request) {
           "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
           "Status Aprovação": mapaLancamentoStatus[item.extrato?.id || ""] || "",
           "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
-        })).filter(row => naoReprovado(row["Status Dia"]))
+        }))
+
+      // Extratos sem ERP que foram aprovados também vão para Conciliados
+      const extratosSoAprovados = matching.extratosSobrando
+        .filter(ex => mapaLancamentoStatus[ex.id] === "APROVADO")
+        .map(ex => ({
+          Data: new Date(dataKey).toLocaleDateString("pt-BR"),
+          Descricao: ex.descricao,
+          Valor: ex.valor,
+          Tipo: ex.tipo === "CREDITO" ? "Entrada" : "Saída",
+          Documento: "",
+          Fornecedor: "",
+          Banco: ex.banco || "",
+          Categoria: "",
+          "Status Matching": "Extrato Aprovado",
+          "Status Aprovação": "APROVADO",
+          "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
+        }))
+
+      return [...pareadosAprovados, ...extratosSoAprovados]
+        .filter(row => naoReprovado(row["Status Dia"]))
     })
 
     // Aba Conciliados
@@ -481,16 +503,22 @@ export async function GET(req: Request) {
       const extBancarioDia = extratoLancamentos.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
       const extImportadoDia = extratosImportados.filter(l => new Date(l.data).toISOString().split("T")[0] === dataKey)
 
+      // Resolver banco do extrato Open Finance via contaMap quando ausente
+      const bancoExtBancario = (l: typeof extBancarioDia[number]) => l.banco || contaMap.get(l.contaId) || ""
+
       // Coletar todos os bancos únicos do dia
       const bancosDoDia = new Set<string>()
       erpDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
-      extBancarioDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
+      extBancarioDia.forEach(l => { const b = bancoExtBancario(l); if (b) bancosDoDia.add(b) })
       extImportadoDia.forEach(l => { if (l.banco) bancosDoDia.add(l.banco) })
 
       // Para cada banco, calcular totais
       return Array.from(bancosDoDia).map(banco => {
         const erpBanco = erpDia.filter(l => l.banco === banco)
-        const extBanco = [...extBancarioDia, ...extImportadoDia].filter(l => l.banco === banco)
+        const extBanco = [
+          ...extBancarioDia.filter(l => bancoExtBancario(l) === banco),
+          ...extImportadoDia.filter(l => l.banco === banco)
+        ]
 
         const entradasErp = erpBanco.filter(l => l.tipo === "CREDITO").reduce((s, l) => s + Number(l.valor), 0)
         const saidasErp = erpBanco.filter(l => l.tipo === "DEBITO").reduce((s, l) => s + Number(l.valor), 0)
