@@ -151,7 +151,11 @@ export async function GET(req: Request) {
 
     // Buscar aprovações por dia no período (escopadas pelo banco do filtro)
     const aprovacoesDia = await (prisma as any).aprovacaoDia.findMany({
-      where: { empresaId, dataDia: { gte: inicio, lte: fim }, banco: filtroBanco }
+      where: { 
+        empresaId, 
+        dataDia: { gte: inicio, lte: fim },
+        ...(filtroBanco.trim() ? { banco: filtroBanco } : {})
+      }
     })
     const mapaDiaStatus: Record<string, string> = {}
     for (const a of aprovacoesDia as any[]) {
