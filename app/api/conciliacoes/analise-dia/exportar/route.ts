@@ -110,25 +110,44 @@ export async function GET(req: Request) {
       extratosImportados = extratosImportados.filter(l => l.tipo === filtroTipo)
     }
 
-    // Filtro por arquivo: aplica somente no lado extrato (importados); Open Finance não possui arquivo
-    if (temArquivo) {
-      extratosImportados = extratosImportados.filter(l =>
-        arquivoCasa(importacaoArquivoMap.get(l.importacaoId) || "")
-      )
-      extratoLancamentos = []
-    }
-
-    // Filtro por banco
-    if (bancoNorm) {
-      erpLancamentos = erpLancamentos.filter(l => l.banco && normalizarBanco(l.banco).includes(bancoNorm))
-      // Se há arquivo selecionado, priorizar arquivo no extrato e não filtrar extrato por banco
-      if (!temArquivo) {
-        extratoLancamentos = extratoLancamentos.filter(l =>
-          normalizarBanco(l.banco || contaMap.get(l.contaId) || "").includes(bancoNorm)
+    // Filtro por banco/arquivo (mesma lógica híbrida do build-day)
+    if (filtroBanco.trim()) {
+      if (temArquivo) {
+        erpLancamentos = erpLancamentos.filter(l =>
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
         )
-        extratosImportados = extratosImportados.filter(l => l.banco && normalizarBanco(l.banco).includes(bancoNorm))
+        // Não filtrar extratos por banco quando arquivo foi especificado
+      } else {
+        erpLancamentos = erpLancamentos.filter(l =>
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+        )
+        extratoLancamentos = extratoLancamentos.filter(l =>
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+        )
+        extratosImportados = extratosImportados.filter(l =>
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+        )
       }
     }
+
+    if (temArquivo) {
+      extratosImportados = extratosImportados.filter(l =>
+        importacaoArquivoMap.get(l.importacaoId) &&
+        arquivoCasa(importacaoArquivoMap.get(l.importacaoId)!)
+      )
+    }
+
+    // Buscar aprovações de lançamentos
+    const aprovacoesLancamento = await prisma.aprovacaoLancamento.findMany({
+      where: {
+        empresaId,
+        dataDia: { gte: inicio, lte: fim },
+        ...(filtroBanco.trim() ? { banco: filtroBanco } : {})
+      }
+    })
+    const aprovacaoMap = new Map(
+      aprovacoesLancamento.map(a => [a.extratoId, { status: a.status, updatedAt: a.updatedAt }])
+    )
 
     // Buscar aprovações por dia no período (escopadas pelo banco do filtro)
     const aprovacoesDia = await (prisma as any).aprovacaoDia.findMany({
@@ -140,10 +159,7 @@ export async function GET(req: Request) {
       mapaDiaStatus[key] = a.status
     }
 
-    // Buscar aprovações por lançamento no período
-    const aprovacoesLancamento = await (prisma as any).aprovacaoLancamento.findMany({
-      where: { empresaId, dataDia: { gte: inicio, lte: fim } }
-    })
+    // Criar mapa de status de lançamentos
     const mapaLancamentoStatus: Record<string, string> = {}
     for (const a of aprovacoesLancamento as any[]) {
       mapaLancamentoStatus[a.extratoId] = a.status
@@ -157,7 +173,8 @@ export async function GET(req: Request) {
         Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
         Valor: Number(l.valor),
         Identificador: l.identificador || "",
-        Banco: l.banco || contaMap.get(l.contaId) || ""
+        Banco: l.banco || contaMap.get(l.contaId) || "",
+        "Status Aprovação": mapaLancamentoStatus[l.id] || ""
       })),
       ...extratosImportados.map(l => ({
         Data: new Date(l.data).toLocaleDateString("pt-BR"),
@@ -165,7 +182,8 @@ export async function GET(req: Request) {
         Tipo: l.tipo === "CREDITO" ? "Entrada" : "Saída",
         Valor: Number(l.valor),
         Identificador: l.identificador || "",
-        Banco: l.banco || ""
+        Banco: l.banco || "",
+        "Status Aprovação": mapaLancamentoStatus[l.id] || ""
       }))
     ]
     extratoRows.sort((a, b) => parseData(a.Data) - parseData(b.Data))
@@ -439,6 +457,7 @@ export async function GET(req: Request) {
           Banco: item.erp?.banco || "",
           Categoria: item.erp?.categoria || "",
           "Status Matching": item.status === "CONCILIADO" ? "Conciliado" : "A Revisar",
+          "Status Aprovação": mapaLancamentoStatus[item.extrato?.id || ""] || "",
           "Status Dia": mapaDiaStatus[dataKey] || "AGUARDANDO"
         })).filter(row => naoReprovado(row["Status Dia"]))
     })

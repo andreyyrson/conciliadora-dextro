@@ -67,7 +67,9 @@ prisma/             → schema + migrations
 
 4. **Matching UI não permite ação**: o usuário vê os matches sugeridos/ambíguos, mas não pode confirmar ou rejeitar diretamente na tela. Isso é apenas visualização.
 
-5. **OFX preview falta testes de UI**: o componente de preview de OFX foi adicionado sem testes de componente (React Testing Library).
+5. **OFX preview falta testes de UI**: o componente de preview de OFX foi adicionado sem testes de componente (React Testing Library).Vou escrever o arquivo completo.
+
+
 
 ---
 

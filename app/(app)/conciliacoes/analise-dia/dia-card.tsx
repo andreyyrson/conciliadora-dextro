@@ -57,12 +57,61 @@ interface TabelaComparativaDiaProps {
     valorErpAtual?: string | number | null
   ) => Promise<void>
   showToast: (type: 'success' | 'error', message: string) => void
+  lancamentosAprovados?: Record<string, { status: string; updatedAt: string; userId: string }>
+  empresaId?: string
+  diaData?: string
+  banco?: string
+  onAfterAction?: () => void
 }
 
-function TabelaComparativaDia({ dia, completando, setCompletando, completarCampoERP, showToast }: TabelaComparativaDiaProps) {
+function TabelaComparativaDia({ dia, completando, setCompletando, completarCampoERP, showToast, lancamentosAprovados, empresaId, diaData, banco, onAfterAction }: TabelaComparativaDiaProps) {
   const { detalhes, erpsSobrandoDetalhes } = dia.matches
   const totalLinhas = detalhes.length + erpsSobrandoDetalhes.length
   if (totalLinhas === 0) return null
+
+  const [loadingId, setLoadingId] = React.useState<string | null>(null)
+  const [editandoId, setEditandoId] = React.useState<string | null>(null)
+  const [localStatus, setLocalStatus] = React.useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    if (lancamentosAprovados) {
+      for (const [extratoId, info] of Object.entries(lancamentosAprovados)) {
+        map[extratoId] = info.status
+      }
+    }
+    return map
+  })
+
+  React.useEffect(() => {
+    const map: Record<string, string> = {}
+    if (lancamentosAprovados) {
+      for (const [extratoId, info] of Object.entries(lancamentosAprovados)) {
+        map[extratoId] = info.status
+      }
+    }
+    setLocalStatus(map)
+  }, [lancamentosAprovados])
+
+  async function aprovarReprovarLancamento(extratoId: string, tipo: 'aprovar' | 'reprovar') {
+    if (!empresaId || !diaData) return
+    setLoadingId(extratoId)
+    try {
+      const res = await fetch(`/api/conciliacoes/${tipo}-lancamento`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresaId, dataDia: diaData, extratoId, banco })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Falha na ação')
+      setLocalStatus(prev => ({ ...prev, [extratoId]: tipo === 'aprovar' ? 'APROVADO' : 'REPROVADO' }))
+      setEditandoId(null)
+      showToast('success', tipo === 'aprovar' ? 'Lançamento aprovado' : 'Lançamento reprovado')
+      onAfterAction?.()
+    } catch (e: any) {
+      showToast('error', e.message || 'Falha na ação')
+    } finally {
+      setLoadingId(null)
+    }
+  }
 
   const statusBadge = (status: string) => {
     const map: Record<string, { label: string; color: string }> = {
@@ -117,6 +166,63 @@ function TabelaComparativaDia({ dia, completando, setCompletando, completarCampo
                 </td>
                 <td className="p-2 text-center">
                   {statusBadge(m.status)}
+                  {localStatus[m.extratoId] && (
+                    <div className={`text-xs font-medium mb-1 px-2 py-0.5 rounded inline-block ${
+                      localStatus[m.extratoId] === 'APROVADO' ? 'bg-green-500/10 text-green-600' :
+                      localStatus[m.extratoId] === 'REPROVADO' ? 'bg-red-500/10 text-red-600' :
+                      'bg-gray-500/10 text-gray-500'
+                    }`}>
+                      {localStatus[m.extratoId]}
+                    </div>
+                  )}
+                  {!m.erpPareado && (
+                    <div className="flex gap-1 mt-1">
+                      {editandoId === m.extratoId || !localStatus[m.extratoId] ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant={localStatus[m.extratoId] === 'APROVADO' ? 'default' : 'outline'}
+                            className="h-5 text-[9px] px-1"
+                            disabled={loadingId === m.extratoId}
+                            onClick={() => aprovarReprovarLancamento(m.extratoId, 'aprovar')}
+                          >
+                            {loadingId === m.extratoId ? <Loader2 className="w-2 h-2 animate-spin" /> : <Check className="w-2 h-2" />}
+                            Aprovar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={localStatus[m.extratoId] === 'REPROVADO' ? 'destructive' : 'outline'}
+                            className="h-5 text-[9px] px-1"
+                            disabled={loadingId === m.extratoId}
+                            onClick={() => aprovarReprovarLancamento(m.extratoId, 'reprovar')}
+                          >
+                            {loadingId === m.extratoId ? <Loader2 className="w-2 h-2 animate-spin" /> : <XIcon className="w-2 h-2" />}
+                            Reprovar
+                          </Button>
+                          {editandoId === m.extratoId && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 text-[9px] px-1"
+                              onClick={() => setEditandoId(null)}
+                            >
+                              Cancelar
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-5 text-[9px] px-1"
+                          onClick={() => setEditandoId(m.extratoId)}
+                        >
+                          <Pencil className="w-2 h-2 mr-1" />
+                          Editar
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {m.erpPareado && (() => {
                     const erp = m.erpPareado
                     if (!erp) return null
@@ -471,6 +577,11 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
                   setCompletando={setCompletando}
                   completarCampoERP={completarCampoERP}
                   showToast={showToast}
+                  lancamentosAprovados={lancamentosAprovados}
+                  empresaId={empresaId || undefined}
+                  diaData={dia.data}
+                  banco={banco}
+                  onAfterAction={onAfterAction}
                 />
 
                 <MatchesDetalhe
@@ -478,6 +589,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
                   diaData={dia.data}
                   empresaId={empresaId || undefined}
                   lancamentosAprovados={lancamentosAprovados}
+                  banco={banco}
                   onAfterAction={onAfterAction}
                 />
 
