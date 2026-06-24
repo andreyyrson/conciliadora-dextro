@@ -342,6 +342,12 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
   const [lancamentosAprovados, setLancamentosAprovados] = React.useState<Record<string, { status: string; updatedAt: string; userId: string }>>({})
   const [completando, setCompletando] = React.useState<null | { id: string; campo: string }>(null)
   const [exportandoDia, setExportandoDia] = React.useState(false)
+  const [refreshKey, setRefreshKey] = React.useState(0)
+
+  const handleAfterAction = React.useCallback(() => {
+    setRefreshKey(prev => prev + 1)
+    onAfterAction?.()
+  }, [onAfterAction])
 
   React.useEffect(() => {
     let ignore = false
@@ -360,7 +366,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
     }
     load()
     return () => { ignore = true }
-  }, [empresaId, dia.data, banco])
+  }, [empresaId, dia.data, banco, refreshKey])
 
   function showToast(type: 'success' | 'error', message: string) {
     setToast({ type, message })
@@ -581,7 +587,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
                   empresaId={empresaId || undefined}
                   diaData={dia.data}
                   banco={banco}
-                  onAfterAction={onAfterAction}
+                  onAfterAction={handleAfterAction}
                 />
 
                 <MatchesDetalhe
@@ -590,7 +596,7 @@ export function DiaCard({ dia, expandido, onToggle, onAfterAction, banco = "", a
                   empresaId={empresaId || undefined}
                   lancamentosAprovados={lancamentosAprovados}
                   banco={banco}
-                  onAfterAction={onAfterAction}
+                  onAfterAction={handleAfterAction}
                 />
 
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
