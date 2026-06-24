@@ -16,10 +16,11 @@ interface MatchesDetalheProps {
   diaData?: string // yyyy-mm-dd
   empresaId?: string
   lancamentosAprovados?: Record<string, LancamentoStatus>
+  banco?: string
   onAfterAction?: () => void
 }
 
-export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovados, onAfterAction }: MatchesDetalheProps) {
+export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovados, banco, onAfterAction }: MatchesDetalheProps) {
   if (!matches || matches.detalhes.length === 0) return null
   const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [loadingId, setLoadingId] = React.useState<string | null>(null)
@@ -98,7 +99,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
       const res = await fetch(`/api/conciliacoes/${tipo}-lancamento`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresaId, dataDia: diaData, extratoId })
+        body: JSON.stringify({ empresaId, dataDia: diaData, extratoId, banco })
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Falha na ação')
@@ -142,7 +143,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
         const res = await fetch(`/api/conciliacoes/${tipo}-lancamento`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId })
+          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId, banco })
         })
         if (res.ok) {
           sucessos++
@@ -178,7 +179,7 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
         const res = await fetch(`/api/conciliacoes/aprovar-lancamento`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId: m.extratoId })
+          body: JSON.stringify({ empresaId, dataDia: diaData, extratoId: m.extratoId, banco })
         })
         if (res.ok) {
           sucessos++
