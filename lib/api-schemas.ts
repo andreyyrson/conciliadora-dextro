@@ -35,7 +35,7 @@ export const reprovarLancamentoBody = z.object({
   empresaId: z.string().min(1),
   dataDia: z.string().min(1),
   extratoId: z.string().min(1),
-  justificativa: z.string().min(1, "Justificativa é obrigatória para reprovação"),
+  justificativa: z.string().optional(),
 })
 
 export const rodarBody = z.object({
