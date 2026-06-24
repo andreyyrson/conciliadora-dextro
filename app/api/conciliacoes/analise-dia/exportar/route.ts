@@ -114,18 +114,18 @@ export async function GET(req: Request) {
     if (filtroBanco.trim()) {
       if (temArquivo) {
         erpLancamentos = erpLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+          l.banco && normalizarBanco(l.banco) === bancoNorm
         )
         // Não filtrar extratos por banco quando arquivo foi especificado
       } else {
         erpLancamentos = erpLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+          l.banco && normalizarBanco(l.banco) === bancoNorm
         )
         extratoLancamentos = extratoLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+          l.banco && normalizarBanco(l.banco) === bancoNorm
         )
         extratosImportados = extratosImportados.filter(l =>
-          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
+          l.banco && normalizarBanco(l.banco) === bancoNorm
         )
       }
     }
