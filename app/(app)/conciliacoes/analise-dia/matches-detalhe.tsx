@@ -207,46 +207,6 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
           <CheckCircle className="w-4 h-4" />
           Matching ({matches.conciliados} conciliados, {matches.aRevisar} a revisar, {matches.naoConciliados} não conciliados)
         </h4>
-        <div className="flex items-center gap-2">
-          {selecionados.size > 0 && (
-            <>
-              <span className="text-xs text-muted-foreground">{selecionados.size} selecionado(s)</span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                disabled={loadingBatch !== null}
-                onClick={() => executarBatch('aprovar')}
-              >
-                {loadingBatch === 'aprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
-                Aprovar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                disabled={loadingBatch !== null}
-                onClick={() => executarBatch('reprovar')}
-              >
-                {loadingBatch === 'reprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <XIcon className="w-3 h-3 mr-1" />}
-                Reprovar
-              </Button>
-              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={limparSelecao}>
-                Limpar
-              </Button>
-            </>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs"
-            disabled={loadingId === '__all__'}
-            onClick={aprovarTodos}
-          >
-            {loadingId === '__all__' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
-            Aprovar Todos
-          </Button>
-        </div>
       </div>
       {toast && (
         <div className={`mb-2 text-xs px-2 py-1 rounded inline-block ${toast.type === 'success' ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
@@ -441,6 +401,48 @@ export function MatchesDetalhe({ matches, diaData, empresaId, lancamentosAprovad
           {matches.erpsSobrando} lançamento(s) ERP sem correspondência no extrato
         </div>
       )}
+      <div className="flex items-center justify-between gap-2 mt-4 pt-2 border-t border-border">
+        <div className="flex items-center gap-2">
+          {selecionados.size > 0 && (
+            <>
+              <span className="text-xs text-muted-foreground">{selecionados.size} selecionado(s)</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={loadingBatch !== null}
+                onClick={() => executarBatch('aprovar')}
+              >
+                {loadingBatch === 'aprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+                Aprovar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={loadingBatch !== null}
+                onClick={() => executarBatch('reprovar')}
+              >
+                {loadingBatch === 'reprovar' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <XIcon className="w-3 h-3 mr-1" />}
+                Reprovar
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs px-2" onClick={limparSelecao}>
+                Limpar
+              </Button>
+            </>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          disabled={loadingId === '__all__'}
+          onClick={aprovarTodos}
+        >
+          {loadingId === '__all__' ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Check className="w-3 h-3 mr-1" />}
+          Aprovar Todos
+        </Button>
+      </div>
     </div>
   )
 }
