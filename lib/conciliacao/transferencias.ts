@@ -68,7 +68,7 @@ function matchTransfers(entries: MatchableTransacao[], toleranciaDias = 7, toler
       !usados.has(credito.id) &&
       Math.abs(credito.valor - debito.valor) <= toleranciaValor &&
       diffDias(credito.data, debito.data) <= toleranciaDias &&
-      (debito.banco && credito.banco ? bancosDiferentes(debito.banco, credito.banco) : true)
+      debito.banco && credito.banco && bancosDiferentes(debito.banco, credito.banco)
     )
     if (!candidato) continue
     usados.add(candidato.id)
