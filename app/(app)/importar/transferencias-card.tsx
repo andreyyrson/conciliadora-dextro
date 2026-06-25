@@ -5,7 +5,7 @@ import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import type { TransferenciaSugestao } from "@/lib/conciliacao/transferencias"
+import type { TransferenciaSugestao, DiagnosticoTransferencias } from "@/lib/conciliacao/transferencias"
 
 export function TransferenciasCard() {
   const { empresaId } = useEmpresa()
@@ -14,11 +14,13 @@ export function TransferenciasCard() {
   const [carregando, setCarregando] = useState(false)
   const [aprovando, setAprovando] = useState(false)
   const [mensagem, setMensagem] = useState("")
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoTransferencias | null>(null)
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<string>(new Date().toISOString().slice(0, 7))
 
-  const getPeriodoRange = useCallback(() => {
-    const hoje = new Date()
-    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+  const getPeriodoRange = useCallback((periodo: string) => {
+    const [ano, mes] = periodo.split("-").map(Number)
+    const primeiroDia = new Date(ano, mes - 1, 1)
+    const ultimoDia = new Date(ano, mes, 0)
     return {
       inicio: primeiroDia.toISOString().split("T")[0],
       fim: ultimoDia.toISOString().split("T")[0]
@@ -27,7 +29,7 @@ export function TransferenciasCard() {
 
   const buscar = useCallback(async () => {
     if (!empresaId) return
-    const { inicio, fim } = getPeriodoRange()
+    const { inicio, fim } = getPeriodoRange(periodoSelecionado)
     setCarregando(true)
     setMensagem("")
     try {
@@ -35,27 +37,35 @@ export function TransferenciasCard() {
         `/api/conciliacoes/transferencias/detectar?empresaId=${empresaId}&dataInicio=${inicio}&dataFim=${fim}`
       )
       const data = await res.json().catch(() => ({}))
+      console.log("[TransferenciasCard] response", { status: res.status, data })
       if (res.ok) {
         setSugestoes(data.transferencias || [])
+        setDiagnostico(data.diagnostico || null)
         setSelecionadas(new Set())
         if ((data.transferencias || []).length === 0) {
           setMensagem("Nenhuma transferência identificada.")
         }
       } else {
         setMensagem(data.error || "Não foi possível detectar transferências.")
+        setDiagnostico(null)
         setSelecionadas(new Set())
       }
     } catch (error) {
-      console.error("Erro ao detectar transferências", error)
+      console.error("[TransferenciasCard] erro", error)
       setMensagem("Falha ao detectar transferências.")
+      setDiagnostico(null)
     } finally {
       setCarregando(false)
     }
-  }, [empresaId, getPeriodoRange])
+  }, [empresaId, periodoSelecionado, getPeriodoRange])
 
   useEffect(() => {
     if (empresaId) buscar()
   }, [empresaId, buscar])
+
+  const handlePeriodoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPeriodoSelecionado(e.target.value)
+  }
 
   const toggle = (id: string) => {
     setSelecionadas(prev => {
@@ -99,6 +109,17 @@ export function TransferenciasCard() {
         <h3 className="text-lg font-semibold text-foreground">Transferências detectadas</h3>
         {carregando && <Loader2 className="animate-spin text-muted-foreground" size={18} />}
       </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-muted-foreground mb-1">
+          Período de busca
+        </label>
+        <input
+          type="month"
+          value={periodoSelecionado}
+          onChange={handlePeriodoChange}
+          className="w-full max-w-xs px-3 py-2 border rounded-md text-sm"
+        />
+      </div>
       {sugestoes.length > 0 ? (
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {sugestoes.map(transferencia => (
@@ -127,7 +148,25 @@ export function TransferenciasCard() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{mensagem || "Nenhuma transferência detectada."}</p>
+        <div className="text-sm text-muted-foreground space-y-2">
+          <p>{mensagem || "Nenhuma transferência detectada."}</p>
+          {diagnostico && (
+            <div className="bg-muted p-3 rounded text-xs font-mospace">
+              <p className="font-semibold">Diagnóstico:</p>
+              <p>ERP: {diagnostico.totalErp} | Extrato: {diagnostico.totalExtrato} | Total: {diagnostico.totalLancamentos}</p>
+              <p>Débitos: {diagnostico.debitos} | Créditos: {diagnostico.creditos}</p>
+              <p>Tipos encontrados: {diagnostico.tiposUnicos.join(", ") || "-"}</p>
+              <p>Amostra:</p>
+              <ul className="list-disc list-inside">
+                {diagnostico.amostra.map(tx => (
+                  <li key={tx.id}>
+                    {tx.tipo} R$ {tx.valor.toFixed(2)} {new Date(tx.data).toLocaleDateString()} [{tx.banco || "sem banco"}] {tx.descricao.slice(0, 30)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
       <div className="mt-4 flex items-center justify-between gap-2">
         <Button
