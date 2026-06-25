@@ -114,18 +114,18 @@ export async function GET(req: Request) {
     if (filtroBanco.trim()) {
       if (temArquivo) {
         erpLancamentos = erpLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco) === bancoNorm
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
         )
         // Não filtrar extratos por banco quando arquivo foi especificado
       } else {
         erpLancamentos = erpLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco) === bancoNorm
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
         )
         extratoLancamentos = extratoLancamentos.filter(l =>
-          l.banco && normalizarBanco(l.banco) === bancoNorm
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
         )
         extratosImportados = extratosImportados.filter(l =>
-          l.banco && normalizarBanco(l.banco) === bancoNorm
+          l.banco && normalizarBanco(l.banco).includes(bancoNorm)
         )
       }
     }
@@ -137,26 +137,32 @@ export async function GET(req: Request) {
       )
     }
 
-    // Buscar aprovações de lançamentos
-    const aprovacoesLancamento = await prisma.aprovacaoLancamento.findMany({
+    // Buscar aprovações de lançamentos do período
+    const aprovacoesLancamentoRaw = await prisma.aprovacaoLancamento.findMany({
       where: {
         empresaId,
-        dataDia: { gte: inicio, lte: fim },
-        ...(filtroBanco.trim() ? { banco: filtroBanco } : {})
+        dataDia: { gte: inicio, lte: fim }
       }
     })
+    // Aplicar filtro de banco por código (tolerante a variações de nome)
+    const aprovacoesLancamento = filtroBanco.trim()
+      ? aprovacoesLancamentoRaw.filter(a => a.extratoId && (extratoLancamentos.some(e => e.id === a.extratoId && e.banco && normalizarBanco(e.banco).includes(bancoNorm)) || extratosImportados.some(e => e.id === a.extratoId && e.banco && normalizarBanco(e.banco).includes(bancoNorm))))
+      : aprovacoesLancamentoRaw
     const aprovacaoMap = new Map(
       aprovacoesLancamento.map(a => [a.extratoId, { status: a.status, updatedAt: a.updatedAt }])
     )
 
-    // Buscar aprovações por dia no período (escopadas pelo banco do filtro)
-    const aprovacoesDia = await (prisma as any).aprovacaoDia.findMany({
+    // Buscar aprovações por dia no período
+    const aprovacoesDiaRaw = await (prisma as any).aprovacaoDia.findMany({
       where: { 
         empresaId, 
-        dataDia: { gte: inicio, lte: fim },
-        ...(filtroBanco.trim() ? { banco: filtroBanco } : {})
+        dataDia: { gte: inicio, lte: fim }
       }
     })
+    // Aplicar filtro de banco por código
+    const aprovacoesDia = filtroBanco.trim()
+      ? aprovacoesDiaRaw.filter((a: any) => a.banco && normalizarBanco(a.banco).includes(bancoNorm))
+      : aprovacoesDiaRaw
     const mapaDiaStatus: Record<string, string> = {}
     for (const a of aprovacoesDia as any[]) {
       const key = (a.dataDia as Date).toISOString().split("T")[0]
