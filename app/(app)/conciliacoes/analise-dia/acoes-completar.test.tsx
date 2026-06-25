@@ -12,6 +12,7 @@ function buildMatches(): MatchDia {
     aRevisar: 1,
     naoConciliados: 0,
     erpsSobrando: 0,
+    erpsSobrandoDetalhes: [],
     detalhes: [
       {
         extratoId: "x1",
@@ -20,7 +21,7 @@ function buildMatches(): MatchDia {
         status: "A_REVISAR",
         confianca: "MEDIUM",
         score: 70,
-        erpPareado: { id: "e1", descricao: "", valor: NaN as any },
+        erpPareado: { id: "e1", descricao: "", valor: 123.45 },
         explicacoes: ["Valor similar"],
       },
     ],
