@@ -129,6 +129,20 @@ export function ProcessamentoLoteScreen() {
         setUploadsErp(uploadsData.uploads || [])
       }
 
+      if (contasRes.ok) {
+        const contasData = await contasRes.json()
+        setContasBancarias(contasData.contas || [])
+      }
+
+      if (importacoesRes.ok) {
+        const importacoesData = await importacoesRes.json()
+        setImportacoesExtrato(importacoesData.importacoes || [])
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error)
+    }
+  }, [])
+
   const toggleTransferencia = (id: string) => {
     setTransferenciasSelecionadas(prev => {
       const novo = new Set(prev)
@@ -162,20 +176,6 @@ export function ProcessamentoLoteScreen() {
       setTransferenciasAprovando(false)
     }
   }
-
-      if (contasRes.ok) {
-        const contasData = await contasRes.json()
-        setContasBancarias(contasData.contas || [])
-      }
-
-      if (importacoesRes.ok) {
-        const importacoesData = await importacoesRes.json()
-        setImportacoesExtrato(importacoesData.importacoes || [])
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error)
-    }
-  }, [])
 
   useEffect(() => {
     if (empresaId) {
