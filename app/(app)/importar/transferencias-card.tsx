@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback } from "react"
 import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import type { TransferenciaSugestao, DiagnosticoTransferencias } from "@/lib/conciliacao/transferencias"
 
 export function TransferenciasCard() {
@@ -15,12 +17,12 @@ export function TransferenciasCard() {
   const [aprovando, setAprovando] = useState(false)
   const [mensagem, setMensagem] = useState("")
   const [diagnostico, setDiagnostico] = useState<DiagnosticoTransferencias | null>(null)
-  const [periodoSelecionado, setPeriodoSelecionado] = useState<string>(new Date().toISOString().slice(0, 7))
+  const [mesSelecionado, setMesSelecionado] = useState<Date>(new Date())
+  const [openCalendar, setOpenCalendar] = useState(false)
 
-  const getPeriodoRange = useCallback((periodo: string) => {
-    const [ano, mes] = periodo.split("-").map(Number)
-    const primeiroDia = new Date(ano, mes - 1, 1)
-    const ultimoDia = new Date(ano, mes, 0)
+  const getPeriodoRange = useCallback((data: Date) => {
+    const primeiroDia = new Date(data.getFullYear(), data.getMonth(), 1)
+    const ultimoDia = new Date(data.getFullYear(), data.getMonth() + 1, 0)
     return {
       inicio: primeiroDia.toISOString().split("T")[0],
       fim: ultimoDia.toISOString().split("T")[0]
@@ -29,7 +31,7 @@ export function TransferenciasCard() {
 
   const buscar = useCallback(async () => {
     if (!empresaId) return
-    const { inicio, fim } = getPeriodoRange(periodoSelecionado)
+    const { inicio, fim } = getPeriodoRange(mesSelecionado)
     setCarregando(true)
     setMensagem("")
     try {
@@ -57,14 +59,17 @@ export function TransferenciasCard() {
     } finally {
       setCarregando(false)
     }
-  }, [empresaId, periodoSelecionado, getPeriodoRange])
+  }, [empresaId, mesSelecionado, getPeriodoRange])
 
   useEffect(() => {
     if (empresaId) buscar()
   }, [empresaId, buscar])
 
-  const handlePeriodoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPeriodoSelecionado(e.target.value)
+  const handleMesChange = (date: Date | undefined) => {
+    if (date) {
+      setMesSelecionado(date)
+      setOpenCalendar(false)
+    }
   }
 
   const toggle = (id: string) => {
@@ -113,12 +118,21 @@ export function TransferenciasCard() {
         <label className="block text-sm font-medium text-muted-foreground mb-1">
           Período de busca
         </label>
-        <input
-          type="month"
-          value={periodoSelecionado}
-          onChange={handlePeriodoChange}
-          className="w-full max-w-xs px-3 py-2 border rounded-md text-sm"
-        />
+        <Popover open={openCalendar} onOpenChange={setOpenCalendar}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="justify-start w-[250px]" role="combobox">
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {mesSelecionado.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="p-2">
+            <Calendar
+              mode="single"
+              selected={mesSelecionado}
+              onSelect={handleMesChange}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
       {sugestoes.length > 0 ? (
         <div className="space-y-2 max-h-64 overflow-y-auto">
