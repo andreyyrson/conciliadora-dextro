@@ -4,6 +4,7 @@ import { useState } from "react"
 import { PageHeader } from "@/components/page-header"
 import { UploadErpScreen } from "./upload-erp-screen"
 import { ExtratoScreen } from "./extrato-screen"
+import { TransferenciasCard } from "./transferencias-card"
 
 export default function ImportarPage() {
   const [modo, setModo] = useState<"erp" | "extrato">("extrato")
@@ -39,6 +40,8 @@ export default function ImportarPage() {
       </div>
 
       {modo === "erp" ? <UploadErpScreen /> : <ExtratoScreen />}
+
+      <TransferenciasCard />
     </div>
   )
 }
