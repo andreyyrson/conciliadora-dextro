@@ -54,21 +54,21 @@ function bancosDiferentes(a?: string | null, b?: string | null) {
   return a.trim().toLowerCase() !== b.trim().toLowerCase()
 }
 
-function matchTransfers(entries: MatchableTransacao[], toleranciaDias = 3, toleranciaCentavos = 0): TransferenciaSugestao[] {
+function matchTransfers(entries: MatchableTransacao[], toleranciaDias = 7, toleranciaValor = 1.0): TransferenciaSugestao[] {
   const normalizadas = entries.map(e => ({ ...e, tipo: normalizarTipo(e.tipo) })).filter(e => e.tipo) as (MatchableTransacao & { tipo: "CREDITO" | "DEBITO" })[]
   const debitos = normalizadas.filter(e => e.tipo === "DEBITO")
   const creditos = normalizadas.filter(e => e.tipo === "CREDITO")
   const usados = new Set<string>()
   const sugestoes: TransferenciaSugestao[] = []
 
-  console.log(`[transferencias] total=${entries.length} debitos=${debitos.length} creditos=${creditos.length}`)
+  console.log(`[transferencias] total=${entries.length} debitos=${debitos.length} creditos=${creditos.length} toleranciaDias=${toleranciaDias} toleranciaValor=${toleranciaValor}`)
 
   for (const debito of debitos) {
     const candidato = creditos.find(credito =>
       !usados.has(credito.id) &&
-      Math.abs(credito.valor - debito.valor) <= toleranciaCentavos &&
+      Math.abs(credito.valor - debito.valor) <= toleranciaValor &&
       diffDias(credito.data, debito.data) <= toleranciaDias &&
-      bancosDiferentes(debito.banco, credito.banco)
+      (debito.banco && credito.banco ? bancosDiferentes(debito.banco, credito.banco) : true)
     )
     if (!candidato) continue
     usados.add(candidato.id)
