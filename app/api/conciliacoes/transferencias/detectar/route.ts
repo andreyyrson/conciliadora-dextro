@@ -25,7 +25,9 @@ export async function GET(req: Request) {
     fim.setHours(23, 59, 59, 999)
 
     const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim)
+    console.log(`[detectar-transferencias] empresaId=${empresaId} erp=${erpLancamentos.length} extratos=${extratoLancamentos.length} periodo=${inicioParam} a ${fimParam}`)
     const transferencias = detectTransferencias(erpLancamentos, extratoLancamentos)
+    console.log(`[detectar-transferencias] sugestoes=${transferencias.length}`)
 
     return NextResponse.json({ transferencias }, { status: 200 })
   } catch (error) {
