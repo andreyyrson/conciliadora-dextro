@@ -55,6 +55,23 @@ model AprovacaoLancamento {
   @@index([extratoId])
 }
 
+model TransferenciaDetectada {
+  id          String   @id @default(cuid())
+  empresaId   String
+  data        DateTime
+  valor       Decimal
+  origemTipo  String
+  origemId    String
+  destinoTipo String
+  destinoId   String
+  status      String   @default("PENDENTE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([empresaId, status])
+  @@unique([origemTipo, origemId, destinoTipo, destinoId])
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -115,6 +132,7 @@ model ExtratoLancamento {
   createdAt     DateTime          @default(now())
   itens         ConciliacaoItem[]
   conta         ContaBancaria     @relation(fields: [contaId], references: [id])
+  transferenciaDetectada Boolean       @default(false)
 
   @@index([contaId, data])
 }
@@ -147,6 +165,7 @@ model ExtratoImportado {
   createdAt     DateTime          @default(now())
   itens         ConciliacaoItem[]
   importacao    ImportacaoExtrato @relation(fields: [importacaoId], references: [id])
+  transferenciaDetectada Boolean       @default(false)
 
   @@index([importacaoId, data])
   @@index([valor, data, tipo])
@@ -181,6 +200,7 @@ model ErpLancamento {
   createdAt   DateTime          @default(now())
   itens       ConciliacaoItem[]
   upload      UploadErp         @relation(fields: [uploadId], references: [id])
+  transferenciaDetectada Boolean  @default(false)
 
   @@index([uploadId, data])
   @@index([valor, data, tipo])

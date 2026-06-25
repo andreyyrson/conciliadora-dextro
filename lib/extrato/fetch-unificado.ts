@@ -32,7 +32,8 @@ export async function fetchExtratos(
     prisma.extratoLancamento.findMany({
       where: {
         contaId: { in: contaIds },
-        data: { gte: inicio, lte: fim }
+        data: { gte: inicio, lte: fim },
+        transferenciaDetectada: false
       },
       orderBy: { data: "asc" }
     }),
@@ -40,7 +41,8 @@ export async function fetchExtratos(
     prisma.extratoImportado.findMany({
       where: {
         importacaoId: { in: importacaoIds },
-        data: { gte: inicio, lte: fim }
+        data: { gte: inicio, lte: fim },
+        transferenciaDetectada: false
       },
       orderBy: { data: "asc" }
     })

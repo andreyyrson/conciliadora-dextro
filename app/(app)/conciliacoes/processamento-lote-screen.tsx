@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { useComparativo } from "./comparativo/use-comparativo"
 import { TabelaComparativaConciliacao } from "./comparativo/tabela-comparativa"
+import type { TransferenciaSugestao } from "@/lib/conciliacao/transferencias"
 
 function ComparativoPreview({ empresaId, periodo }: { empresaId: string | null; periodo?: string }) {
   const {
@@ -108,6 +109,12 @@ export function ProcessamentoLoteScreen() {
     progress: 0,
     message: ""
   })
+  const [transferenciasSugestoes, setTransferenciasSugestoes] = useState<TransferenciaSugestao[]>([])
+  const [transferenciasCarregando, setTransferenciasCarregando] = useState(false)
+  const [transferenciasMensagem, setTransferenciasMensagem] = useState("")
+  const [transferenciasAprovando, setTransferenciasAprovando] = useState(false)
+  const [transferenciasSelecionadas, setTransferenciasSelecionadas] = useState<Set<string>>(new Set())
+  const [conciliacaoId, setConciliacaoId] = useState<string | null>(null)
 
   const carregarDados = useCallback(async (empId: string) => {
     try {
@@ -121,6 +128,40 @@ export function ProcessamentoLoteScreen() {
         const uploadsData = await uploadsRes.json()
         setUploadsErp(uploadsData.uploads || [])
       }
+
+  const toggleTransferencia = (id: string) => {
+    setTransferenciasSelecionadas(prev => {
+      const novo = new Set(prev)
+      if (novo.has(id)) novo.delete(id)
+      else novo.add(id)
+      return novo
+    })
+  }
+
+  const aprovarTransferencias = async () => {
+    if (!empresaId || transferenciasSelecionadas.size === 0) return
+    setTransferenciasAprovando(true)
+    try {
+      const selecionadas = transferenciasSugestoes.filter(t => transferenciasSelecionadas.has(t.id))
+      const res = await fetch("/api/conciliacoes/transferencias/aprovar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresaId, transferencias: selecionadas })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setTransferenciasMensagem(`${data.updated || 0} transferência(s) removidas.`)
+        await buscarTransferencias()
+      } else {
+        setTransferenciasMensagem(data.error || "Falha ao aprovar transferências.")
+      }
+    } catch (error) {
+      console.error("Erro ao aprovar transferências", error)
+      setTransferenciasMensagem("Erro ao aprovar transferências.")
+    } finally {
+      setTransferenciasAprovando(false)
+    }
+  }
 
       if (contasRes.ok) {
         const contasData = await contasRes.json()
@@ -172,6 +213,59 @@ export function ProcessamentoLoteScreen() {
     setSelectedImportacoes(newSelected)
   }
 
+  const getPeriodoRange = useCallback(() => {
+    if (periodo) {
+      const [y, m] = periodo.split("-")
+      if (y && m) {
+        const inicio = `${y}-${m}-01`
+        const fimDate = new Date(Number(y), Number(m), 0)
+        const fim = fimDate.toISOString().split("T")[0]
+        return { inicio, fim }
+      }
+    }
+    const hoje = new Date()
+    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+    return {
+      inicio: primeiroDia.toISOString().split("T")[0],
+      fim: ultimoDia.toISOString().split("T")[0]
+    }
+  }, [periodo])
+
+  const buscarTransferencias = useCallback(async () => {
+    if (!empresaId) return
+    const { inicio, fim } = getPeriodoRange()
+    setTransferenciasCarregando(true)
+    setTransferenciasMensagem("")
+    try {
+      const res = await fetch(
+        `/api/conciliacoes/transferencias/detectar?empresaId=${empresaId}&dataInicio=${inicio}&dataFim=${fim}`
+      )
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setTransferenciasSugestoes(data.transferencias || [])
+        setTransferenciasSelecionadas(new Set())
+        if ((data.transferencias || []).length === 0) {
+          setTransferenciasMensagem("Nenhuma transferência identificada.")
+        }
+      } else {
+        setTransferenciasMensagem(data.error || "Não foi possível detectar transferências.")
+        setTransferenciasSelecionadas(new Set())
+      }
+    } catch (error) {
+      console.error("Erro ao detectar transferências", error)
+      setTransferenciasMensagem("Falha ao detectar transferências.")
+    } finally {
+      setTransferenciasCarregando(false)
+    }
+  }, [empresaId, getPeriodoRange])
+
+  useEffect(() => {
+    if (conciliacaoId) {
+      buscarTransferencias()
+    }
+  }, [conciliacaoId, buscarTransferencias])
+
   const processarLote = async () => {
     if (selectedUploads.size === 0 || (selectedContas.size === 0 && selectedImportacoes.size === 0)) {
       alert("Selecione pelo menos um upload ERP e uma conta bancária ou importação de extrato")
@@ -205,10 +299,8 @@ export function ProcessamentoLoteScreen() {
           message: "Processamento concluído com sucesso!",
           conciliacaoId: data.conciliacaoId
         })
-
-        setTimeout(() => {
-          router.push(`/conciliacoes/${data.conciliacaoId}`)
-        }, 2000)
+        setConciliacaoId(data.conciliacaoId)
+        await buscarTransferencias()
       } else {
         setProcessamentoStatus({
           status: "error",
@@ -384,6 +476,62 @@ export function ProcessamentoLoteScreen() {
                 </div>
               )}
             </div>
+          </div>
+        </Card>
+      )}
+
+      {(transferenciasCarregando || transferenciasSugestoes.length > 0 || transferenciasMensagem) && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-foreground">Transferências detectadas</h3>
+            {transferenciasCarregando && <Loader2 className="animate-spin text-muted-foreground" size={18} />}
+          </div>
+          {transferenciasSugestoes.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {transferenciasSugestoes.map(transferencia => (
+                <label
+                  key={transferencia.id}
+                  className="flex items-start gap-3 p-3 rounded border border-dashed bg-background"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={transferenciasSelecionadas.has(transferencia.id)}
+                    onChange={() => toggleTransferencia(transferencia.id)}
+                  />
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    <div className="font-medium text-foreground">
+                      R$ {transferencia.valor.toFixed(2)} • {new Date(transferencia.dataOrigem).toLocaleDateString()} → {new Date(transferencia.dataDestino).toLocaleDateString()}
+                    </div>
+                    <div>
+                      {transferencia.descricaoOrigem} → {transferencia.descricaoDestino}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {transferencia.origemTipo} {transferencia.bancoOrigem || ""} → {transferencia.destinoTipo} {transferencia.bancoDestino || ""}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{transferenciasMensagem || "Nenhuma transferência detectada."}</p>
+          )}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => buscarTransferencias()}
+              disabled={transferenciasCarregando}
+            >
+              Recarregar
+            </Button>
+            <Button
+              size="sm"
+              onClick={aprovarTransferencias}
+              disabled={transferenciasSelecionadas.size === 0 || transferenciasAprovando}
+            >
+              {transferenciasAprovando ? "Removendo..." : "Aprovar remoção"}
+            </Button>
           </div>
         </Card>
       )}
