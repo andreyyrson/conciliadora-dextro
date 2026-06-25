@@ -5,7 +5,7 @@ import { useEmpresa } from "@/lib/use-empresa"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import type { TransferenciaSugestao } from "@/lib/conciliacao/transferencias"
+import type { TransferenciaSugestao, DiagnosticoTransferencias } from "@/lib/conciliacao/transferencias"
 
 export function TransferenciasCard() {
   const { empresaId } = useEmpresa()
@@ -14,6 +14,7 @@ export function TransferenciasCard() {
   const [carregando, setCarregando] = useState(false)
   const [aprovando, setAprovando] = useState(false)
   const [mensagem, setMensagem] = useState("")
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoTransferencias | null>(null)
 
   const getPeriodoRange = useCallback(() => {
     const hoje = new Date()
@@ -35,19 +36,23 @@ export function TransferenciasCard() {
         `/api/conciliacoes/transferencias/detectar?empresaId=${empresaId}&dataInicio=${inicio}&dataFim=${fim}`
       )
       const data = await res.json().catch(() => ({}))
+      console.log("[TransferenciasCard] response", { status: res.status, data })
       if (res.ok) {
         setSugestoes(data.transferencias || [])
+        setDiagnostico(data.diagnostico || null)
         setSelecionadas(new Set())
         if ((data.transferencias || []).length === 0) {
           setMensagem("Nenhuma transferência identificada.")
         }
       } else {
         setMensagem(data.error || "Não foi possível detectar transferências.")
+        setDiagnostico(null)
         setSelecionadas(new Set())
       }
     } catch (error) {
-      console.error("Erro ao detectar transferências", error)
+      console.error("[TransferenciasCard] erro", error)
       setMensagem("Falha ao detectar transferências.")
+      setDiagnostico(null)
     } finally {
       setCarregando(false)
     }
@@ -127,7 +132,25 @@ export function TransferenciasCard() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{mensagem || "Nenhuma transferência detectada."}</p>
+        <div className="text-sm text-muted-foreground space-y-2">
+          <p>{mensagem || "Nenhuma transferência detectada."}</p>
+          {diagnostico && (
+            <div className="bg-muted p-3 rounded text-xs font-mospace">
+              <p className="font-semibold">Diagnóstico:</p>
+              <p>ERP: {diagnostico.totalErp} | Extrato: {diagnostico.totalExtrato} | Total: {diagnostico.totalLancamentos}</p>
+              <p>Débitos: {diagnostico.debitos} | Créditos: {diagnostico.creditos}</p>
+              <p>Tipos encontrados: {diagnostico.tiposUnicos.join(", ") || "-"}</p>
+              <p>Amostra:</p>
+              <ul className="list-disc list-inside">
+                {diagnostico.amostra.map(tx => (
+                  <li key={tx.id}>
+                    {tx.tipo} R$ {tx.valor.toFixed(2)} {new Date(tx.data).toLocaleDateString()} [{tx.banco || "sem banco"}] {tx.descricao.slice(0, 30)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
       <div className="mt-4 flex items-center justify-between gap-2">
         <Button

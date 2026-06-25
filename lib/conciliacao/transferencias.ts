@@ -124,3 +124,41 @@ export function detectTransferencias(erps: ErpTransaction[], extratos: ExtratoTr
     ...detectTransferenciasExtrato(extratos)
   ]
 }
+
+export interface DiagnosticoTransferencias {
+  totalErp: number
+  totalExtrato: number
+  totalLancamentos: number
+  debitos: number
+  creditos: number
+  tiposUnicos: string[]
+  amostra: { id: string; tipo: string; valor: number; data: string; banco: string | null; descricao: string }[]
+}
+
+export function diagnosticarTransferencias(erps: ErpTransaction[], extratos: ExtratoTransaction[]): DiagnosticoTransferencias {
+  const todos = [
+    ...erps.map(tx => ({ ...tx, origem: "ERP" as const })),
+    ...extratos.map(tx => ({ ...tx }))
+  ]
+  const tiposUnicos = Array.from(new Set(todos.map(tx => tx.tipo)))
+  const debitos = todos.filter(tx => normalizarTipo(tx.tipo) === "DEBITO").length
+  const creditos = todos.filter(tx => normalizarTipo(tx.tipo) === "CREDITO").length
+  const amostra = todos.slice(0, 10).map(tx => ({
+    id: tx.id,
+    tipo: tx.tipo,
+    valor: tx.valor,
+    data: tx.data.toISOString(),
+    banco: tx.banco || null,
+    descricao: tx.descricao
+  }))
+
+  return {
+    totalErp: erps.length,
+    totalExtrato: extratos.length,
+    totalLancamentos: todos.length,
+    debitos,
+    creditos,
+    tiposUnicos,
+    amostra
+  }
+}

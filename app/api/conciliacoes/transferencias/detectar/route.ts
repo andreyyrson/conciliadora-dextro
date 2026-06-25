@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { fetchConciliationData } from "@/lib/conciliacao"
-import { detectTransferencias } from "@/lib/conciliacao/transferencias"
+import { detectTransferencias, diagnosticarTransferencias } from "@/lib/conciliacao/transferencias"
 
 export async function GET(req: Request) {
   try {
@@ -25,11 +25,10 @@ export async function GET(req: Request) {
     fim.setHours(23, 59, 59, 999)
 
     const { erpLancamentos, extratoLancamentos } = await fetchConciliationData(empresaId, inicio, fim)
-    console.log(`[detectar-transferencias] empresaId=${empresaId} erp=${erpLancamentos.length} extratos=${extratoLancamentos.length} periodo=${inicioParam} a ${fimParam}`)
     const transferencias = detectTransferencias(erpLancamentos, extratoLancamentos)
-    console.log(`[detectar-transferencias] sugestoes=${transferencias.length}`)
+    const diagnostico = diagnosticarTransferencias(erpLancamentos, extratoLancamentos)
 
-    return NextResponse.json({ transferencias }, { status: 200 })
+    return NextResponse.json({ transferencias, diagnostico }, { status: 200 })
   } catch (error) {
     console.error("Erro ao detectar transferências:", error)
     return NextResponse.json({ error: "Erro ao detectar transferências" }, { status: 500 })
