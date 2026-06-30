@@ -109,18 +109,18 @@ export function TransferenciasCard() {
   if (!empresaId) return null
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-foreground">Transferências detectadas</h3>
-        {carregando && <Loader2 className="animate-spin text-muted-foreground" size={18} />}
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-foreground">Transferências detectadas</h3>
+        {carregando && <Loader2 className="animate-spin text-muted-foreground" size={16} />}
       </div>
       <div className="mb-4">
-        <label className="block text-sm font-medium text-muted-foreground mb-1">
+        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
           Período de busca
         </label>
         <Popover open={openCalendar} onOpenChange={setOpenCalendar}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="justify-start w-[250px]" role="combobox">
+            <Button variant="outline" className="justify-start w-full h-9 text-sm" role="combobox">
               <CalendarIcon className="w-4 h-4 mr-2" />
               {mesSelecionado.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
             </Button>
@@ -135,49 +135,62 @@ export function TransferenciasCard() {
         </Popover>
       </div>
       {sugestoes.length > 0 ? (
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="space-y-1.5 max-h-80 overflow-y-auto">
           {sugestoes.map(transferencia => (
             <label
               key={transferencia.id}
-              className="flex items-start gap-3 p-3 rounded border border-dashed bg-background"
+              className="flex items-start gap-3 p-3 rounded border border-border bg-background hover:bg-muted/50 cursor-pointer transition-colors"
             >
               <input
                 type="checkbox"
-                className="mt-1"
+                className="mt-1 h-4 w-4 rounded border-border"
                 checked={selecionadas.has(transferencia.id)}
                 onChange={() => toggle(transferencia.id)}
               />
-              <div className="flex-1 text-sm text-muted-foreground">
-                <div className="font-medium text-foreground">
-                  R$ {transferencia.valor.toFixed(2)} • {new Date(transferencia.dataOrigem).toLocaleDateString()} → {new Date(transferencia.dataDestino).toLocaleDateString()}
+              <div className="flex-1 text-sm">
+                <div className="font-medium text-foreground mb-1">
+                  R$ {transferencia.valor.toFixed(2)}
                 </div>
-                <div>
+                <div className="text-muted-foreground text-xs mb-1">
+                  {new Date(transferencia.dataOrigem).toLocaleDateString()} → {new Date(transferencia.dataDestino).toLocaleDateString()}
+                </div>
+                <div className="text-muted-foreground text-xs truncate">
                   {transferencia.descricaoOrigem} → {transferencia.descricaoDestino}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {transferencia.origemTipo} {transferencia.bancoOrigem || ""} → {transferencia.destinoTipo} {transferencia.bancoDestino || ""}
+                <div className="text-xs text-muted-foreground mt-1">
+                  <span className="inline-flex items-center gap-1">
+                    {transferencia.bancoOrigem && <span className="font-medium">{transferencia.bancoOrigem}</span>}
+                    {transferencia.bancoOrigem && transferencia.bancoDestino && <span>→</span>}
+                    {transferencia.bancoDestino && <span className="font-medium">{transferencia.bancoDestino}</span>}
+                  </span>
                 </div>
               </div>
             </label>
           ))}
         </div>
       ) : (
-        <div className="text-sm text-muted-foreground space-y-2">
+        <div className="text-sm text-muted-foreground space-y-3">
           <p>{mensagem || "Nenhuma transferência detectada."}</p>
           {diagnostico && (
-            <div className="bg-muted p-3 rounded text-xs font-mospace">
-              <p className="font-semibold">Diagnóstico:</p>
-              <p>ERP: {diagnostico.totalErp} | Extrato: {diagnostico.totalExtrato} | Total: {diagnostico.totalLancamentos}</p>
-              <p>Débitos: {diagnostico.debitos} | Créditos: {diagnostico.creditos}</p>
-              <p>Tipos encontrados: {diagnostico.tiposUnicos.join(", ") || "-"}</p>
-              <p>Amostra:</p>
-              <ul className="list-disc list-inside">
-                {diagnostico.amostra.map(tx => (
-                  <li key={tx.id}>
-                    {tx.tipo} R$ {tx.valor.toFixed(2)} {new Date(tx.data).toLocaleDateString()} [{tx.banco || "sem banco"}] {tx.descricao.slice(0, 30)}
-                  </li>
-                ))}
-              </ul>
+            <div className="bg-muted/50 p-3 rounded border border-border text-xs">
+              <p className="font-semibold text-foreground mb-2">Diagnóstico:</p>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">ERP: {diagnostico.totalErp} | Extrato: {diagnostico.totalExtrato} | Total: {diagnostico.totalLancamentos}</p>
+                <p className="text-muted-foreground">Débitos: {diagnostico.debitos} | Créditos: {diagnostico.creditos}</p>
+                <p className="text-muted-foreground">Tipos: {diagnostico.tiposUnicos.join(", ") || "-"}</p>
+                {diagnostico.amostra.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-medium text-foreground mb-1">Amostra:</p>
+                    <ul className="space-y-1">
+                      {diagnostico.amostra.map(tx => (
+                        <li key={tx.id} className="text-muted-foreground">
+                          {tx.tipo} R$ {tx.valor.toFixed(2)} {new Date(tx.data).toLocaleDateString()} [{tx.banco || "sem banco"}] {tx.descricao.slice(0, 25)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -188,15 +201,19 @@ export function TransferenciasCard() {
           size="sm"
           onClick={() => buscar()}
           disabled={carregando}
+          className="flex-1"
         >
-          Recarregar
+          {carregando ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarIcon className="w-4 h-4 mr-2" />}
+          {carregando ? "Carregando..." : "Recarregar"}
         </Button>
         <Button
           size="sm"
           onClick={aprovar}
           disabled={selecionadas.size === 0 || aprovando}
+          className="flex-1"
         >
-          {aprovando ? "Removendo..." : "Aprovar remoção"}
+          {aprovando ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+          {aprovando ? "Removendo..." : `Aprovar (${selecionadas.size})`}
         </Button>
       </div>
     </Card>
