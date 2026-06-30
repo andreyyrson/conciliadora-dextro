@@ -7,8 +7,23 @@ services:
       - "127.0.0.1:3004:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/dextro
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - DIRECT_URL=${DIRECT_URL}
+      - NEXTAUTH_URL=http://localhost:3004
+      - DIRECT_URL=postgresql://postgres:postgres@db:5432/dextro
+    depends_on:
+      - db
     restart: unless-stopped
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dextro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
