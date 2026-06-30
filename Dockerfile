@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Instalar dependências do OpenSSL para Prisma
+RUN apk add --no-cache openssl1.1-compat
+
 COPY package.json package-lock.json* ./
 RUN npm ci
 
